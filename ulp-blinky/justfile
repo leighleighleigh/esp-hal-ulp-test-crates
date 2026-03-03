@@ -1,0 +1,4 @@
+build-all:
+  cargo esp32s3
+  cargo esp32s2
+  cargo esp32c6

@@ -1,0 +1,48 @@
+[package]
+name = "ulp-blinky"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88.0"
+
+[[bin]]
+path = "src/main.rs"
+name = "blinky"
+test = false
+bench = false
+
+[dependencies]
+cfg-if = "1"
+embedded-hal = "1.0.0"
+panic-halt = "1.0.0"
+
+# LP HAL from esp-hal,
+# which will need a chip feature-flag specified,
+# in order to provide the right linker script.
+esp-lp-hal = "0.3.0"
+
+[patch.crates-io]
+esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
+# # Un-deletes the RTC_CTRL.rtc_state0 register from the ULP PAC.
+# # This is needed to raise software interrupts from the ULP core, to the HP core.
+# esp32s3-ulp = { git = "https://github.com/esp-rs/esp-pacs.git", branch = "main" }
+# esp32s2-ulp = { git = "https://github.com/esp-rs/esp-pacs.git", branch = "main" }
+
+[build-dependencies]
+esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }
+
+[features]
+default = []
+esp32s3 = ["esp-metadata-generated/esp32s3", "esp-lp-hal/esp32s3"]
+esp32s2 = ["esp-metadata-generated/esp32s2", "esp-lp-hal/esp32s2"]
+esp32c6 = ["esp-metadata-generated/esp32c6", "esp-lp-hal/esp32c6"]
+
+[profile.release]
+debug = false
+strip = "debuginfo"
+# size is an important factor in the ULP code,  because it's easy to run out of space.
+opt-level = "s" 
+codegen-units = 1 # LLVM can perform better optimizations using a single thread
+# Enabling LTO breaks the weak linkage used for the ulp_irq_handler function...
+# https://github.com/riscvarchive/riscv-gcc/issues/172
+lto = false
+

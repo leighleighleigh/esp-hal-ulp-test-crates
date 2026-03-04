@@ -1,3 +1,6 @@
+build CHIP="esp32s3":
+  cargo {{CHIP}}
+
 build-all:
   cargo esp32s3
   cargo esp32s2

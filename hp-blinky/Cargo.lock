@@ -700,6 +700,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
+name = "hp-blinky"
+version = "0.1.0"
+dependencies = [
+ "critical-section",
+ "esp-backtrace",
+ "esp-bootloader-esp-idf",
+ "esp-hal",
+ "esp-metadata-generated 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "esp-println",
+ "log",
+]
+
+[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1121,19 +1134,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e87a2ed6b42ec5e28cc3b94c09982969e9227600b2e3dcbc1db927a84c06bd69"
 
 [[package]]
-name = "ulp-esp32s3"
-version = "0.1.0"
-dependencies = [
- "critical-section",
- "esp-backtrace",
- "esp-bootloader-esp-idf",
- "esp-hal",
- "esp-metadata-generated 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "esp-println",
- "log",
-]
-
-[[package]]
 name = "unicode-ident"
 version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1230,11 +1230,3 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[patch.unused]]
-name = "esp-rtos"
-version = "0.2.0"
-
-[[patch.unused]]
-name = "esp-storage"
-version = "0.8.1"

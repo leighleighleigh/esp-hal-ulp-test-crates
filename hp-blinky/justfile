@@ -1,0 +1,10 @@
+ulp_project := "../ulp-blinky/"
+
+build CHIP="esp32s3":
+  #!/usr/bin/env bash
+  set +eu pipefail
+  pushd {{ulp_project}}
+  just build {{CHIP}}
+  popd
+  cargo {{CHIP}}
+

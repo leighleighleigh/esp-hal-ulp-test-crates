@@ -18,6 +18,7 @@ use log::info;
 // For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
 esp_bootloader_esp_idf::esp_app_desc!();
 
+
 #[allow(
     clippy::large_stack_frames,
     reason = "it's not unusual to allocate larger buffers etc. in main"
@@ -37,9 +38,12 @@ fn main() -> ! {
     }
 
     // load code to LP core
-    let ulp_core_code = load_lp_code!(
-        "../../blinky/target/riscv32imc-unknown-none-elf/release/blinky"
-    );
+    // Path to the blinky ULP payload changes depending on the host architecture
+    #[cfg(any(esp32s3,esp32s2))]
+    let ulp_core_code = load_lp_code!("../ulp-blinky/target/riscv32imc-unknown-none-elf/release/blinky");
+
+    #[cfg(esp32c6)]
+    let ulp_core_code = load_lp_code!("../ulp-blinky/target/riscv32imac-unknown-none-elf/release/blinky");
 
     // start ULP coprocessor
     ulp_core_code.run(&mut ulp_core, UlpCoreWakeupSource::HpCpu);

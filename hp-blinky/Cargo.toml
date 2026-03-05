@@ -5,45 +5,36 @@ rust-version = "1.88"
 version      = "0.1.0"
 
 [[bin]]
-name = "ulp-esp32s3"
-path = "./src/bin/main.rs"
-
-[features]
-default = []
-esp32s3 = []
-esp32s2 = []
-esp32c6 = []
+name = "app"
+path = "./src/main.rs"
 
 [dependencies]
-esp-hal = { version = "~1.0", features = ["esp32s3", "log-04", "unstable"] }
-esp-backtrace = { version = "0.18.1", features = [
-  "esp32s3",
-  "panic-handler",
-  "println",
-] }
-esp-println = { version = "0.16.1", features = ["esp32s3", "log-04"] }
-esp-bootloader-esp-idf = { version = "0.4.0", features = ["esp32s3", "log-04"] }
 log = "0.4.27"
 critical-section = "1.2.0"
+esp-backtrace = { version = "0.18.1", features = ["panic-handler", "println"] }
+esp-println = { version = "0.16.1", features = ["log-04"] }
+esp-bootloader-esp-idf = { version = "0.4.0", features = ["log-04"] }
+
+[dependencies.esp-hal]
+version = "1.0.0-rc.1"
+features = ["unstable", "log-04"]
 
 [patch.crates-io]
-# cat Cargo.toml | grep '\.esp-' | grep -o 'esp-\w*' | sort | uniq
-# = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-#esp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-#esp-storage = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-#esp-bootloader-esp-idf = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-#esp-rtos = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-#esp-backtrace = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-#esp-println = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
 esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
-#esp-storage = { path = "/home/leigh/Git/esp-hal/esp-storage" }
 esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
-#esp-rtos = { path = "/home/leigh/Git/esp-hal/esp-rtos" }
 esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
 esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
 
 [build-dependencies]
 esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }
+
+[features]
+default = ["esp32s3","ulp-app-blinky"]
+ulp-app-blinky = [] # use blinky app for ulp
+ulp-app-stompy = [] # use stompy app for ulp
+esp32s3 = ["esp-metadata-generated/esp32s3", "esp-hal/esp32s3", "esp-bootloader-esp-idf/esp32s3", "esp-backtrace/esp32s3", "esp-println/esp32s3" ]
+esp32s2 = ["esp-metadata-generated/esp32s2", "esp-hal/esp32s2", "esp-bootloader-esp-idf/esp32s2", "esp-backtrace/esp32s2", "esp-println/esp32s2" ]
+esp32c6 = ["esp-metadata-generated/esp32c6", "esp-hal/esp32c6", "esp-bootloader-esp-idf/esp32c6", "esp-backtrace/esp32c6", "esp-println/esp32c6" ]
 
 [profile.dev]
 # Rust debug is too slow.
@@ -51,10 +42,17 @@ esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }
 opt-level = "s"
 
 [profile.release]
-codegen-units    = 1     # LLVM can perform better optimizations using a single thread
-debug            = 2
-debug-assertions = false
-incremental      = false
-lto              = 'fat'
-opt-level        = 's'
-overflow-checks  = false
+debug = false
+strip = true
+#opt-level = "s"
+opt-level = 3
+codegen-units = 1
+lto = true
+
+#[patch.crates-io]
+#esp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
+#esp-backtrace = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
+#esp-println = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
+#esp-bootloader-esp-idf = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
+#esp-storage = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
+#esp-rtos = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }

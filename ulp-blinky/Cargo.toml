@@ -2,7 +2,7 @@
 name = "ulp-blinky"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.88.0"
+rust-version = "1.90.0"
 
 [[bin]]
 path = "src/main.rs"
@@ -21,11 +21,8 @@ panic-halt = "1.0.0"
 esp-lp-hal = "0.3.0"
 
 [patch.crates-io]
+#esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
 esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
-# # Un-deletes the RTC_CTRL.rtc_state0 register from the ULP PAC.
-# # This is needed to raise software interrupts from the ULP core, to the HP core.
-# esp32s3-ulp = { git = "https://github.com/esp-rs/esp-pacs.git", branch = "main" }
-# esp32s2-ulp = { git = "https://github.com/esp-rs/esp-pacs.git", branch = "main" }
 
 [build-dependencies]
 esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }

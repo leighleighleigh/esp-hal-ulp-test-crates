@@ -1,10 +1,47 @@
-ulp_project := "../ulp-blinky/"
+espflash_flags := "--no-skip --ignore_app_descriptor --partition-table ./partitions.csv"
 
-build CHIP="esp32s3":
+default:
+  @just try-flash esp32s3 && just stream
+
+build CHIP:
   #!/usr/bin/env bash
   set +eu pipefail
-  pushd {{ulp_project}}
-  just build {{CHIP}}
-  popd
+  echo "WARNING: No longer auto-builds the ulp-blinky code!!!">&2
   cargo {{CHIP}}
 
+try-flash CHIP:
+  #!/usr/bin/env bash
+  just build {{CHIP}}
+  while [ true ]; do
+    espflash flash {{espflash_flags}} -p /dev/ttySTOMP* $(just find-app-elf) && exit 0
+    sleep 1
+  done
+
+try-stream PORT:
+  #!/usr/bin/env bash
+  echo "# [$(date +%s)] Connected to {{PORT}}"
+  while [ true ]; do
+    stty -F {{PORT}} speed 115200 cs8 -cstopb -parenb -echo time 3 min 0 2>/dev/null && break
+    sleep 0.01
+  done
+
+  while [ true ]; do
+    cat {{PORT}} 2>/dev/null || break
+  done
+  echo "# [$(date +%s)] Disconnected from {{PORT}}"
+
+stream PORT="/dev/ttySTOMP*":
+  #!/usr/bin/env bash
+  while [ true ]; do
+    test -c {{PORT}} && just try-stream {{PORT}}
+    # if exit with Ctrl-C, return code will be 130.
+    # this should cause a break in the loop
+    if [ "$?" -eq 130 ];
+    then
+      break
+    fi
+  done
+
+find-app-elf:
+  #!/usr/bin/env bash
+  find ./target/xtensa-esp32s3-none-elf/ -maxdepth 2 -name "app" | head -n1

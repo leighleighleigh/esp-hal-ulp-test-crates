@@ -16,7 +16,7 @@ use panic_halt as _;
 const ADDRESS: u32 = 0x5000_2000;
 
 #[cfg(any(esp32s2, esp32s3))]
-const ADDRESS: u32 = 0x400;
+const ADDRESS: u32 = 0x1000;
 
 #[entry]
 fn main() -> ! {
@@ -29,6 +29,6 @@ fn main() -> ! {
         unsafe {
             ptr.write_volatile(i);
         }
-        Delay.delay_ms(1000);
+        Delay.delay_ms(100);
     }
 }

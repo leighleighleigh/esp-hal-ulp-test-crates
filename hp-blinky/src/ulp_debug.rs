@@ -3,6 +3,7 @@
 // and reading forums - Leigh Oliver
 // Originally written for stompy-ulp/hp-core project,
 // on the 2nd of January 2026.
+#![allow(dead_code)]
 use log::info;
 use esp_hal::peripherals;
 

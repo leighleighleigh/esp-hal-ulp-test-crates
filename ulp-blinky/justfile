@@ -1,7 +1,7 @@
 build CHIP="esp32s3":
   cargo {{CHIP}}
 
-build-all:
-  cargo esp32s3
-  cargo esp32s2
-  cargo esp32c6
+# Finds the last-built application file
+find-last-built-app-elf:
+  #!/usr/bin/env bash
+  find ./target/ -maxdepth 3 -name "blinky" -type f -printf "%A@ %p\n" | sort -r | head -n1 | cut -d' ' -f2

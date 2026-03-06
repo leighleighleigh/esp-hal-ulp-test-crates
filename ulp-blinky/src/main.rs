@@ -8,8 +8,9 @@
 #![no_std]
 #![no_main]
 
-use embedded_hal::delay::DelayNs;
-use esp_lp_hal::{delay::Delay, prelude::*};
+use esp_lp_hal::prelude::*;
+// use embedded_hal::delay::DelayNs;
+// use esp_lp_hal::delay::Delay;
 use panic_halt as _;
 
 #[cfg(esp32c6)]
@@ -19,16 +20,9 @@ const ADDRESS: u32 = 0x5000_2000;
 const ADDRESS: u32 = 0x1000;
 
 #[entry]
-fn main() -> ! {
-    let mut i: u32 = 0;
-
+fn main() {
     let ptr = ADDRESS as *mut u32;
-
-    loop {
-        i = i.wrapping_add(1u32);
-        unsafe {
-            ptr.write_volatile(i);
-        }
-        Delay.delay_ms(100);
-    }
+    let mut i : u32 = unsafe { ptr.read_volatile() };
+    i = i.wrapping_add(1u32);
+    unsafe { ptr.write_volatile(i); }
 }

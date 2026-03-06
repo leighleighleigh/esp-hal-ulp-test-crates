@@ -1,39 +1,90 @@
+# Build parameters
+chip := "esp32s3"
+hp_app_crate := "./" # This crate, built for the main processor
+built_ulp_apps := "./ulp-apps/" # Where compiled ULP apps are stored, for use by hp-crate
+ulp_app_crate := "../ulp-blinky/" # Crate containing ULP/LP code
+# Set the hp-app feature flag, which affects what ulp binary gets loaded.
+# This does not affect which ulp_app_crate gets built.
+cargo_flags := "--features=ulp-blinky"
 espflash_flags := "--no-skip --ignore_app_descriptor --partition-table ./partitions.csv"
 
 default:
-  @just try-flash esp32s3 && just stream
+  @just build && just flash && just stream
 
-build CHIP:
+# Builds this crate for CHIP,
+# and any ULP app it depends on too.
+build ULPAPP=ulp_app_crate HPAPP=hp_app_crate CHIP=chip:
   #!/usr/bin/env bash
   set +eu pipefail
-  echo "WARNING: No longer auto-builds the ulp-blinky code!!!">&2
+  just build-ulp-app {{ULPAPP}} {{CHIP}}
+  just build-hp-app {{HPAPP}} {{CHIP}}
+
+# Builds crate located at APPCRATE, for CHIP, using 'cargo {{CHIP}}' alias.
+build-hp-app APPCRATE CHIP:
+  #!/usr/bin/env bash
+  set +eu pipefail
+  appdir="$(realpath {{APPCRATE}})"
+  pushd "${appdir}" >/dev/null
+  cargo {{CHIP}} {{cargo_flags}}
+  popd >/dev/null
+
+# Enters the ulp project and builds it for the CHIP.
+# Requires a cargo alias to run 'cargo CHIP', in the ULP project.
+build-ulp-app APPCRATE CHIP:
+  #!/usr/bin/env bash
+  set +eu pipefail
+  appdir="$(realpath {{APPCRATE}})"
+  outdir="$(realpath {{built_ulp_apps}})"
+  pushd "${appdir}" >/dev/null
   cargo {{CHIP}}
+  appfile="${appdir}/$(just find-last-built-app-elf)"
+  popd >/dev/null
+  # Copy the built application to built_ulp_apps
+  appfile="$(realpath "${appfile}")"
+  appname="$(basename "${appfile}")"
+  outname="{{CHIP}}-ulp-${appname}"
+  cp -v "${appfile}" "${outdir}/${outname}"
 
-try-flash CHIP:
+
+# # Experimental! Use cargo-metadata to find the binary filename of the crate before it is built.
+# # If it returns more than 1 binary name, this is an error.
+# crate-binary-name APPCRATE:
+#   #!/usr/bin/env bash
+#   set +eu pipefail
+#   appdir="$(realpath {{APPCRATE}})"
+#   appmanifest="${appdir}/Cargo.toml"
+#   test -f "${appmanifest}"
+#   bintargetnames=`cargo metadata --format-version 1 --manifest-path "${appmanifest}" | jq '.packages[].targets | map(select(.kind[] == "bin"))[].name'`
+#   echo $bintargetnames
+
+# Repeatedly attempts to flash until successful
+flash APPFILE=`just find-last-built-app-elf`:
   #!/usr/bin/env bash
-  just build {{CHIP}}
   while [ true ]; do
-    espflash flash {{espflash_flags}} -p /dev/ttySTOMP* $(just find-app-elf) && exit 0
-    sleep 1
+    espflash flash {{espflash_flags}} -p /dev/ttySTOMP* {{APPFILE}} && exit 0
+    sleep 0.5
   done
-
-try-stream PORT:
-  #!/usr/bin/env bash
-  echo "# [$(date +%s)] Connected to {{PORT}}"
-  while [ true ]; do
-    stty -F {{PORT}} speed 115200 cs8 -cstopb -parenb -echo time 3 min 0 2>/dev/null && break
-    sleep 0.01
-  done
-
-  while [ true ]; do
-    cat {{PORT}} 2>/dev/null || break
-  done
-  echo "# [$(date +%s)] Disconnected from {{PORT}}"
 
 stream PORT="/dev/ttySTOMP*":
   #!/usr/bin/env bash
   while [ true ]; do
-    test -c {{PORT}} && just try-stream {{PORT}}
+    test -c {{PORT}}
+
+    # Manually stream the port to the console
+    if [ "$?" -eq 0 ];
+    then
+      echo "# [$(date +%s)] Connected to {{PORT}}"
+      while [ true ]; do
+        stty -F {{PORT}} speed 115200 cs8 -cstopb -parenb -echo time 3 min 0 2>/dev/null && break
+        sleep 0.01
+      done
+
+      while [ true ]; do
+        cat {{PORT}} 2>/dev/null || break
+      done
+      echo "# [$(date +%s)] Disconnected from {{PORT}}"
+    fi
+
     # if exit with Ctrl-C, return code will be 130.
     # this should cause a break in the loop
     if [ "$?" -eq 130 ];
@@ -42,6 +93,8 @@ stream PORT="/dev/ttySTOMP*":
     fi
   done
 
-find-app-elf:
+# Find the pasth to the most recently built application file
+find-last-built-app-elf APPNAME="app":
   #!/usr/bin/env bash
-  find ./target/xtensa-esp32s3-none-elf/ -maxdepth 2 -name "app" | head -n1
+  set +eu pipefail
+  find ./target/ -maxdepth 3 -name "{{APPNAME}}" -type f -printf "%A@ %p\n" | sort -r | head -n1 | cut -d' ' -f2

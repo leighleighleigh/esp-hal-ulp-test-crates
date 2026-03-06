@@ -1,12 +1,22 @@
 [package]
 edition      = "2024"
 name         = "hp-blinky"
-rust-version = "1.88"
+rust-version = "1.90"
 version      = "0.1.0"
 
 [[bin]]
 name = "app"
 path = "./src/main.rs"
+test = false
+bench = false
+
+[features]
+default = ["esp32s3","ulp-blinky"]
+ulp-blinky = [] # use blinky app for ulp
+ulp-stompy = [] # use stompy app for ulp
+esp32s3 = ["esp-metadata-generated/esp32s3", "esp-hal/esp32s3", "esp-bootloader-esp-idf/esp32s3", "esp-backtrace/esp32s3", "esp-println/esp32s3" ]
+esp32s2 = ["esp-metadata-generated/esp32s2", "esp-hal/esp32s2", "esp-bootloader-esp-idf/esp32s2", "esp-backtrace/esp32s2", "esp-println/esp32s2" ]
+esp32c6 = ["esp-metadata-generated/esp32c6", "esp-hal/esp32c6", "esp-bootloader-esp-idf/esp32c6", "esp-backtrace/esp32c6", "esp-println/esp32c6" ]
 
 [dependencies]
 log = "0.4.27"
@@ -19,22 +29,14 @@ esp-bootloader-esp-idf = { version = "0.4.0", features = ["log-04"] }
 version = "1.0.0-rc.1"
 features = ["unstable", "log-04"]
 
+[build-dependencies]
+esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }
+
 [patch.crates-io]
 esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
 esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
 esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
 esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
-
-[build-dependencies]
-esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }
-
-[features]
-default = ["esp32s3","ulp-app-blinky"]
-ulp-app-blinky = [] # use blinky app for ulp
-ulp-app-stompy = [] # use stompy app for ulp
-esp32s3 = ["esp-metadata-generated/esp32s3", "esp-hal/esp32s3", "esp-bootloader-esp-idf/esp32s3", "esp-backtrace/esp32s3", "esp-println/esp32s3" ]
-esp32s2 = ["esp-metadata-generated/esp32s2", "esp-hal/esp32s2", "esp-bootloader-esp-idf/esp32s2", "esp-backtrace/esp32s2", "esp-println/esp32s2" ]
-esp32c6 = ["esp-metadata-generated/esp32c6", "esp-hal/esp32c6", "esp-bootloader-esp-idf/esp32c6", "esp-backtrace/esp32c6", "esp-println/esp32c6" ]
 
 [profile.dev]
 # Rust debug is too slow.

@@ -63,7 +63,7 @@ fn main() -> ! {
 
 
     #[cfg(any(esp32s2,esp32s3))]
-    let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE).with_sleep_cycles(100);
+    let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE).with_sleep_cycles(53); // 53 cycles is about 10Hz counter increment (timer loop would be slightly faster)
 
     #[cfg(esp32c6)]
     let mut ulp_core = LpCore::new(peripherals.LP_CORE);

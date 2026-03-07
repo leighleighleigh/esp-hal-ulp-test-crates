@@ -25,6 +25,9 @@ fn main() {
     let mut i : u32 = unsafe { ptr.read_volatile() };
     i = i.wrapping_add(1u32);
     unsafe { ptr.write_volatile(i); }
-    // Wake up the main CPU
-    esp_lp_hal::ulp_wake_hp_core();
+
+    // Wake up the main CPU if the number is divisible by 10
+    if i % 10 == 0 {
+      esp_lp_hal::ulp_wake_hp_core();
+    }
 }

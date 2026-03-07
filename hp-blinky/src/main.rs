@@ -11,6 +11,8 @@ use log::info;
 use esp_backtrace as _;
 use esp_hal::clock::CpuClock;
 use esp_hal::main;
+use esp_hal::system::{SleepSource,wakeup_cause};
+use esp_hal::rtc_cntl::sleep::{UlpWakeupSource,RtcSleepConfig,WakeSource};
 
 #[allow(unused_imports)]
 use esp_hal::time::{Duration, Instant};
@@ -34,6 +36,12 @@ use esp_hal::gpio::{Flex,DriveMode,Pull,OutputConfig,RtcPin,RtcPinWithResistors}
 // This creates a default app-descriptor required by the esp-idf bootloader.
 // For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
 esp_bootloader_esp_idf::esp_app_desc!();
+
+
+const ULP_SLEEP_CYCLES : u32 = 53; // Affects how fast the ULP code is executed
+const ULP_CYCLES_PER_SECOND : u32 = 530; // Approximately how many cycles per second
+const SAMPLE_LOOP_COUNT : u32 = ULP_CYCLES_PER_SECOND / ULP_SLEEP_CYCLES; // How many loops to achieve approximately 1 second of sampling.
+
 
 #[allow(
     clippy::large_stack_frames,
@@ -62,64 +70,89 @@ fn main() -> ! {
         <GPIO2 as RtcPinWithResistors>::rtcio_pullup(&io_reg_en, true);
     }
 
-
-    #[cfg(any(esp32s2,esp32s3))]
-    let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE).with_sleep_cycles(530); // 53 cycles is about 10Hz counter increment (timer loop would be slightly faster)
-    #[cfg(esp32c6)]
-    let mut ulp_core = LpCore::new(peripherals.LP_CORE);
-
+    // Pointer to the shared counter variable in memory
     let counter_ptr = (0x5000_1000) as *mut u32;
-    // Reset the counter
-    unsafe { counter_ptr.write_volatile(0); }
-    
-    // Install ulp-apps/$CHIP-blinky
-    #[cfg(esp32s3)]
-    let ulp_core_code = load_lp_code!("./ulp-apps/esp32s3-ulp-blinky");
-    #[cfg(esp32s2)]
-    let ulp_core_code = load_lp_code!("./ulp-apps/esp32s2-ulp-blinky");
-    #[cfg(esp32c6)]
-    let ulp_core_code = load_lp_code!("./ulp-apps/esp32c6-ulp-blinky");
 
-    #[cfg(any(esp32s2,esp32s3))]
-    ulp_core_code.run(&mut ulp_core, UlpCoreWakeupSource::HpCpu);
-    #[cfg(esp32c6)]
-    ulp_core_code.run(&mut ulp_core, LpCoreWakeupSource::HpCpu);
+    // Check ESP wake-up condition.
+    let wakeup_reason = wakeup_cause();
+    match wakeup_reason {
+        SleepSource::Ulp => {
+            // Delay to allow USB to connect
+            let dly = Delay::new();
+            dly.delay_millis(500);
 
-    // Measure the ULP counter quickly in a loop,
-    // and try to estimate the frequency of ULP counter updates.
-    let mut last_print_time = Instant::now();
+            // Run 10 loops!
 
-    let _dly = Delay::new();
-    let mut last_change_time = Instant::now();
-    let mut last_counter = unsafe { counter_ptr.read_volatile() };
+            // Measure the ULP counter quickly in a loop,
+            // and try to estimate the frequency of ULP counter updates.
+            let mut loop_limit = SAMPLE_LOOP_COUNT;
 
-    let mut single_count_samples : u64 = 0;
-    let mut single_count_period : u64 = 0;
+            let mut last_change_time = Instant::now();
+            let mut last_counter = unsafe { counter_ptr.read_volatile() };
 
-    loop {
-        let new_count= unsafe { counter_ptr.read_volatile() };
-        let new_time = Instant::now();
+            let mut single_count_samples : u64 = 0;
+            let mut single_count_period : u64 = 0;
 
-        if new_count != last_counter {
-            let dc = new_count - last_counter;
-            let dt = new_time - last_change_time;
+            loop {
+                let new_count= unsafe { counter_ptr.read_volatile() };
+                let new_time = Instant::now();
 
-            // Calculate micros
-            let dtmicros = dt.as_micros();
-            // calculate micros per count
-            let count_period = dtmicros / (dc as u64);
+                if new_count != last_counter {
+                    let dc = new_count - last_counter;
+                    let dt = new_time - last_change_time;
 
-            single_count_samples += 1;
-            single_count_period += count_period;
-            last_counter = new_count;
-            last_change_time = new_time;
+                    // Calculate micros
+                    let dtmicros = dt.as_micros();
+                    // calculate micros per count
+                    let count_period = dtmicros / (dc as u64);
 
-            if last_print_time.elapsed().as_secs() >= 1 {
-                let avg_period = single_count_period / single_count_samples;
-                let avg_rate = 1000000.0 / (avg_period as f64);
-                info!("dc {}, dt {}, period {}, samples {}, avg_period {}, avg_rate {}",dc,dt,count_period,single_count_samples,avg_period,avg_rate);
-                last_print_time = Instant::now();
+                    single_count_samples += 1;
+                    single_count_period += count_period;
+                    last_counter = new_count;
+                    last_change_time = new_time;
+
+                    let avg_period = single_count_period / single_count_samples;
+                    let avg_rate = 1000000.0 / (avg_period as f64);
+                    info!("dc {}, dt {}, period {}, samples {}, avg_period {}, avg_rate {}",dc,dt,count_period,single_count_samples,avg_period,avg_rate);
+
+                    loop_limit -= 1;
+                    if loop_limit == 0 {
+                        break;
+                    }
+                }
             }
+        },
+        _ => {
+            // Else, reprogram the ULP
+            #[cfg(any(esp32s2,esp32s3))]
+            let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE).with_sleep_cycles(ULP_SLEEP_CYCLES); // 53 cycles is about 10Hz counter increment (timer loop would be slightly faster)
+            #[cfg(esp32c6)]
+            let mut ulp_core = LpCore::new(peripherals.LP_CORE);
+
+            // Load the application
+            #[cfg(esp32s3)]
+            let ulp_core_code = load_lp_code!("./ulp-apps/esp32s3-ulp-blinky");
+            #[cfg(esp32s2)]
+            let ulp_core_code = load_lp_code!("./ulp-apps/esp32s2-ulp-blinky");
+            #[cfg(esp32c6)]
+            let ulp_core_code = load_lp_code!("./ulp-apps/esp32c6-ulp-blinky");
+
+            // Reset the counter
+            unsafe { counter_ptr.write_volatile(0); }
+
+            #[cfg(any(esp32s2,esp32s3))]
+            ulp_core_code.run(&mut ulp_core, UlpCoreWakeupSource::HpCpu);
+            #[cfg(esp32c6)]
+            ulp_core_code.run(&mut ulp_core, LpCoreWakeupSource::HpCpu);
         }
     }
+
+    // Now go to sleep deep sleep, until the ulp wakes us up!
+    let mut rtc = esp_hal::rtc_cntl::Rtc::new(peripherals.LPWR);
+    let ulp_wakeup = UlpWakeupSource::new();
+    let wake_sources: &[&dyn WakeSource] = &[&ulp_wakeup];
+    let config : RtcSleepConfig = RtcSleepConfig::deep();
+    rtc.sleep(&config, &wake_sources);
+
+    loop {}
 }

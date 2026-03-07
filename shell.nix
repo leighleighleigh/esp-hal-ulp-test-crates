@@ -11,7 +11,7 @@ let
     # This will build esp-rs-src, chosen above
     esp-rs = pkgs.callPackage "${esp-rs-src}/esp-rs/default.nix" {
         pkgs = pkgs;
-        version = "1.90.0.0"; # Rust version
+        version = "1.88.0.0"; # Rust version
         crosstool-version = "15.2.0_20251204"; # Cross-compiler toolchain version (GCC)
         binutils-version = "16.3_20250913"; # Binutils version (GDB)
     };
@@ -37,21 +37,14 @@ pkgs.mkShell rec {
         pkgs.libusb1
         # for libudev
         pkgs.systemdMinimal
-        # for making fat32 images
-        pkgs.mtools
     ];
 
     LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";
 
     shellHook = ''
-    # custom bashrc stuff
-    export PS1_PREFIX="(esp-rs)"
-    . ~/.bashrc
-
-    #export LD_LIBRARY_PATH="''${LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}"
-    ## this is important - it tells rustup where to find the esp toolchain,
-    ## without needing to copy it into your local ~/.rustup/ folder.
-    #export RUSTUP_TOOLCHAIN=${esp-rs}
+    # set the shell logline or whatever it's called
+    export PS1="''${debian_chroot:+($debian_chroot)}\[\033[01;39m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\W\[\033[00m\]\$ "
+    export PS1="(esp-hal-ulp-tests)$PS1"
 
     # Load shell completions for espflash
     if (which espflash >/dev/null 2>&1); then

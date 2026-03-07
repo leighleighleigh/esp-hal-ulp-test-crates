@@ -38,9 +38,10 @@ use esp_hal::gpio::{Flex,DriveMode,Pull,OutputConfig,RtcPin,RtcPinWithResistors}
 esp_bootloader_esp_idf::esp_app_desc!();
 
 
-const ULP_SLEEP_CYCLES : u32 = 53; // Affects how fast the ULP code is executed
+const ULP_SLEEP_CYCLES : u32 = 265; // Affects how fast the ULP code is executed
 const ULP_CYCLES_PER_SECOND : u32 = 530; // Approximately how many cycles per second
-const SAMPLE_LOOP_COUNT : u32 = ULP_CYCLES_PER_SECOND / ULP_SLEEP_CYCLES; // How many loops to achieve approximately 1 second of sampling.
+//const SAMPLE_LOOP_COUNT : u32 = ULP_CYCLES_PER_SECOND / ULP_SLEEP_CYCLES; // How many loops to achieve approximately 1 second of sampling.
+const SAMPLE_LOOP_COUNT : u32 = 10;
 
 
 #[allow(

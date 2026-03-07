@@ -364,12 +364,12 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 [[package]]
 name = "esp-backtrace"
 version = "0.18.1"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#f5f135b4a0b41a06a3bc36a5b1e01b967867c229"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
 dependencies = [
  "cfg-if",
  "document-features",
  "esp-config",
- "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=devel)",
+ "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features)",
  "esp-println",
  "heapless 0.9.2",
  "riscv",
@@ -380,14 +380,14 @@ dependencies = [
 [[package]]
 name = "esp-bootloader-esp-idf"
 version = "0.4.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#f5f135b4a0b41a06a3bc36a5b1e01b967867c229"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
 dependencies = [
  "cfg-if",
  "document-features",
  "embedded-storage",
  "esp-config",
  "esp-hal-procmacros",
- "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=devel)",
+ "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features)",
  "esp-rom-sys",
  "jiff",
  "log",
@@ -397,10 +397,10 @@ dependencies = [
 [[package]]
 name = "esp-config"
 version = "0.6.1"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#f5f135b4a0b41a06a3bc36a5b1e01b967867c229"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
 dependencies = [
  "document-features",
- "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=devel)",
+ "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features)",
  "serde",
  "serde_yaml",
  "somni-expr",
@@ -409,7 +409,7 @@ dependencies = [
 [[package]]
 name = "esp-hal"
 version = "1.0.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#f5f135b4a0b41a06a3bc36a5b1e01b967867c229"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
 dependencies = [
  "bitfield",
  "bitflags",
@@ -434,7 +434,7 @@ dependencies = [
  "enumset",
  "esp-config",
  "esp-hal-procmacros",
- "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=devel)",
+ "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features)",
  "esp-riscv-rt",
  "esp-rom-sys",
  "esp-sync",
@@ -464,7 +464,7 @@ dependencies = [
 [[package]]
 name = "esp-hal-procmacros"
 version = "0.21.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#f5f135b4a0b41a06a3bc36a5b1e01b967867c229"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
 dependencies = [
  "document-features",
  "object",
@@ -484,15 +484,15 @@ checksum = "9a93e39c8ad8d390d248dc7b9f4b59a873f313bf535218b8e2351356972399e3"
 [[package]]
 name = "esp-metadata-generated"
 version = "0.3.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#f5f135b4a0b41a06a3bc36a5b1e01b967867c229"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
 
 [[package]]
 name = "esp-println"
 version = "0.16.1"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#f5f135b4a0b41a06a3bc36a5b1e01b967867c229"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
 dependencies = [
  "document-features",
- "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=devel)",
+ "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features)",
  "esp-sync",
  "log",
  "portable-atomic",
@@ -501,7 +501,7 @@ dependencies = [
 [[package]]
 name = "esp-riscv-rt"
 version = "0.13.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#f5f135b4a0b41a06a3bc36a5b1e01b967867c229"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
 dependencies = [
  "document-features",
  "riscv",
@@ -511,23 +511,23 @@ dependencies = [
 [[package]]
 name = "esp-rom-sys"
 version = "0.1.3"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#f5f135b4a0b41a06a3bc36a5b1e01b967867c229"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
 dependencies = [
  "cfg-if",
  "document-features",
- "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=devel)",
+ "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features)",
 ]
 
 [[package]]
 name = "esp-sync"
 version = "0.1.1"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#f5f135b4a0b41a06a3bc36a5b1e01b967867c229"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
 dependencies = [
  "cfg-if",
  "document-features",
  "embassy-sync 0.6.2",
  "embassy-sync 0.7.2",
- "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=devel)",
+ "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features)",
  "riscv",
  "xtensa-lx",
 ]
@@ -548,7 +548,7 @@ dependencies = [
 [[package]]
 name = "esp32"
 version = "0.39.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=284111a#284111a606d1e36de06e3284351aa1acf7b056d4"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=b6e370c#b6e370c1d8b344fe0808c007b6ee565bf160c82c"
 dependencies = [
  "critical-section",
  "vcell",
@@ -557,7 +557,7 @@ dependencies = [
 [[package]]
 name = "esp32c2"
 version = "0.28.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=284111a#284111a606d1e36de06e3284351aa1acf7b056d4"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=b6e370c#b6e370c1d8b344fe0808c007b6ee565bf160c82c"
 dependencies = [
  "critical-section",
  "vcell",
@@ -566,7 +566,7 @@ dependencies = [
 [[package]]
 name = "esp32c3"
 version = "0.31.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=284111a#284111a606d1e36de06e3284351aa1acf7b056d4"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=b6e370c#b6e370c1d8b344fe0808c007b6ee565bf160c82c"
 dependencies = [
  "critical-section",
  "vcell",
@@ -575,7 +575,7 @@ dependencies = [
 [[package]]
 name = "esp32c6"
 version = "0.22.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=284111a#284111a606d1e36de06e3284351aa1acf7b056d4"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=b6e370c#b6e370c1d8b344fe0808c007b6ee565bf160c82c"
 dependencies = [
  "critical-section",
  "vcell",
@@ -584,7 +584,7 @@ dependencies = [
 [[package]]
 name = "esp32h2"
 version = "0.18.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=284111a#284111a606d1e36de06e3284351aa1acf7b056d4"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=b6e370c#b6e370c1d8b344fe0808c007b6ee565bf160c82c"
 dependencies = [
  "critical-section",
  "vcell",
@@ -593,7 +593,7 @@ dependencies = [
 [[package]]
 name = "esp32s2"
 version = "0.30.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=284111a#284111a606d1e36de06e3284351aa1acf7b056d4"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=b6e370c#b6e370c1d8b344fe0808c007b6ee565bf160c82c"
 dependencies = [
  "critical-section",
  "vcell",
@@ -602,7 +602,7 @@ dependencies = [
 [[package]]
 name = "esp32s3"
 version = "0.34.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=284111a#284111a606d1e36de06e3284351aa1acf7b056d4"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=b6e370c#b6e370c1d8b344fe0808c007b6ee565bf160c82c"
 dependencies = [
  "critical-section",
  "vcell",
@@ -1219,7 +1219,7 @@ dependencies = [
 [[package]]
 name = "xtensa-lx"
 version = "0.13.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#f5f135b4a0b41a06a3bc36a5b1e01b967867c229"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
 dependencies = [
  "critical-section",
 ]
@@ -1227,7 +1227,7 @@ dependencies = [
 [[package]]
 name = "xtensa-lx-rt"
 version = "0.21.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#f5f135b4a0b41a06a3bc36a5b1e01b967867c229"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
 dependencies = [
  "document-features",
  "xtensa-lx",
@@ -1237,7 +1237,7 @@ dependencies = [
 [[package]]
 name = "xtensa-lx-rt-proc-macros"
 version = "0.5.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#f5f135b4a0b41a06a3bc36a5b1e01b967867c229"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
 dependencies = [
  "proc-macro2",
  "quote",

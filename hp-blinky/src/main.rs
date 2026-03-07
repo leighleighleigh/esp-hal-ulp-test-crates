@@ -19,8 +19,6 @@ use esp_hal::gpio::rtc_io::{LowPowerOutput,LowPowerInput,LowPowerOutputOpenDrain
 
 #[cfg(any(esp32s2,esp32s3))]
 mod ulp_debug;
-#[allow(unused_imports)]
-use ulp_debug::{dump_coproc_pc_instructions, read_coproc_debug};
 
 #[cfg(esp32c6)]
 use esp_hal::lp_core::{LpCore, LpCoreWakeupSource};
@@ -63,7 +61,7 @@ fn main() -> ! {
     #[cfg(feature = "ulp-stompy")]
     {
         // Install ulp-apps/esp32s3-stompy-ulp-lp-core-ws2812b
-        #[cfg(any(esp32s3))]
+        #[cfg(esp32s3)]
         let ulp_core_code = load_lp_code!("./ulp-apps/esp32s3-ulp-stompy");
 
         let ulp_arg_pin0 = LowPowerOutputOpenDrain::new(peripherals.GPIO0);
@@ -111,7 +109,7 @@ fn main() -> ! {
 
     // Measure the ULP counter quickly in a loop,
     // and try to estimate the frequency of ULP counter updates.
-    let dly = Delay::new();
+    let _dly = Delay::new();
     let mut last_change_time = Instant::now();
     let mut last_counter = unsafe { counter_ptr.read_volatile() };
     let mut first = true;

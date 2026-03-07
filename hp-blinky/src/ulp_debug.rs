@@ -7,6 +7,10 @@
 use log::info;
 use esp_hal::peripherals;
 
+pub trait FromRegister {
+    fn read() -> Self;
+}
+
 #[derive(Debug)]
 #[allow(unused)]
 pub struct SarCocpuState {
@@ -16,6 +20,32 @@ pub struct SarCocpuState {
     trap: bool,
     ebreak: bool
 }
+
+impl FromRegister for SarCocpuState {
+    #[cfg(esp32s3)]
+    fn read() -> Self {
+        let r = unsafe { &*peripherals::SENS::PTR }.sar_cocpu_state().read();
+        SarCocpuState {
+            clk_en_st: r.sar_cocpu_clk_en_st().bit_is_set(),
+            reset_n: r.sar_cocpu_reset_n().bit_is_set(),
+            eoi: r.sar_cocpu_eoi().bit_is_set(),
+            trap: r.sar_cocpu_trap().bit_is_set(),
+            ebreak: r.sar_cocpu_ebreak().bit_is_set(),
+        }
+    }
+    #[cfg(esp32s2)]
+    fn read() -> Self {
+        let r = unsafe { &*peripherals::SENS::PTR }.sar_cocpu_state().read();
+        SarCocpuState {
+            clk_en_st: r.cocpu_clk_en().bit_is_set(),
+            reset_n: r.cocpu_reset_n().bit_is_set(),
+            eoi: r.cocpu_eoi().bit_is_set(),
+            trap: r.cocpu_trap().bit_is_set(),
+            ebreak: r.cocpu_ebreak().bit_is_set(),
+        }
+    }
+}
+
 
 #[derive(Debug)]
 #[allow(unused)]
@@ -28,38 +58,46 @@ pub struct CocpuDebug {
     state : SarCocpuState
 }
 
-fn read_coproc_state() -> SarCocpuState {
-    // 1. Trigger the debug prompt
-    let r = unsafe { &*peripherals::SENS::PTR }.sar_cocpu_state().read();
-    SarCocpuState {
-        clk_en_st: r.sar_cocpu_clk_en_st().bit_is_set(),
-        reset_n: r.sar_cocpu_reset_n().bit_is_set(),
-        eoi: r.sar_cocpu_eoi().bit_is_set(),
-        trap: r.sar_cocpu_trap().bit_is_set(),
-        ebreak: r.sar_cocpu_ebreak().bit_is_set(),
+impl CocpuDebug {
+    fn trigger_debug() {
+        #[cfg(esp32s3)]
+        unsafe {{ &*peripherals::SENS::PTR }.sar_cocpu_state().write(|w| w.sar_cocpu_dbg_trigger().set_bit())};
+        #[cfg(esp32s2)]
+        unsafe {{ &*peripherals::SENS::PTR }.sar_cocpu_state().write(|w| w.cocpu_dbg_trigger().set_bit())};
+    }
+    fn read_debug() -> Self {
+        let r = unsafe { &*peripherals::SENS::PTR }.sar_cocpu_debug().read();
+
+        #[cfg(esp32s3)]
+        return CocpuDebug {
+            pc: r.sar_cocpu_pc().bits(),
+            mem_valid: r.sar_cocpu_mem_vld().bit_is_set(),
+            mem_ready: r.sar_cocpu_mem_rdy().bit_is_set(),
+            write_enable: r.sar_cocpu_mem_wen().bits(),
+            mem_address: r.sar_cocpu_mem_addr().bits(),
+            state: SarCocpuState::read(),
+        };
+
+        #[cfg(esp32s2)]
+        return CocpuDebug {
+            pc: r.cocpu_pc().bits(),
+            mem_valid: r.cocpu_mem_vld().bit_is_set(),
+            mem_ready: r.cocpu_mem_rdy().bit_is_set(),
+            write_enable: r.cocpu_mem_wen().bits(),
+            mem_address: r.cocpu_mem_addr().bits(),
+            state: SarCocpuState::read(),
+        };
     }
 }
 
-pub fn read_coproc_debug() -> CocpuDebug {
-    // Forum quote
-    // "SENS_SAR_COCPU_DEBUG_REG might be helpful. Set SENS_SAR_COCPU_STATE_REG[SENS_COCPU_DBG_TRIGGER] to update (I'm not sure it's immediate though?)."
-
-    // 1. Trigger the debug prompt
-    unsafe {
-        { &*peripherals::SENS::PTR }
-            .sar_cocpu_state()
-            .write(|w| w.sar_cocpu_dbg_trigger().set_bit());
-    };
-
-    // 2. Read the debug register
-    let r = unsafe { &*peripherals::SENS::PTR }.sar_cocpu_debug().read();
-    CocpuDebug {
-        pc: r.sar_cocpu_pc().bits(),
-        mem_valid: r.sar_cocpu_mem_vld().bit_is_set(),
-        mem_ready: r.sar_cocpu_mem_rdy().bit_is_set(),
-        write_enable: r.sar_cocpu_mem_wen().bits(),
-        mem_address: r.sar_cocpu_mem_addr().bits(),
-        state: read_coproc_state()
+impl FromRegister for CocpuDebug {
+    fn read() -> Self {
+        // Forum quote:
+        // "SENS_SAR_COCPU_DEBUG_REG might be helpful. Set SENS_SAR_COCPU_STATE_REG[SENS_COCPU_DBG_TRIGGER] to update (I'm not sure it's immediate though?)."
+        // 1. Trigger the debug prompt
+        CocpuDebug::trigger_debug();
+        // 2. Read the debug register
+        CocpuDebug::read_debug()
     }
 }
 

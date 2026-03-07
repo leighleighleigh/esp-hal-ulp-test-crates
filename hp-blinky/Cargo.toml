@@ -11,7 +11,7 @@ test = false
 bench = false
 
 [features]
-default = ["esp32s3","ulp-blinky"]
+default = [] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.
 ulp-blinky = [] # use blinky app for ulp
 ulp-stompy = [] # use stompy app for ulp
 esp32s3 = ["esp-metadata-generated/esp32s3", "esp-hal/esp32s3", "esp-bootloader-esp-idf/esp32s3", "esp-backtrace/esp32s3", "esp-println/esp32s3" ]

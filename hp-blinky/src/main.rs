@@ -63,7 +63,7 @@ fn main() -> ! {
 
 
     #[cfg(any(esp32s2,esp32s3))]
-    let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE).with_sleep_cycles(53); // 53 cycles is about 10Hz counter increment (timer loop would be slightly faster)
+    let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE).with_sleep_cycles(530); // 53 cycles is about 10Hz counter increment (timer loop would be slightly faster)
 
     #[cfg(esp32c6)]
     let mut ulp_core = LpCore::new(peripherals.LP_CORE);
@@ -119,40 +119,39 @@ fn main() -> ! {
 
     // Measure the ULP counter quickly in a loop,
     // and try to estimate the frequency of ULP counter updates.
+    let mut last_print_time = Instant::now();
+
     let _dly = Delay::new();
     let mut last_change_time = Instant::now();
     let mut last_counter = unsafe { counter_ptr.read_volatile() };
-    let mut first = true;
 
-    // Keep adding up the delta counts and delta times,
-    // and make a rolling average of the rate.
-    let mut rolling_counts : u32 = 0;
-    let mut rolling_deltas : u32 = 0;
+    let mut single_count_samples : u64 = 0;
+    let mut single_count_period : u64 = 0;
 
     loop {
         let new_count= unsafe { counter_ptr.read_volatile() };
         let new_time = Instant::now();
 
         if new_count != last_counter {
-            if !first {
-                let dc = new_count - last_counter;
-                let dt = new_time - last_change_time;
+            let dc = new_count - last_counter;
+            let dt = new_time - last_change_time;
 
-                rolling_counts += dc;
-                rolling_deltas += dt.as_millis() as u32;
+            // Calculate micros
+            let dtmicros = dt.as_micros();
+            // calculate micros per count
+            let count_period = dtmicros / (dc as u64);
 
-                // Print the updated rollling amount
-                // calculate the rate of single counts, in Hertz.
-                // for now, just uses massive expensive floating-point operations for this, for accuracy! :)
-                let count_rate : f64 = (rolling_counts as f64) / ((rolling_deltas as f64) / 1000.0);
-                info!("Rolling count {}, delta {}ms, rate {}Hz", rolling_counts,rolling_deltas,count_rate);
-            }
-            first = false;
-
-            // Calculate delta, calculate time delta
+            single_count_samples += 1;
+            single_count_period += count_period;
             last_counter = new_count;
-            last_change_time = Instant::now();
-        }
+            last_change_time = new_time;
 
+            if last_print_time.elapsed().as_secs() >= 1 {
+                let avg_period = single_count_period / single_count_samples;
+                let avg_rate = 1000000.0 / (avg_period as f64);
+                info!("dc {}, dt {}, period {}, samples {}, avg_period {}, avg_rate {}",dc,dt,count_period,single_count_samples,avg_period,avg_rate);
+                last_print_time = Instant::now();
+            }
+        }
     }
 }

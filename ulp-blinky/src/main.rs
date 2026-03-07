@@ -25,4 +25,6 @@ fn main() {
     let mut i : u32 = unsafe { ptr.read_volatile() };
     i = i.wrapping_add(1u32);
     unsafe { ptr.write_volatile(i); }
+    // Wake up the main CPU
+    esp_lp_hal::ulp_wake_hp_core();
 }

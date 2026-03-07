@@ -3,9 +3,6 @@ chip := "esp32s3"
 hp_app_crate := "./" # This crate, built for the main processor
 built_ulp_apps := "./ulp-apps/" # Where compiled ULP apps are stored, for use by hp-crate
 ulp_app_crate := "../ulp-blinky/" # Crate containing ULP/LP code
-# Set the hp-app feature flag, which affects what ulp binary gets loaded.
-# This does not affect which ulp_app_crate gets built.
-cargo_flags := "--features=ulp-blinky"
 espflash_flags := "--no-skip --ignore_app_descriptor --partition-table ./partitions.csv"
 
 default:
@@ -25,7 +22,7 @@ build-hp-app APPCRATE CHIP:
   set +eu pipefail
   appdir="$(realpath {{APPCRATE}})"
   pushd "${appdir}" >/dev/null
-  cargo {{CHIP}} {{cargo_flags}}
+  cargo {{CHIP}}
   popd >/dev/null
 
 # Enters the ulp project and builds it for the CHIP.

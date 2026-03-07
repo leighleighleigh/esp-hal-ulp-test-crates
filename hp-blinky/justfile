@@ -68,23 +68,7 @@ flash APPFILE=`just find-last-built-app-elf`:
 stream PORT="/dev/ttySTOMP*":
   #!/usr/bin/env bash
   while [ true ]; do
-    test -c {{PORT}}
-
-    # Manually stream the port to the console
-    if [ "$?" -eq 0 ];
-    then
-      echo "# [$(date +%s)] Connected to {{PORT}}"
-      while [ true ]; do
-        stty -F {{PORT}} speed 115200 cs8 -cstopb -parenb -echo time 3 min 0 2>/dev/null && break
-        sleep 0.01
-      done
-
-      while [ true ]; do
-        cat {{PORT}} 2>/dev/null || break
-      done
-      echo "# [$(date +%s)] Disconnected from {{PORT}}"
-    fi
-
+    test -c {{PORT}} && just try-stream {{PORT}}
     # if exit with Ctrl-C, return code will be 130.
     # this should cause a break in the loop
     if [ "$?" -eq 130 ];
@@ -92,6 +76,21 @@ stream PORT="/dev/ttySTOMP*":
       break
     fi
   done
+
+[private]
+try-stream PORT:
+  #!/usr/bin/env bash
+  echo "# [$(date +%s)] Connected to {{PORT}}"
+  while [ true ]; do
+    stty -F {{PORT}} speed 115200 cs8 -cstopb -parenb -echo time 3 min 0 2>/dev/null && break
+    sleep 0.01
+  done
+
+  while [ true ]; do
+    cat {{PORT}} 2>/dev/null || break
+  done
+  echo "# [$(date +%s)] Disconnected from {{PORT}}"
+
 
 # Find the pasth to the most recently built application file
 find-last-built-app-elf APPNAME="app":

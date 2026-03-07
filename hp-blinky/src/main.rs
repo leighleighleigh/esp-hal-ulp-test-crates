@@ -1,5 +1,11 @@
 #![no_std]
 #![no_main]
+#![deny(
+    clippy::mem_forget,
+    reason = "mem::forget is generally not safe to do with esp_hal types, especially those \
+    holding buffers for the duration of a data transfer."
+)]
+#![deny(clippy::large_stack_frames)]
 
 use log::info;
 use esp_backtrace as _;
@@ -31,6 +37,10 @@ use esp_hal::gpio::{Flex,DriveMode,Pull,OutputConfig,RtcPin,RtcPinWithResistors}
 // For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
 esp_bootloader_esp_idf::esp_app_desc!();
 
+#[allow(
+    clippy::large_stack_frames,
+    reason = "it's not unusual to allocate larger buffers etc. in main"
+)]
 #[main]
 fn main() -> ! {
     esp_println::logger::init_logger_from_env();
@@ -53,7 +63,7 @@ fn main() -> ! {
 
 
     #[cfg(any(esp32s2,esp32s3))]
-    let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE);
+    let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE).with_sleep_cycles(100);
 
     #[cfg(esp32c6)]
     let mut ulp_core = LpCore::new(peripherals.LP_CORE);

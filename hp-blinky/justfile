@@ -61,11 +61,11 @@ build-ulp-app APPCRATE CHIP:
 flash APPFILE=`just find-last-built-app-elf`:
   #!/usr/bin/env bash
   while [ true ]; do
-    espflash flash {{espflash_flags}} -p /dev/ttySTOMP* {{APPFILE}} && exit 0
+    espflash flash {{espflash_flags}} -p /dev/ttyACM* {{APPFILE}} && exit 0
     sleep 0.5
   done
 
-stream PORT="/dev/ttySTOMP*":
+stream PORT="/dev/ttyACM*":
   #!/usr/bin/env bash
   while [ true ]; do
     test -c {{PORT}} && just try-stream {{PORT}}

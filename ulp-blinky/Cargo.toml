@@ -21,8 +21,8 @@ panic-halt = "1.0.0"
 esp-lp-hal = "0.3.0"
 
 [patch.crates-io]
-#esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
+esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
+#esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
 
 [build-dependencies]
 esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }

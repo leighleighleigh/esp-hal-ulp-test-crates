@@ -32,12 +32,6 @@ features = ["unstable", "log-04"]
 [build-dependencies]
 esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }
 
-[patch.crates-io]
-esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
-esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
-esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
-esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
-
 [profile.dev]
 # Rust debug is too slow.
 # For debug builds always builds with some optimization
@@ -51,10 +45,15 @@ opt-level = 3
 codegen-units = 1
 lto = true
 
+# Local development
 #[patch.crates-io]
-#esp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-#esp-backtrace = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-#esp-println = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-#esp-bootloader-esp-idf = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-#esp-storage = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-#esp-rtos = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
+#esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
+#esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
+#esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
+#esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
+
+[patch.crates-io]
+esp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
+esp-bootloader-esp-idf = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
+esp-backtrace = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
+esp-println = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }

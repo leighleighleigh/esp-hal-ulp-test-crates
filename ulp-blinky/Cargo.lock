@@ -48,6 +48,7 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 [[package]]
 name = "esp-hal-procmacros"
 version = "0.21.0"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#4ceebcd6817c158326a5a0d39fbaf24920d0d4c3"
 dependencies = [
  "document-features",
  "proc-macro-crate",
@@ -60,13 +61,14 @@ dependencies = [
 [[package]]
 name = "esp-lp-hal"
 version = "0.3.0"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#4ceebcd6817c158326a5a0d39fbaf24920d0d4c3"
 dependencies = [
  "cfg-if",
  "document-features",
  "embedded-hal",
  "embedded-hal-nb",
  "esp-hal-procmacros",
- "esp-metadata-generated 0.3.0",
+ "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=devel)",
  "esp32c6-lp",
  "esp32s2-ulp",
  "esp32s3-ulp",
@@ -77,12 +79,13 @@ dependencies = [
 [[package]]
 name = "esp-metadata-generated"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a93e39c8ad8d390d248dc7b9f4b59a873f313bf535218b8e2351356972399e3"
 
 [[package]]
 name = "esp-metadata-generated"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a93e39c8ad8d390d248dc7b9f4b59a873f313bf535218b8e2351356972399e3"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#4ceebcd6817c158326a5a0d39fbaf24920d0d4c3"
 
 [[package]]
 name = "esp32c6-lp"

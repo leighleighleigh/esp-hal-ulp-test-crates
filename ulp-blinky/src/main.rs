@@ -28,6 +28,6 @@ fn main() {
 
     // Wake up the main CPU if the number is divisible by 10
     if i % 10 == 0 {
-      esp_lp_hal::ulp_wake_hp_core();
+      esp_lp_hal::wake_hp_core();
     }
 }

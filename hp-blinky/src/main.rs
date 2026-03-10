@@ -21,7 +21,7 @@ use esp_hal::delay::Delay;
 use esp_hal::load_lp_code;
 
 #[cfg(any(esp32s2,esp32s3))]
-use esp_hal::ulp_core::{UlpCore,UlpCoreWakeupSource};
+use esp_hal::ulp_core::{UlpCore,UlpCoreWakeupSource,UlpCoreSleepCycles};
 
 #[cfg(any(esp32s2,esp32s3))]
 mod ulp_debug;
@@ -38,7 +38,7 @@ use esp_hal::gpio::{Flex,DriveMode,Pull,OutputConfig,RtcPin,RtcPinWithResistors}
 esp_bootloader_esp_idf::esp_app_desc!();
 
 
-const ULP_SLEEP_CYCLES : u32 = 265; // Affects how fast the ULP code is executed
+const ULP_SLEEP_CYCLES : u32 = 53; // Affects how fast the ULP code is executed
 const ULP_CYCLES_PER_SECOND : u32 = 530; // Approximately how many cycles per second
 //const SAMPLE_LOOP_COUNT : u32 = ULP_CYCLES_PER_SECOND / ULP_SLEEP_CYCLES; // How many loops to achieve approximately 1 second of sampling.
 const SAMPLE_LOOP_COUNT : u32 = 10;
@@ -126,7 +126,7 @@ fn main() -> ! {
         _ => {
             // Else, reprogram the ULP
             #[cfg(any(esp32s2,esp32s3))]
-            let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE).with_sleep_cycles(ULP_SLEEP_CYCLES); // 53 cycles is about 10Hz counter increment (timer loop would be slightly faster)
+            let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE).with_sleep_cycles(UlpCoreSleepCycles::new(ULP_SLEEP_CYCLES)); // 53 cycles is about 10Hz counter increment (timer loop would be slightly faster)
             #[cfg(esp32c6)]
             let mut ulp_core = LpCore::new(peripherals.LP_CORE);
 

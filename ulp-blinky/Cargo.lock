@@ -48,7 +48,7 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 [[package]]
 name = "esp-hal-procmacros"
 version = "0.21.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#3c3c81260d71d361337e28a91dee3b5a5e86e0cd"
 dependencies = [
  "document-features",
  "proc-macro-crate",
@@ -61,14 +61,14 @@ dependencies = [
 [[package]]
 name = "esp-lp-hal"
 version = "0.3.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#3c3c81260d71d361337e28a91dee3b5a5e86e0cd"
 dependencies = [
  "cfg-if",
  "document-features",
  "embedded-hal",
  "embedded-hal-nb",
  "esp-hal-procmacros",
- "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features)",
+ "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=devel)",
  "esp32c6-lp",
  "esp32s2-ulp",
  "esp32s3-ulp",
@@ -85,13 +85,12 @@ checksum = "9a93e39c8ad8d390d248dc7b9f4b59a873f313bf535218b8e2351356972399e3"
 [[package]]
 name = "esp-metadata-generated"
 version = "0.3.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fdevel-ulp-features#8c6f68229459566285ab70984e186f5d4c195f5f"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=devel#3c3c81260d71d361337e28a91dee3b5a5e86e0cd"
 
 [[package]]
 name = "esp32c6-lp"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1bd02a62890ad56dd8c8e4a993decaad03265a8fdf1e965948ddad19ad35065"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=b6e370c#b6e370c1d8b344fe0808c007b6ee565bf160c82c"
 dependencies = [
  "critical-section",
  "vcell",
@@ -100,8 +99,7 @@ dependencies = [
 [[package]]
 name = "esp32s2-ulp"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75b00c203c3e0226fdfeb828376a2f290ace5b9239ab78aee81c2ec1083ac83c"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=b6e370c#b6e370c1d8b344fe0808c007b6ee565bf160c82c"
 dependencies = [
  "critical-section",
  "vcell",
@@ -110,8 +108,7 @@ dependencies = [
 [[package]]
 name = "esp32s3-ulp"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae6d479079c506628d634d9f17865f2ea795b30b601bda43f2245049c15f164d"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=b6e370c#b6e370c1d8b344fe0808c007b6ee565bf160c82c"
 dependencies = [
  "critical-section",
  "vcell",

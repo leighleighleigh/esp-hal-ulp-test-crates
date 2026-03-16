@@ -21,7 +21,7 @@ use esp_hal::delay::Delay;
 use esp_hal::load_lp_code;
 
 #[cfg(any(esp32s2,esp32s3))]
-use esp_hal::ulp_core::{UlpCore,UlpCoreWakeupSource,UlpCoreSleepCycles};
+use esp_hal::ulp_core::{UlpCore,UlpCoreWakeupSource,UlpCoreTimerCycles};
 
 #[cfg(any(esp32s2,esp32s3))]
 mod ulp_debug;
@@ -126,7 +126,7 @@ fn main() -> ! {
         _ => {
             // Else, reprogram the ULP
             #[cfg(any(esp32s2,esp32s3))]
-            let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE).with_sleep_cycles(UlpCoreSleepCycles::new(ULP_SLEEP_CYCLES)); // 53 cycles is about 10Hz counter increment (timer loop would be slightly faster)
+            let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE);
             #[cfg(esp32c6)]
             let mut ulp_core = LpCore::new(peripherals.LP_CORE);
 
@@ -142,7 +142,8 @@ fn main() -> ! {
             unsafe { counter_ptr.write_volatile(0); }
 
             #[cfg(any(esp32s2,esp32s3))]
-            ulp_core_code.run(&mut ulp_core, UlpCoreWakeupSource::HpCpu);
+            ulp_core_code.run(&mut ulp_core, UlpCoreWakeupSource::Timer(UlpCoreTimerCycles::new(ULP_SLEEP_CYCLES)));
+
             #[cfg(esp32c6)]
             ulp_core_code.run(&mut ulp_core, LpCoreWakeupSource::HpCpu);
         }

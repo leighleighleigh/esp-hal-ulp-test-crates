@@ -51,7 +51,7 @@ lto = true
 #esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
 
 [patch.crates-io]
-esp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-esp-bootloader-esp-idf = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-esp-backtrace = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
-esp-println = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "devel" }
+esp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "leighleighleigh/ulp-timer" }
+esp-bootloader-esp-idf = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "leighleighleigh/ulp-timer" }
+esp-backtrace = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "leighleighleigh/ulp-timer" }
+esp-println = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "leighleighleigh/ulp-timer" }

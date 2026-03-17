@@ -20,7 +20,7 @@ const ADDRESS: u32 = 0x5000_2000;
 const ADDRESS: u32 = 0x1000;
 
 #[entry]
-fn main() {
+fn main() -> ! {
     let ptr = ADDRESS as *mut u32;
     let mut i : u32 = unsafe { ptr.read_volatile() };
     i = i.wrapping_add(1u32);
@@ -30,4 +30,6 @@ fn main() {
     if i % 10 == 0 {
       esp_lp_hal::wake_hp_core();
     }
+
+    loop {}
 }

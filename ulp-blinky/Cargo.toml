@@ -18,11 +18,7 @@ panic-halt = "1.0.0"
 # LP HAL from esp-hal,
 # which will need a chip feature-flag specified,
 # in order to provide the right linker script.
-esp-lp-hal = "0.3.0"
-
-[patch.crates-io]
-esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "leighleighleigh/ulp-timer" }
-#esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
+esp-lp-hal = { version = "0.3.0", git = "https://github.com/esp-rs/esp-hal", rev = "6ba09ad" }
 
 [build-dependencies]
 esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }
@@ -42,4 +38,8 @@ codegen-units = 1 # LLVM can perform better optimizations using a single thread
 # Enabling LTO breaks the weak linkage used for the ulp_irq_handler function...
 # https://github.com/riscvarchive/riscv-gcc/issues/172
 lto = false
+
+#[patch.crates-io]
+#esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "leighleighleigh/ulp-interrupt-handler" }
+#esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
 

@@ -48,7 +48,7 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 [[package]]
 name = "esp-hal-procmacros"
 version = "0.21.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fulp-timer#4fd390060666520c4289abd62c8b6113db2a9cc7"
+source = "git+https://github.com/esp-rs/esp-hal?rev=6ba09ad#6ba09ad97be9602eedf0000b7f0a7f38331dc9bd"
 dependencies = [
  "document-features",
  "proc-macro-crate",
@@ -61,14 +61,14 @@ dependencies = [
 [[package]]
 name = "esp-lp-hal"
 version = "0.3.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fulp-timer#4fd390060666520c4289abd62c8b6113db2a9cc7"
+source = "git+https://github.com/esp-rs/esp-hal?rev=6ba09ad#6ba09ad97be9602eedf0000b7f0a7f38331dc9bd"
 dependencies = [
  "cfg-if",
  "document-features",
  "embedded-hal",
  "embedded-hal-nb",
  "esp-hal-procmacros",
- "esp-metadata-generated 0.3.0 (git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fulp-timer)",
+ "esp-metadata-generated 0.3.0 (git+https://github.com/esp-rs/esp-hal?rev=6ba09ad)",
  "esp32c6-lp",
  "esp32s2-ulp",
  "esp32s3-ulp",
@@ -85,7 +85,7 @@ checksum = "9a93e39c8ad8d390d248dc7b9f4b59a873f313bf535218b8e2351356972399e3"
 [[package]]
 name = "esp-metadata-generated"
 version = "0.3.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?branch=leighleighleigh%2Fulp-timer#4fd390060666520c4289abd62c8b6113db2a9cc7"
+source = "git+https://github.com/esp-rs/esp-hal?rev=6ba09ad#6ba09ad97be9602eedf0000b7f0a7f38331dc9bd"
 
 [[package]]
 name = "esp32c6-lp"

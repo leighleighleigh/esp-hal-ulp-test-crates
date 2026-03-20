@@ -62,10 +62,10 @@
     addi sp,sp, \cxt_size
 .endm
 
-.section .init.vectors
+.section .init
 .global reset_vector
-.global _start
-.global _start_trap
+.global ulp_irq
+.global _start_trap_rust
 
 /* The reset vector, jumps to startup code */
 reset_vector:
@@ -74,7 +74,7 @@ reset_vector:
 
 /* Interrupt handler */
 .balign 0x10
-_start_trap:
+ulp_irq:
     /* Save the general gurpose register context before handling the interrupt */
     save_general_regs
 

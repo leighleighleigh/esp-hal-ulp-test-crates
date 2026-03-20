@@ -64,28 +64,21 @@ SECTIONS
 
   .text ALIGN(_stext,4) :
   {
-    /* FROM PICORV32 
-    KEEP(*(.initjmp));
-    . = ALIGN(0x10);
-    KEEP(*(.trap));
+    KEEP(*(.init.vectors));
     KEEP(*(.init));
-    KEEP(*(.init.rust));
     KEEP(*(.trap.rust));
+    *(.text.abort);
     *(.text .text.*);
-    __stext = .;
-    */
 
     /* Put reset handler first in .text section so it ends up as the entry */
     /* point of the program. */
-    KEEP(*(.init.vectors));
-    KEEP(*(.init));
-
-    KEEP(*(.trap.start));    /* for _start_trap routine */
-    KEEP(*(.trap.rust));     /* for _start_trap_rust Rust function */
-    KEEP(*(.trap .trap.*));  /* Other .trap symbols at the end */
-
-    *(.text.abort);
-    *(.text .text.*);
+    /* KEEP(*(.init.vectors)); */
+    /* KEEP(*(.init)); */
+    /* KEEP(*(.trap.start));     */
+    /* KEEP(*(.trap.rust));      */
+    /* KEEP(*(.trap .trap.*));  */
+    /* *(.text.abort); */
+    /* *(.text .text.*); */
 
     . = ALIGN(4);
     __etext = .;

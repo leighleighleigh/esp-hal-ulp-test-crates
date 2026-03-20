@@ -30,8 +30,8 @@ PROVIDE(_mp_hook = _default_mp_hook);
    _setup_interrupts maps to _default_setup_interrupts, which in direct mode sets the value
    of the xtvec register to _start_trap and, in vectored mode, sets its value to
    _vector_table and enables vectored mode. */
-EXTERN(_default_setup_interrupts);
-PROVIDE(_setup_interrupts = _default_setup_interrupts);
+/* EXTERN(_default_setup_interrupts); */
+PROVIDE(_setup_interrupts = _setup_interrupts);
 
 /* Default main routine. If no hal_main symbol is provided, then hal_main maps to main, which
    is usually defined by final users via the #[riscv_rt::entry] attribute. Using hal_main

@@ -66,6 +66,8 @@
 .global reset_vector
 .global _start
 .global _start_trap
+.global _start_trap_rust
+.global _setup_interrupts
 
 /* The reset vector, jumps to startup code */
 reset_vector:
@@ -92,3 +94,10 @@ _start_trap:
 
     /* Exit interrupt handler by executing the custom retirq instruction which will restore pc and re-enable interrupts */
     retirq_insn
+
+.section .init.rust
+_setup_interrupts:
+     /* Custom instruction to un-mask the interrupts */
+     /* waitirq_insn zero */
+     maskirq_insn zero, zero
+     ret

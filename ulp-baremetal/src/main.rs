@@ -1,35 +1,12 @@
 //! Increments a 32 bit counter value at a known point in memory, once a second.
-//! Operated with riscv_rt provided entrypoints
+//! Uses riscv_rt to provide interrupt handling, although it's linker scripts are overridden
+//! with ones inside of ./ld/.
 
 #![no_std]
 #![no_main]
 
-//use panic_halt as _;
 extern crate panic_halt;
-use riscv_rt::entry;
-use core::arch::global_asm;
-// use core::arch::asm;
-
-// Include macros which define custom RISCV R-Type instructions, used for interrupt handling.
-global_asm!(include_str!("./ulp_riscv_interrupt_ops.S"));
-
-// Assembly containing the reset_vector and irq_vector instructions.
-// TODO: The irq_vector here should be hooked into the pre_start_trap stuff somehow, probably
-global_asm!(include_str!("./ulp_riscv_vectors.S"));
-
-// // TODO: This should be hooked into pre_init / post_init somehow, so it can call the maskirq_insn 
-// global_asm!(
-//    r#"
-//    .balign 0x10
-//    .section .init.vectors
-//    .global _ulp_setup_interrupts
-//    _ulp_setup_interrupts:
-//         /* Custom instruction to un-mask the interrupts */
-//         /* waitirq_insn zero */
-//         maskirq_insn zero, zero
-//         ret
-//    "#
-// );
+use esp_hal_procmacros::entry;
 
 const ADDRESS: u32 = 0x1000;
 

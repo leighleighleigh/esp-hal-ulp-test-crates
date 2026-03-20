@@ -49,8 +49,8 @@ codegen-units = 1
 lto = true
 
 # Local development
-#[patch.crates-io]
-#esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
-#esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
-#esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
-#esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
+[patch.crates-io]
+esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
+esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
+esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
+esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }

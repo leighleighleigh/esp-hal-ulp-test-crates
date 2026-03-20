@@ -2,7 +2,11 @@
 chip := "esp32s3"
 hp_app_crate := "./" # This crate, built for the main processor
 built_ulp_apps := "./ulp-apps/" # Where compiled ULP apps are stored, for use by hp-crate
-ulp_app_crate := "../ulp-blinky/" # Crate containing ULP/LP code
+
+ulp_app_crate := "../ulp-baremetal/" # Crate containing BARE METAL ULP/LP code
+#ulp_app_crate := "../ulp-blinky/" # Crate containing ULP/LP code
+ulp_app_name := "blinky"
+
 espflash_flags := "--no-skip --ignore_app_descriptor --partition-table ./partitions.csv"
 
 default:
@@ -38,8 +42,9 @@ build-ulp-app APPCRATE CHIP:
   popd >/dev/null
   # Copy the built application to built_ulp_apps
   appfile="$(realpath "${appfile}")"
-  appname="$(basename "${appfile}")"
-  outname="{{CHIP}}-ulp-${appname}"
+  # appname="$(basename "${appfile}")"
+  # outname="{{CHIP}}-ulp-${appname}"
+  outname="{{CHIP}}-ulp-{{ulp_app_name}}"
   cp -v "${appfile}" "${outdir}/${outname}"
 
 

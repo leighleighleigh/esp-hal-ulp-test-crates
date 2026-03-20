@@ -1,3 +1,6 @@
+[alias]
+esp32s3 = "build --release"
+
 [build]
 target = "riscv32imc-unknown-none-elf"  # ESP32-S2 + ESP32-S3
 #target = "riscv32imac-unknown-none-elf" # ESP32-C6

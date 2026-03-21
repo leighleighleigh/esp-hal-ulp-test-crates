@@ -1243,19 +1243,3 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[patch.unused]]
-name = "esp-backtrace"
-version = "0.18.1"
-
-[[patch.unused]]
-name = "esp-bootloader-esp-idf"
-version = "0.4.0"
-
-[[patch.unused]]
-name = "esp-hal"
-version = "1.0.0"
-
-[[patch.unused]]
-name = "esp-println"
-version = "0.16.1"

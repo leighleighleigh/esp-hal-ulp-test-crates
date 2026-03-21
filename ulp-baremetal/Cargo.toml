@@ -15,19 +15,6 @@ cfg-if = "1"
 embedded-hal = "1.0.0"
 panic-halt = "1.0.0"
 
-# riscv-rt TODOs for adapting esp-lp-hal
-# 1. Check that the overriden _setup_interrupt and _start_trap functions work, 
-#    with the interrupt/exception handling hooks provided by riscv-rt.
-# 2. Add the custom picorv32 assembly instructions somewhere, exported as inlined rust functions
-# 3. Add a critical section implementation
-# riscv-rt = { version = "0.17.1", features = ["no-mhartid", "no-xie-xip", "no-xtvec", "single-hart"] }
-
-# The 'entry' procmacro from esp-hal-procmacros is still used,
-# as it handles argument type passing between HP & LP cores using the 
-# __ULP_MAGIC_ symbol name :)
-# esp-hal-procmacros = { version = "0.21.0", features = ["is-ulp-core"] }
-esp-hal-procmacros = { version = "0.21.0", features = ["is-ulp-core"], path = "/home/leigh/Git/esp-hal/esp-hal-procmacros" }
-
 # LP HAL from esp-hal, needed by esp-hal-procmacros,
 # so that it can conjure the peripherals passed to main()
 # esp-lp-hal = { version = "0.3.0", features = [ "esp32s3" ], git = "https://github.com/esp-rs/esp-hal", rev = "6ba09ad" }

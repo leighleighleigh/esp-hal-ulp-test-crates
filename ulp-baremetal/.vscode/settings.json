@@ -3,7 +3,7 @@
 
   // For ESP32-S3
   "rust-analyzer.cargo.target": "riscv32imc-unknown-none-elf",
-  "rust-analyzer.cargo.features": ["esp32s3"],
+  "rust-analyzer.cargo.features": [],
   // For ESP32-S2
   // "rust-analyzer.cargo.features": ["esp32s2"],
 

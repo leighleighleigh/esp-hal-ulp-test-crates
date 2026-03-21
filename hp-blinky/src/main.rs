@@ -33,6 +33,8 @@ use esp_hal::lp_core::{LpCore, LpCoreWakeupSource};
 use esp_hal::peripherals::GPIO2;
 use esp_hal::gpio::{Flex,DriveMode,Pull,OutputConfig,RtcPin,RtcPinWithResistors};
 
+use esp_hal::gpio::rtc_io::LowPowerInput;
+
 // This creates a default app-descriptor required by the esp-idf bootloader.
 // For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -86,6 +88,8 @@ fn main() -> ! {
             #[cfg(esp32c6)]
             let mut ulp_core = LpCore::new(peripherals.LP_CORE);
 
+            let ulp_arg_pin = LowPowerInput::new(peripherals.GPIO5);
+
             // Load the application
             #[cfg(esp32s3)]
             let ulp_core_code = load_lp_code!("./ulp-apps/esp32s3-ulp-blinky");
@@ -98,7 +102,7 @@ fn main() -> ! {
             unsafe { counter_ptr.write_volatile(0); }
 
             #[cfg(any(esp32s2,esp32s3))]
-            ulp_core_code.run(&mut ulp_core, UlpCoreWakeupSource::Timer(UlpCoreTimerCycles::new(ULP_SLEEP_CYCLES)));
+            ulp_core_code.run(&mut ulp_core, UlpCoreWakeupSource::Timer(UlpCoreTimerCycles::new(ULP_SLEEP_CYCLES)), ulp_arg_pin);
 
             #[cfg(esp32c6)]
             ulp_core_code.run(&mut ulp_core, LpCoreWakeupSource::HpCpu);
@@ -139,7 +143,7 @@ fn main() -> ! {
 
             let avg_period = single_count_period / single_count_samples;
             let avg_rate = 1000000.0 / (avg_period as f64);
-            info!("dc {}, dt {}, period {}, samples {}, avg_period {}, avg_rate {}",dc,dt,count_period,single_count_samples,avg_period,avg_rate);
+            info!("value {}, samples {}, avg_period {}, avg_rate {}",new_count,single_count_samples,avg_period,avg_rate);
 
             #[cfg(feature = "main-core-sleeps")]
             {
@@ -151,7 +155,7 @@ fn main() -> ! {
             }
         } else {
             if last_change_time.elapsed().as_secs() > 5 {
-                info!("No change in 5 seconds...");
+                info!("No change in 5 seconds... (value: {})",new_count);
                 last_counter = new_count;
                 last_change_time = new_time;
             }

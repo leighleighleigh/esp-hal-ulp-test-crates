@@ -10,33 +10,31 @@ extern crate panic_halt;
 use esp_lp_hal::prelude::*;
 use esp_lp_hal::delay::Delay;
 use esp_lp_hal::gpio::Input;
-// use embedded_hal::digital::InputPin;
-// use esp_lp_hal::TrapFrame;
+use esp_lp_hal::TrapFrame;
+use esp_lp_hal::sens_interrupt;
+use esp_lp_hal::gpio_interrupt;
 
 const ADDRESS: u32 = 0x1000;
 
-/// Override interrupt handler for RTC Peripheral interrupts (SENS).
-#[unsafe(export_name = "SensInterrupt")]
-pub fn sens_interrupt(sar_cocpu_int_st: esp_lp_hal::pac::sens::sar_cocpu_int_st::R) {
-    // Did we get a startup interrupt? If so, reset counter to 0x0
-    if sar_cocpu_int_st.sar_cocpu_start_int_st().bit_is_set() {
-        let ptr = ADDRESS as *mut u32;
-        unsafe { ptr.write_volatile(0); }
-    }
+// Use the interrupt macro from esp-pacs with rt feature enabled, to hook an interrupt.
+// Note that the interrupts are dispatched from esp-lp-hal.
+pub fn on_start() {
+    // Did we get a startup interrupt? If so, increment counter
+    let ptr = ADDRESS as *mut u32;
+    let i = unsafe { ptr.read_volatile() };
+    unsafe { ptr.write_volatile(i + 1); }
 }
 
-/// Overriden handler for GPIO interrupts
-#[unsafe(export_name = "GpioInterrupt")]
-pub fn gpio_interrupt(pin_status : u32) {
-    // Will increment counter when GPIO 5 is pressed
-    let pin_number = 5;
-    if (pin_status & (1 << pin_number)) != 0 {
-        let ptr = ADDRESS as *mut u32;
-        let mut i : u32 = unsafe { ptr.read_volatile() };
-        i = i.wrapping_add(1u32);
-        unsafe { ptr.write_volatile(i); }
-    }
+sens_interrupt!(RISCV_START_INT, on_start);
+
+// Hook a button press
+pub fn on_button() {
+    // Reset the counter
+    let ptr = ADDRESS as *mut u32;
+    unsafe { ptr.write_volatile(0); }
 }
+
+gpio_interrupt!(GPIO5,on_button);
 
 // Hackily enable a GPIO interrupt 
 // Call this in your main()
@@ -71,10 +69,9 @@ fn main(mut _stomp_pin : Input<5>) {
     enable_sens_intr();
     enable_gpio_intr();
 
-    let dly = Delay{};
-
+    // let dly = Delay{};
     // Handle interupts for 3 seconds, then reset.
     // This should trigger the 'start up' interrupt from SensInterrupt,
     // which should reset the counter to 0>
-    dly.delay_millis(3000);
+    // dly.delay_millis(3000);
 }

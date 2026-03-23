@@ -7,42 +7,44 @@
 )]
 #![deny(clippy::large_stack_frames)]
 
-use log::info;
 use esp_backtrace as _;
-use esp_hal::clock::CpuClock;
-use esp_hal::main;
-use esp_hal::system::{SleepSource,wakeup_cause};
-use esp_hal::rtc_cntl::sleep::{UlpWakeupSource,RtcSleepConfig,WakeSource};
-
 #[allow(unused_imports)]
 use esp_hal::time::{Duration, Instant};
-use esp_hal::delay::Delay;
+#[cfg(any(esp32s2, esp32s3))]
+use esp_hal::ulp_core::{UlpCore, UlpCoreTimerCycles, UlpCoreWakeupSource};
+use esp_hal::{
+    clock::CpuClock,
+    delay::Delay,
+    load_lp_code,
+    main,
+    rtc_cntl::sleep::{RtcSleepConfig, UlpWakeupSource, WakeSource},
+    system::{SleepSource, wakeup_cause},
+};
+use log::info;
 
-use esp_hal::load_lp_code;
-
-#[cfg(any(esp32s2,esp32s3))]
-use esp_hal::ulp_core::{UlpCore,UlpCoreWakeupSource,UlpCoreTimerCycles};
-
-#[cfg(any(esp32s2,esp32s3))]
+#[cfg(any(esp32s2, esp32s3))]
 mod ulp_debug;
 
+use esp_hal::gpio::{
+    DriveMode,
+    Flex,
+    OutputConfig,
+    Pull,
+    RtcPin,
+    RtcPinWithResistors,
+    rtc_io::LowPowerInput,
+};
 #[cfg(esp32c6)]
 use esp_hal::lp_core::{LpCore, LpCoreWakeupSource};
-
 // For power pin
 use esp_hal::peripherals::GPIO2;
-use esp_hal::gpio::{Flex,DriveMode,Pull,OutputConfig,RtcPin,RtcPinWithResistors};
-
-use esp_hal::gpio::rtc_io::LowPowerInput;
 
 // This creates a default app-descriptor required by the esp-idf bootloader.
 // For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
 esp_bootloader_esp_idf::esp_app_desc!();
 
-
-const ULP_SLEEP_CYCLES : u32 = 53; // Affects how fast the ULP code is executed
-const SAMPLE_LOOP_COUNT : u32 = 10;
-
+const ULP_SLEEP_CYCLES: u32 = 53; // Affects how fast the ULP code is executed
+const SAMPLE_LOOP_COUNT: u32 = 10;
 
 #[allow(
     clippy::large_stack_frames,
@@ -55,7 +57,6 @@ fn main() -> ! {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
 
-    
     {
         // REQUIRED FOR LEIGHLEIGHLEIGH's CUSTOM DEVBOARD ONLY
         // Turn the power on, and keep it on during sleep using pad hold.
@@ -83,12 +84,13 @@ fn main() -> ! {
         }
         _ => {
             // Else, reprogram the ULP
-            #[cfg(any(esp32s2,esp32s3))]
+            #[cfg(any(esp32s2, esp32s3))]
             let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE);
             #[cfg(esp32c6)]
             let mut ulp_core = LpCore::new(peripherals.LP_CORE);
 
-            let ulp_arg_pin = LowPowerInput::new(peripherals.GPIO5);
+            // let ulp_arg_pin = LowPowerInput::new(peripherals.GPIO5);
+            let ulp_arg_pin = LowPowerInput::new(peripherals.GPIO0);
 
             // Load the application
             #[cfg(esp32s3)]
@@ -99,10 +101,16 @@ fn main() -> ! {
             let ulp_core_code = load_lp_code!("./ulp-apps/esp32c6-ulp-blinky");
 
             // Reset the counter
-            unsafe { counter_ptr.write_volatile(0); }
+            unsafe {
+                counter_ptr.write_volatile(0);
+            }
 
-            #[cfg(any(esp32s2,esp32s3))]
-            ulp_core_code.run(&mut ulp_core, UlpCoreWakeupSource::Timer(UlpCoreTimerCycles::new(ULP_SLEEP_CYCLES)), ulp_arg_pin);
+            #[cfg(any(esp32s2, esp32s3))]
+            ulp_core_code.run(
+                &mut ulp_core,
+                UlpCoreWakeupSource::Timer(UlpCoreTimerCycles::new(ULP_SLEEP_CYCLES)),
+                ulp_arg_pin,
+            );
 
             #[cfg(esp32c6)]
             ulp_core_code.run(&mut ulp_core, LpCoreWakeupSource::HpCpu);
@@ -120,11 +128,11 @@ fn main() -> ! {
     let mut last_change_time = Instant::now();
     let mut last_counter = unsafe { counter_ptr.read_volatile() };
 
-    let mut single_count_samples : u64 = 0;
-    let mut single_count_period : u64 = 0;
+    let mut single_count_samples: u64 = 0;
+    let mut single_count_period: u64 = 0;
 
     loop {
-        let new_count= unsafe { counter_ptr.read_volatile() };
+        let new_count = unsafe { counter_ptr.read_volatile() };
         let new_time = Instant::now();
 
         if new_count != last_counter {
@@ -143,7 +151,10 @@ fn main() -> ! {
 
             let avg_period = single_count_period / single_count_samples;
             let avg_rate = 1000000.0 / (avg_period as f64);
-            info!("value {}, samples {}, avg_period {}, avg_rate {}",new_count,single_count_samples,avg_period,avg_rate);
+            info!(
+                "value {}, samples {}, avg_period {}, avg_rate {}",
+                new_count, single_count_samples, avg_period, avg_rate
+            );
 
             #[cfg(feature = "main-core-sleeps")]
             {
@@ -155,7 +166,7 @@ fn main() -> ! {
             }
         } else {
             if last_change_time.elapsed().as_secs() > 5 {
-                info!("No change in 5 seconds... (value: {})",new_count);
+                info!("No change in 5 seconds... (value: {})", new_count);
                 last_counter = new_count;
                 last_change_time = new_time;
             }
@@ -166,7 +177,7 @@ fn main() -> ! {
     let mut rtc = esp_hal::rtc_cntl::Rtc::new(peripherals.LPWR);
     let ulp_wakeup = UlpWakeupSource::new();
     let wake_sources: &[&dyn WakeSource] = &[&ulp_wakeup];
-    let config : RtcSleepConfig = RtcSleepConfig::deep();
+    let config: RtcSleepConfig = RtcSleepConfig::deep();
     rtc.sleep(&config, &wake_sources);
 
     loop {}

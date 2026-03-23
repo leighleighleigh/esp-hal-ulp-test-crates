@@ -8,6 +8,8 @@
 #![deny(clippy::large_stack_frames)]
 
 use esp_backtrace as _;
+#[cfg(feature = "main-core-sleeps")]
+use esp_hal::rtc_cntl::sleep::{RtcSleepConfig, UlpWakeupSource, WakeSource};
 #[allow(unused_imports)]
 use esp_hal::time::{Duration, Instant};
 #[cfg(any(esp32s2, esp32s3))]
@@ -17,7 +19,7 @@ use esp_hal::{
     delay::Delay,
     load_lp_code,
     main,
-    rtc_cntl::sleep::{RtcSleepConfig, UlpWakeupSource, WakeSource},
+    peripherals::RTC_IO,
     system::{SleepSource, wakeup_cause},
 };
 use log::info;
@@ -44,6 +46,7 @@ use esp_hal::peripherals::GPIO2;
 esp_bootloader_esp_idf::esp_app_desc!();
 
 const ULP_SLEEP_CYCLES: u32 = 53; // Affects how fast the ULP code is executed
+#[cfg(feature = "main-core-sleeps")]
 const SAMPLE_LOOP_COUNT: u32 = 10;
 
 #[allow(
@@ -92,6 +95,12 @@ fn main() -> ! {
             // let ulp_arg_pin = LowPowerInput::new(peripherals.GPIO5);
             let ulp_arg_pin = LowPowerInput::new(peripherals.GPIO0);
 
+            // Configure RTC_IO wakeup on this pin
+            RTC_IO::regs().pin(0_usize).write(|w| unsafe {
+                w.int_type().bits(5);
+                w.wakeup_enable().set_bit()
+            });
+
             // Load the application
             #[cfg(esp32s3)]
             let ulp_core_code = load_lp_code!("./ulp-apps/esp32s3-ulp-blinky");
@@ -123,6 +132,7 @@ fn main() -> ! {
 
     // Measure the ULP counter quickly in a loop,
     // and try to estimate the frequency of ULP counter updates.
+    #[cfg(feature = "main-core-sleeps")]
     let mut loop_limit = SAMPLE_LOOP_COUNT;
 
     let mut last_change_time = Instant::now();
@@ -152,33 +162,33 @@ fn main() -> ! {
             let avg_period = single_count_period / single_count_samples;
             let avg_rate = 1000000.0 / (avg_period as f64);
             info!(
-                "value {}, samples {}, avg_period {}, avg_rate {}",
-                new_count, single_count_samples, avg_period, avg_rate
+                "value {new_count}, samples {single_count_samples}, avg_period {avg_period}, avg_rate {avg_rate}"
             );
 
             #[cfg(feature = "main-core-sleeps")]
             {
                 loop_limit -= 1;
-            }
 
-            if loop_limit == 0 {
-                break;
+                if loop_limit == 0 {
+                    break;
+                }
             }
-        } else {
-            if last_change_time.elapsed().as_secs() > 5 {
-                info!("No change in 5 seconds... (value: {})", new_count);
-                last_counter = new_count;
-                last_change_time = new_time;
-            }
+        } else if last_change_time.elapsed().as_secs() > 5 {
+            info!("No change in 5 seconds... (value: {new_count})");
+            last_counter = new_count;
+            last_change_time = new_time;
         }
     }
 
     // Now go to sleep deep sleep, until the ulp wakes us up!
-    let mut rtc = esp_hal::rtc_cntl::Rtc::new(peripherals.LPWR);
-    let ulp_wakeup = UlpWakeupSource::new();
-    let wake_sources: &[&dyn WakeSource] = &[&ulp_wakeup];
-    let config: RtcSleepConfig = RtcSleepConfig::deep();
-    rtc.sleep(&config, &wake_sources);
+    #[cfg(feature = "main-core-sleeps")]
+    {
+        let mut rtc = esp_hal::rtc_cntl::Rtc::new(peripherals.LPWR);
+        let ulp_wakeup = UlpWakeupSource::new();
+        let wake_sources: &[&dyn WakeSource] = &[&ulp_wakeup];
+        let config: RtcSleepConfig = RtcSleepConfig::deep();
+        rtc.sleep(&config, &wake_sources);
 
-    loop {}
+        loop {}
+    }
 }

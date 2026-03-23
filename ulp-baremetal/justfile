@@ -1,7 +1,21 @@
+###### RECIPES ######
+
 build:
   cargo build --release
 
 # Finds the last-built application file
+[private]
 find-last-built-app-elf:
   #!/usr/bin/env bash
   find ./target/ -maxdepth 3 -name "app" -type f -printf "%A@ %p\n" | sort -r | head -n1 | cut -d' ' -f2
+
+###### LINTING ######
+
+cargo-format:
+  #!/usr/bin/env bash
+  shopt -s globstar 
+  cargo fmt --all -- --config-path=rustfmt.toml src/**/*.rs
+
+cargo-clippy:
+  #!/usr/bin/env bash
+  cargo clippy -- -D warnings --no-deps

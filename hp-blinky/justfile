@@ -1,26 +1,41 @@
-# Build parameters
-chip := "esp32s3"
-hp_app_crate := "./" # This crate, built for the main processor
-built_ulp_apps := "./ulp-apps/" # Where compiled ULP apps are stored, for use by hp-crate
+###### Parameters ######
+# chip - The ESP32 chip to target, for both HP and LP crates.
+# A cargo alias must be added to both crates,
+# which matches the name of this chip,
+# and calls `cargo build`. For example:
+# [alias]
+# esp32s3 = "build --release --features=esp32s3 --target xtensa-esp32s3-none-elf"
+chip := "esp32s3" 
 
-ulp_app_crate := "../ulp-baremetal/" # Crate containing BARE METAL ULP/LP code
-#ulp_app_crate := "../ulp-blinky/" # Crate containing ULP/LP code
+# hp_app_crate - The crate containing the HP core project.
+hp_app_crate := "./"  
+
+# ulp_app_crate - The crate containing the ULP project.
+# This will be built using the command `cargo {{chip}}`,
+# which must be aliased in the `.cargo/config.toml` of the ULP project.
+ulp_app_crate := "../ulp-baremetal/"  
+
+# ulp_app_name - The name of the ULP ELF file, when ulp_app_crate is built.
 ulp_app_name := "blinky"
 
+# espflash_flags - Extra arguments to use when flashing the HP core.
 espflash_flags := "--no-skip --ignore_app_descriptor --partition-table ./partitions.csv"
 
-default:
-  @just build && just flash && just stream
+###### RECIPES ######
 
-# Builds this crate for CHIP,
-# and any ULP app it depends on too.
-build ULPAPP=ulp_app_crate HPAPP=hp_app_crate CHIP=chip:
+[doc('build, flash, and monitor')]
+all:
+  @just build && just flash && just monitor 
+
+[doc('Build LP & HP crates')]
+build HPAPP=hp_app_crate ULPAPP=ulp_app_crate CHIP=chip:
   #!/usr/bin/env bash
   set +eu pipefail
   just build-ulp-app {{ULPAPP}} {{CHIP}}
   just build-hp-app {{HPAPP}} {{CHIP}}
 
 # Builds crate located at APPCRATE, for CHIP, using 'cargo {{CHIP}}' alias.
+[private]
 build-hp-app APPCRATE CHIP:
   #!/usr/bin/env bash
   set +eu pipefail
@@ -29,13 +44,14 @@ build-hp-app APPCRATE CHIP:
   cargo {{CHIP}}
   popd >/dev/null
 
-# Enters the ulp project and builds it for the CHIP.
-# Requires a cargo alias to run 'cargo CHIP', in the ULP project.
+# Enters the ulp project, and builds it.
+# A cargo alias for 'cargo {{CHIP}}', must be added to `.cargo/config.toml`, in the ULP project.
+[private]
 build-ulp-app APPCRATE CHIP:
   #!/usr/bin/env bash
   set +eu pipefail
   appdir="$(realpath {{APPCRATE}})"
-  outdir="$(realpath {{built_ulp_apps}})"
+  outdir="$(realpath ./ulp-apps/)"
   pushd "${appdir}" >/dev/null
   cargo {{CHIP}}
   appfile="${appdir}/$(just find-last-built-app-elf)"
@@ -47,18 +63,6 @@ build-ulp-app APPCRATE CHIP:
   outname="{{CHIP}}-ulp-{{ulp_app_name}}"
   cp -v "${appfile}" "${outdir}/${outname}"
 
-
-# # Experimental! Use cargo-metadata to find the binary filename of the crate before it is built.
-# # If it returns more than 1 binary name, this is an error.
-# crate-binary-name APPCRATE:
-#   #!/usr/bin/env bash
-#   set +eu pipefail
-#   appdir="$(realpath {{APPCRATE}})"
-#   appmanifest="${appdir}/Cargo.toml"
-#   test -f "${appmanifest}"
-#   bintargetnames=`cargo metadata --format-version 1 --manifest-path "${appmanifest}" | jq '.packages[].targets | map(select(.kind[] == "bin"))[].name'`
-#   echo $bintargetnames
-
 # Repeatedly attempts to flash until successful
 flash APPFILE=`just find-last-built-app-elf`:
   #!/usr/bin/env bash
@@ -67,10 +71,11 @@ flash APPFILE=`just find-last-built-app-elf`:
     sleep 0.5
   done
 
-stream PORT="/dev/ttyACM*":
+# Stream serial output, will re-attempt connection if lost.
+monitor PORT="/dev/ttyACM*":
   #!/usr/bin/env bash
   while [ true ]; do
-    test -c {{PORT}} && just try-stream {{PORT}}
+    test -c {{PORT}} && just try-monitor {{PORT}}
     # if exit with Ctrl-C, return code will be 130.
     # this should cause a break in the loop
     if [ "$?" -eq 130 ];
@@ -80,7 +85,7 @@ stream PORT="/dev/ttyACM*":
   done
 
 [private]
-try-stream PORT:
+try-monitor PORT:
   #!/usr/bin/env bash
   echo "# [$(date +%s)] Connected to {{PORT}}"
   while [ true ]; do
@@ -95,7 +100,32 @@ try-stream PORT:
 
 
 # Find the pasth to the most recently built application file
+[private]
 find-last-built-app-elf APPNAME="app":
   #!/usr/bin/env bash
   set +eu pipefail
   find ./target/ -maxdepth 3 -name "{{APPNAME}}" -type f -printf "%A@ %p\n" | sort -r | head -n1 | cut -d' ' -f2
+
+
+# # Experimental! Use cargo-metadata to find the binary filename of the crate before it is built.
+# # If it returns more than 1 binary name, this is an error.
+# crate-binary-name APPCRATE:
+#   #!/usr/bin/env bash
+#   set +eu pipefail
+#   appdir="$(realpath {{APPCRATE}})"
+#   appmanifest="${appdir}/Cargo.toml"
+#   test -f "${appmanifest}"
+#   bintargetnames=`cargo metadata --format-version 1 --manifest-path "${appmanifest}" | jq '.packages[].targets | map(select(.kind[] == "bin"))[].name'`
+#   echo $bintargetnames
+
+###### LINTING ######
+
+cargo-format:
+  #!/usr/bin/env bash
+  shopt -s globstar 
+  cargo fmt --all -- --config-path=rustfmt.toml src/**/*.rs
+
+cargo-clippy:
+  #!/usr/bin/env bash
+  echo "Hard-coded for esp32s3 chip!" >&2
+  cargo clippy --features=esp32s3 --target xtensa-esp32s3-none-elf -- -D warnings --no-deps

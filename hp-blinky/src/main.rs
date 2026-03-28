@@ -45,7 +45,8 @@ use esp_hal::peripherals::GPIO2;
 // For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
 esp_bootloader_esp_idf::esp_app_desc!();
 
-const ULP_SLEEP_CYCLES: u32 = 53; // Affects how fast the ULP code is executed
+//const ULP_SLEEP_CYCLES: u32 = 53; // Affects how fast the ULP code is executed
+const ULP_SLEEP_CYCLES: u32 = 0; // Affects how fast the ULP code is executed
 #[cfg(feature = "main-core-sleeps")]
 const SAMPLE_LOOP_COUNT: u32 = 10;
 

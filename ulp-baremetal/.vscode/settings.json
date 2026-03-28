@@ -3,7 +3,10 @@
 
   // For ESP32-S3
   "rust-analyzer.cargo.target": "riscv32imc-unknown-none-elf",
-  "rust-analyzer.cargo.features": [],
+  // "rust-analyzer.cargo.features": [],
+  // "rust-analyzer.cargo.noDeps": true,
+  // "rust-analyzer.linkedProjects": [ "/home/leigh/Git/esp-hal/esp-lp-hal/Cargo.toml" ],
+
   // For ESP32-S2
   // "rust-analyzer.cargo.features": ["esp32s2"],
 

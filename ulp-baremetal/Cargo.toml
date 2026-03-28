@@ -17,8 +17,8 @@ panic-halt = "1.0.0"
 
 # LP HAL from esp-hal, needed by esp-hal-procmacros,
 # so that it can conjure the peripherals passed to main()
-# esp-lp-hal = { version = "0.3.0", features = [ "esp32s3" ], git = "https://github.com/esp-rs/esp-hal", rev = "6ba09ad" }
-esp-lp-hal = { version = "0.3.0", features = [ "esp32s3" ], path = "/home/leigh/Git/esp-hal/esp-lp-hal"}
+#esp-lp-hal = { version = "0.3.0", features = [ "esp32s3" ], git = "https://github.com/esp-rs/esp-hal", rev = "6ba09ad" }
+esp-lp-hal = { version = "0.3.0", features = [ "esp32s3" ] }
 
 [features]
 default = [] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.
@@ -34,7 +34,6 @@ codegen-units = 1 # LLVM can perform better optimizations using a single thread
 # https://github.com/riscvarchive/riscv-gcc/issues/172
 lto = false
 
-#[patch.crates-io]
+[patch.crates-io]
+esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
 #esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "leighleighleigh/ulp-interrupt-handler" }
-#esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
-

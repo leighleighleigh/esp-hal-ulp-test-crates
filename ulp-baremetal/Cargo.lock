@@ -62,12 +62,14 @@ name = "esp-lp-hal"
 version = "0.3.0"
 dependencies = [
  "cfg-if",
+ "critical-section",
  "document-features",
  "embedded-hal",
  "embedded-hal-nb",
  "esp-hal-procmacros",
  "esp-metadata-generated",
  "esp32s3-ulp",
+ "portable-atomic",
  "riscv",
 ]
 
@@ -78,7 +80,7 @@ version = "0.3.0"
 [[package]]
 name = "esp32s3-ulp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=663c742#663c742c6e5b51df96253594661bca866f758af8"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=879efa6#879efa6a91c6f0e2c7672830a39cf002d8c973bb"
 dependencies = [
  "critical-section",
  "vcell",
@@ -129,6 +131,12 @@ name = "paste"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
+
+[[package]]
+name = "portable-atomic"
+version = "1.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c33a9471896f1c69cecef8d20cbe2f7accd12527ce60845ff44c153bb2a21b49"
 
 [[package]]
 name = "proc-macro-crate"

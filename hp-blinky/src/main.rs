@@ -46,7 +46,7 @@ use esp_hal::peripherals::GPIO2;
 esp_bootloader_esp_idf::esp_app_desc!();
 
 // const ULP_SLEEP_CYCLES: u32 = 53; // Affects how fast the ULP code is executed
-const ULP_SLEEP_CYCLES: u32 = 530; // Affects how fast the ULP code is executed
+const ULP_SLEEP_CYCLES: u32 = 5300/2; // Affects how fast the ULP code is executed
 #[cfg(feature = "main-core-sleeps")]
 const SAMPLE_LOOP_COUNT: u32 = 10;
 
@@ -101,10 +101,10 @@ fn main() -> ! {
             let ulp_arg_pin = LowPowerInput::new(peripherals.GPIO0);
 
             // Configure RTC_IO wakeup on this pin
-            RTC_IO::regs().pin(0_usize).write(|w| unsafe {
-                w.int_type().bits(5);
-                w.wakeup_enable().set_bit()
-            });
+            // RTC_IO::regs().pin(0_usize).write(|w| unsafe {
+            //     w.int_type().bits(5);
+            //     w.wakeup_enable().set_bit()
+            // });
 
             // Load the application
             #[cfg(esp32s3)]

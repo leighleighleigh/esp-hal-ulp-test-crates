@@ -80,7 +80,7 @@ version = "0.3.0"
 [[package]]
 name = "esp32s3-ulp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=879efa6#879efa6a91c6f0e2c7672830a39cf002d8c973bb"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=250be223#250be223784fb2166ea3257f2c9818fd70c12098"
 dependencies = [
  "critical-section",
  "vcell",
@@ -270,6 +270,7 @@ name = "ulp-baremetal"
 version = "0.1.0"
 dependencies = [
  "cfg-if",
+ "critical-section",
  "embedded-hal",
  "esp-lp-hal",
  "panic-halt",

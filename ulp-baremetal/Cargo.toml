@@ -19,6 +19,7 @@ panic-halt = "1.0.0"
 # so that it can conjure the peripherals passed to main()
 #esp-lp-hal = { version = "0.3.0", features = [ "esp32s3" ], git = "https://github.com/esp-rs/esp-hal", rev = "6ba09ad" }
 esp-lp-hal = { version = "0.3.0", features = [ "esp32s3" ], path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
+critical-section = "1.2.0"
 
 [features]
 default = [] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.

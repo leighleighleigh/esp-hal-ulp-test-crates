@@ -22,7 +22,7 @@ use esp_hal::{
     peripherals::RTC_IO,
     system::{SleepSource, wakeup_cause},
 };
-use log::info;
+use log::{info,error};
 
 #[cfg(any(esp32s2, esp32s3))]
 mod ulp_debug;
@@ -41,12 +41,18 @@ use esp_hal::lp_core::{LpCore, LpCoreWakeupSource};
 // For power pin
 use esp_hal::peripherals::GPIO2;
 
+use crate::ulp_debug::FromRegister;
+
 // This creates a default app-descriptor required by the esp-idf bootloader.
 // For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
 esp_bootloader_esp_idf::esp_app_desc!();
 
-// const ULP_SLEEP_CYCLES: u32 = 53; // Affects how fast the ULP code is executed
-const ULP_SLEEP_CYCLES: u32 = 5300/2; // Affects how fast the ULP code is executed
+// Timeout period when no count is detected
+const SAMPLE_TIMEOUT_MILLIS : u64 = 2500;
+
+// Affects how fast the ULP code is executed
+const ULP_SLEEP_CYCLES: u32 = 530;
+
 #[cfg(feature = "main-core-sleeps")]
 const SAMPLE_LOOP_COUNT: u32 = 10;
 
@@ -83,6 +89,14 @@ fn main() -> ! {
     // Pointer to the shared counter variable in memory
     let counter_ptr = (0x5000_1000) as *mut u32;
 
+    // Load the application
+    #[cfg(esp32s3)]
+    let ulp_core_code = load_lp_code!("./ulp-apps/esp32s3-ulp-blinky");
+    #[cfg(esp32s2)]
+    let ulp_core_code = load_lp_code!("./ulp-apps/esp32s2-ulp-blinky");
+    #[cfg(esp32c6)]
+    let ulp_core_code = load_lp_code!("./ulp-apps/esp32c6-ulp-blinky");
+
     // Check ESP wake-up condition.
     let wakeup_reason = wakeup_cause();
 
@@ -105,14 +119,6 @@ fn main() -> ! {
             //     w.int_type().bits(5);
             //     w.wakeup_enable().set_bit()
             // });
-
-            // Load the application
-            #[cfg(esp32s3)]
-            let ulp_core_code = load_lp_code!("./ulp-apps/esp32s3-ulp-blinky");
-            #[cfg(esp32s2)]
-            let ulp_core_code = load_lp_code!("./ulp-apps/esp32s2-ulp-blinky");
-            #[cfg(esp32c6)]
-            let ulp_core_code = load_lp_code!("./ulp-apps/esp32c6-ulp-blinky");
 
             // Reset the counter
             unsafe {
@@ -178,10 +184,25 @@ fn main() -> ! {
                     break;
                 }
             }
-        } else if last_change_time.elapsed().as_secs() > 5 {
-            info!("No change in 5 seconds... (value: {new_count})");
+        } else if last_change_time.elapsed().as_millis() > SAMPLE_TIMEOUT_MILLIS {
+            info!("No change in {SAMPLE_TIMEOUT_MILLIS}... (value: {new_count})");
             last_counter = new_count;
             last_change_time = new_time;
+
+            // Print some debug information
+            let cocpu_debug = ulp_debug::CocpuDebug::read();
+            info!("{cocpu_debug:?}");
+            ulp_debug::dump_coproc_pc_instructions(&cocpu_debug);
+            let (_pc,instr) = ulp_debug::get_cocpu_pc_instr(&cocpu_debug);
+            // Decode the instruction type
+            match riscv_decode::decode(instr) {
+                Ok(i) => {
+                    info!("{i:?}");
+                },
+                Err(e) => {
+                    error!("{e:?}");
+                }
+            };
         }
     }
 

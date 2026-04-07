@@ -110,11 +110,16 @@ impl FromRegister for CocpuDebug {
     }
 }
 
-pub fn dump_coproc_pc_instructions(dbg: CocpuDebug) {
+pub fn get_cocpu_pc_instr(dbg : &CocpuDebug) -> (u32, u32) {
     // Using the 'pc' field of CocpuDebug,
-    // reads the data from RTC_SLOW_MEM and prints it as hex.
-    // Will print an instruction before and after this too.
+    // calculates the HP-core-relative PC address,
+    // reads the data from RTC_SLOW_MEM.
     let pc = (dbg.pc as u32 + 0x50000000) as *mut u32;
     let instr = unsafe { pc.read_unaligned() };
-    info!("*PC({:04x}): {:08x}", dbg.pc, instr);
+    (dbg.pc as u32, instr)
+}
+
+pub fn dump_coproc_pc_instructions(dbg: &CocpuDebug) {
+    let (pc,instr) = get_cocpu_pc_instr(dbg);
+    info!("*PC({:04x}): {:08x}", pc, instr);
 }

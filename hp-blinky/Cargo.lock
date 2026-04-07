@@ -729,6 +729,7 @@ dependencies = [
  "esp-metadata-generated 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "esp-println",
  "log",
+ "riscv-decode",
 ]
 
 [[package]]
@@ -940,6 +941,12 @@ dependencies = [
  "riscv-macros",
  "riscv-pac",
 ]
+
+[[package]]
+name = "riscv-decode"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68b59d645e392e041ad18f5e529ed13242d8405c66bb192f59703ea2137017d0"
 
 [[package]]
 name = "riscv-macros"

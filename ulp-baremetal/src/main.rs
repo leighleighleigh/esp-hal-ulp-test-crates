@@ -9,7 +9,7 @@ extern crate panic_halt;
 
 use core::cell::RefCell;
 use critical_section::Mutex;
-
+use embedded_hal::digital::InputPin;
 use esp_lp_hal::{
     gpio::{Event, Input, Io, WakeEvent},
     interrupt::{self,Interrupt},
@@ -26,11 +26,17 @@ fn increment_counter() {
         ptr.write_volatile(i + 1);
     }
 }
+
 fn reset_counter() {
     let ptr = ADDRESS as *mut u32;
     unsafe {
         ptr.write_volatile(0);
     }
+}
+
+fn read_counter() -> u32 {
+    let ptr = ADDRESS as *mut u32;
+    unsafe {ptr.read_volatile()}
 }
 
 // NOTE: Normally this would contain Option<Input<0>>,
@@ -40,16 +46,26 @@ static BUTTON: Mutex<RefCell<Input<0>>> = Mutex::new(RefCell::new(Input::<0>::ne
 
 #[entry]
 fn main(mut button: Input<0>) {
-    let peripherals = Peripherals::take();
-    let mut io = Io::new(peripherals.RTC_IO);
-    io.set_interrupt_handler(gpio_interrupt_handler);
+    // let peripherals = Peripherals::take().unwrap();
+    // let mut io = Io::new(peripherals.RTC_IO);
+    // io.set_interrupt_handler(gpio_interrupt_handler);
 
-    interrupt::bind_handler(Interrupt::RISCV_START_INT, startup_interrupt_handler);
-    critical_section::with(|cs| {
-        button.listen(Event::FallingEdge);
-        //button.wakeup_enable(true,WakeEvent::HighLevel);
-        *BUTTON.borrow_ref_mut(cs) = button;
-    });
+    // interrupt::bind_handler(Interrupt::RISCV_START_INT, startup_interrupt_handler);
+    // critical_section::with(|cs| {
+    //     button.listen(Event::FallingEdge);
+    //     //button.wakeup_enable(true,WakeEvent::HighLevel);
+    //     *BUTTON.borrow_ref_mut(cs) = button;
+    // });
+
+    increment_counter();
+
+    // if button.is_high().unwrap() {
+    //     reset_counter();
+    // }
+
+    if read_counter() % 10 == 0 {
+        esp_lp_hal::wake_hp_core();
+    }
 }
 
 #[handler]

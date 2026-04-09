@@ -7,12 +7,8 @@
 
 extern crate panic_halt;
 
-use core::cell::RefCell;
-use critical_section::Mutex;
-use embedded_hal::digital::InputPin;
 use esp_lp_hal::{
-    gpio::{Event, Input, Io, WakeEvent},
-    interrupt::{self,Interrupt},
+    gpio::{Input, Io},
     pac::Peripherals,
     prelude::*,
 };
@@ -27,68 +23,10 @@ fn increment_counter() {
     }
 }
 
-fn reset_counter() {
-    let ptr = ADDRESS as *mut u32;
-    unsafe {
-        ptr.write_volatile(0);
-    }
-}
-
-fn read_counter() -> u32 {
-    let ptr = ADDRESS as *mut u32;
-    unsafe {ptr.read_volatile()}
-}
-
-// NOTE: Normally this would contain Option<Input<0>>,
-//       but for some reason the ULP core is crashing when
-//       .unwrap() is used on anything...
-static BUTTON: Mutex<RefCell<Input<0>>> = Mutex::new(RefCell::new(Input::<0>::new()));
-
 #[entry]
-fn main(mut button: Input<0>) {
-    // let peripherals = Peripherals::take().unwrap();
-    // let mut io = Io::new(peripherals.RTC_IO);
-    // io.set_interrupt_handler(gpio_interrupt_handler);
-
-    // interrupt::bind_handler(Interrupt::RISCV_START_INT, startup_interrupt_handler);
-    // critical_section::with(|cs| {
-    //     button.listen(Event::FallingEdge);
-    //     //button.wakeup_enable(true,WakeEvent::HighLevel);
-    //     *BUTTON.borrow_ref_mut(cs) = button;
-    // });
+fn main(mut _button: Input<0>) {
+    let peripherals = Peripherals::take().unwrap();
+    let mut _io = Io::new(peripherals.RTC_IO);
 
     increment_counter();
-
-    // if button.is_high().unwrap() {
-    //     reset_counter();
-    // }
-
-    if read_counter() % 10 == 0 {
-        esp_lp_hal::wake_hp_core();
-    }
-}
-
-#[handler]
-fn startup_interrupt_handler() {
-    increment_counter();
-    interrupt::disable(Interrupt::RISCV_START_INT);
-}
-
-#[handler]
-fn gpio_interrupt_handler() {
-    if critical_section::with(|cs| {
-        BUTTON
-            .borrow_ref_mut(cs)
-            .is_interrupt_set()
-    }) {
-        // The button was the source of the interrupt
-        reset_counter();
-    } 
-
-    // Clear the interrupt
-    critical_section::with(|cs| {
-        BUTTON
-            .borrow_ref_mut(cs)
-            .clear_interrupt()
-    });
 }

@@ -80,6 +80,7 @@ version = "0.3.0"
 [[package]]
 name = "esp32s3-ulp"
 version = "0.3.0"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=5ff8e30e#5ff8e30e2ad103415490381635f471ccaae24d67"
 dependencies = [
  "critical-section",
  "vcell",

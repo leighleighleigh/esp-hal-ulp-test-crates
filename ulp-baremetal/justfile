@@ -1,13 +1,18 @@
 ###### RECIPES ######
-
 build:
   cargo build --release
+  #cargo build
 
 # Finds the last-built application file
-[private]
 find-last-built-app-elf:
   #!/usr/bin/env bash
   find ./target/ -maxdepth 3 -name "app" -type f -printf "%A@ %p\n" | sort -r | head -n1 | cut -d' ' -f2
+
+# Runs objdump with nice colours
+objdump *ARGS="-d":
+  #!/usr/bin/env bash
+  ULP_ELF="$(just find-last-built-app-elf)"
+  riscv32-esp-elf-objdump --demangle=rust  --visualize-jumps=extended-color --disassembler-color=extended "${ULP_ELF}" {{ARGS}}
 
 ###### LINTING ######
 

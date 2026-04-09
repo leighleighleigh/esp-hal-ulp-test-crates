@@ -51,7 +51,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 const SAMPLE_TIMEOUT_MILLIS : u64 = 2500;
 
 // Affects how fast the ULP code is executed
-const ULP_SLEEP_CYCLES: u32 = 530;
+const ULP_SLEEP_CYCLES: u32 = 53;
 
 #[cfg(feature = "main-core-sleeps")]
 const SAMPLE_LOOP_COUNT: u32 = 10;

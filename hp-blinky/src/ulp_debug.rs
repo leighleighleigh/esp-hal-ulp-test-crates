@@ -121,5 +121,5 @@ pub fn get_cocpu_pc_instr(dbg : &CocpuDebug) -> (u32, u32) {
 
 pub fn dump_coproc_pc_instructions(dbg: &CocpuDebug) {
     let (pc,instr) = get_cocpu_pc_instr(dbg);
-    info!("*PC({:04x}): {:08x}", pc, instr);
+    info!("*PC(0x{:x}): {:08x}", pc, instr);
 }

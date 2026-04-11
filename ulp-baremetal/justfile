@@ -7,12 +7,6 @@ find-last-built-app-elf:
   #!/usr/bin/env bash
   find ./target/ -maxdepth 3 -name "app" -type f -printf "%A@ %p\n" | sort -r | head -n1 | cut -d' ' -f2
 
-# Runs objdump with nice colours
-objdump *ARGS="-d":
-  #!/usr/bin/env bash
-  ULP_ELF="$(just find-last-built-app-elf)"
-  riscv32-esp-elf-objdump --demangle=rust  --visualize-jumps=extended-color --disassembler-color=extended "${ULP_ELF}" {{ARGS}}
-
 ###### LINTING ######
 
 cargo-format:
@@ -23,3 +17,29 @@ cargo-format:
 cargo-clippy:
   #!/usr/bin/env bash
   cargo clippy --release -- -D warnings --no-deps
+
+###### BINUTILS ######
+
+# General-purpose GNU Binutils recipe,
+# to run programs on the latest ELF
+binutil TOOL_NAME *ARGS="":
+  #!/usr/bin/env bash
+  ULP_ELF="$(just find-last-built-app-elf)"
+  riscv32-esp-elf-{{TOOL_NAME}} "${ULP_ELF}" {{ARGS}}
+
+objdump *ARGS="-d":
+  #!/usr/bin/env bash
+  just binutil objdump --demangle=rust  --visualize-jumps=extended-color --disassembler-color=extended {{ARGS}}
+
+readelf *ARGS="":
+  #!/usr/bin/env bash
+  just binutil readelf --demangle=rust -W {{ARGS}}
+
+size *ARGS="-A":
+  #!/usr/bin/env bash
+  just binutil size {{ARGS}}
+
+nm *ARGS="-An --demangle=rust":
+  #!/usr/bin/env bash
+  just binutil nm {{ARGS}}
+

@@ -17,7 +17,10 @@ use esp_lp_hal::{
     prelude::*,
 };
 
-const ADDRESS: usize = 0x400;
+// This is exported globally,
+// so that it may be fetched from the symbol table.
+#[unsafe(export_name = "COUNTER_ADDRESS")]
+static mut ADDRESS: u32 = 0x1000;
 
 static BUTTON: Mutex<RefCell<Option<Input<0>>>> = Mutex::new(RefCell::new(None));
 
@@ -38,8 +41,8 @@ fn main(mut button: Input<0>) {
 #[handler]
 fn startup_interrupt_handler() {
     // Increment the counter every time RISCV_START_INT is triggered
-    let counter = (ADDRESS) as *mut u32;
     unsafe {
+        let counter = ADDRESS as *mut u32;
         counter.write_volatile(counter.read_volatile() + 1);
     }
 
@@ -60,8 +63,8 @@ fn gpio_interrupt_handler() {
             .is_interrupt_set()
     }) {
         // The button was the source of the interrupt, reset the counter to 0.
-        let counter = (ADDRESS) as *mut u32;
         unsafe {
+            let counter = ADDRESS as *mut u32;
             counter.write_volatile(0);
         }
     }

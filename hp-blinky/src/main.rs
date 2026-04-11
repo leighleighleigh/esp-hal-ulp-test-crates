@@ -19,10 +19,9 @@ use esp_hal::{
     delay::Delay,
     load_lp_code,
     main,
-    peripherals::RTC_IO,
     system::{SleepSource, wakeup_cause},
 };
-use log::{info,error};
+use log::{error, info};
 
 #[cfg(any(esp32s2, esp32s3))]
 mod ulp_debug;
@@ -48,7 +47,7 @@ use crate::ulp_debug::FromRegister;
 esp_bootloader_esp_idf::esp_app_desc!();
 
 // Timeout period when no count is detected
-const SAMPLE_TIMEOUT_MILLIS : u64 = 2500;
+const SAMPLE_TIMEOUT_MILLIS: u64 = 2500;
 
 // Affects how fast the ULP code is executed
 const ULP_SLEEP_CYCLES: u32 = 53;
@@ -193,12 +192,12 @@ fn main() -> ! {
             let cocpu_debug = ulp_debug::CocpuDebug::read();
             info!("{cocpu_debug:?}");
             ulp_debug::dump_coproc_pc_instructions(&cocpu_debug);
-            let (_pc,instr) = ulp_debug::get_cocpu_pc_instr(&cocpu_debug);
+            let (_pc, instr) = ulp_debug::get_cocpu_pc_instr(&cocpu_debug);
             // Decode the instruction type
             match riscv_decode::decode(instr) {
                 Ok(i) => {
                     info!("{i:?}");
-                },
+                }
                 Err(e) => {
                     error!("{e:?}");
                 }

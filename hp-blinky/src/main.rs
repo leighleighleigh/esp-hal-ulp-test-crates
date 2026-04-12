@@ -88,14 +88,6 @@ fn main() -> ! {
     // Pointer to the shared counter variable in memory
     let counter_ptr = (0x5000_1000) as *mut u32;
 
-    // Load the application
-    #[cfg(esp32s3)]
-    let ulp_core_code = load_lp_code!("./ulp-apps/esp32s3-ulp-blinky");
-    #[cfg(esp32s2)]
-    let ulp_core_code = load_lp_code!("./ulp-apps/esp32s2-ulp-blinky");
-    #[cfg(esp32c6)]
-    let ulp_core_code = load_lp_code!("./ulp-apps/esp32c6-ulp-blinky");
-
     // Check ESP wake-up condition.
     let wakeup_reason = wakeup_cause();
 
@@ -110,7 +102,14 @@ fn main() -> ! {
             #[cfg(esp32c6)]
             let mut ulp_core = LpCore::new(peripherals.LP_CORE);
 
-            // let ulp_arg_pin = LowPowerInput::new(peripherals.GPIO5);
+            // Load the application
+            #[cfg(esp32s3)]
+            let ulp_core_code = load_lp_code!("./ulp-apps/esp32s3-ulp-blinky");
+            #[cfg(esp32s2)]
+            let ulp_core_code = load_lp_code!("./ulp-apps/esp32s2-ulp-blinky");
+            #[cfg(esp32c6)]
+            let ulp_core_code = load_lp_code!("./ulp-apps/esp32c6-ulp-blinky");
+
             let ulp_arg_pin = LowPowerInput::new(peripherals.GPIO0);
 
             // Configure RTC_IO wakeup on this pin

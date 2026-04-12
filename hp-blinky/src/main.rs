@@ -15,11 +15,7 @@ use esp_hal::time::{Duration, Instant};
 #[cfg(any(esp32s2, esp32s3))]
 use esp_hal::ulp_core::{UlpCore, UlpCoreTimerCycles, UlpCoreWakeupSource};
 use esp_hal::{
-    clock::CpuClock,
-    delay::Delay,
-    load_lp_code,
-    main,
-    system::{SleepSource, wakeup_cause},
+    clock::CpuClock, delay::Delay, gpio::InputConfig, load_lp_code, main, peripherals::RTC_IO, system::{SleepSource, wakeup_cause}
 };
 use log::{error, info};
 
@@ -38,7 +34,7 @@ use esp_hal::gpio::{
 #[cfg(esp32c6)]
 use esp_hal::lp_core::{LpCore, LpCoreWakeupSource};
 // For power pin
-use esp_hal::peripherals::GPIO2;
+use esp_hal::peripherals::{GPIO0,GPIO2};
 
 use crate::ulp_debug::FromRegister;
 
@@ -110,13 +106,14 @@ fn main() -> ! {
             #[cfg(esp32c6)]
             let ulp_core_code = load_lp_code!("./ulp-apps/esp32c6-ulp-blinky");
 
-            let ulp_arg_pin = LowPowerInput::new(peripherals.GPIO0);
-
-            // Configure RTC_IO wakeup on this pin
-            // RTC_IO::regs().pin(0_usize).write(|w| unsafe {
-            //     w.int_type().bits(5);
-            //     w.wakeup_enable().set_bit()
-            // });
+            // The GPIO0 peripheral is unsafely cloned
+            let io_boot = peripherals.GPIO0;
+            let ulp_arg_pin = LowPowerInput::new(unsafe { io_boot.clone_unchecked() });
+            // Configure RTC_IO wakeup on GPIO0
+            {
+                let mut flash_button = Flex::new(unsafe { io_boot.clone_unchecked() });
+                flash_button.wakeup_enable(true, esp_hal::gpio::WakeEvent::LowLevel).expect("GPIO0 wakeup enabled");
+            }
 
             // Reset the counter
             unsafe {
@@ -126,7 +123,8 @@ fn main() -> ! {
             #[cfg(any(esp32s2, esp32s3))]
             ulp_core_code.run(
                 &mut ulp_core,
-                UlpCoreWakeupSource::Timer(UlpCoreTimerCycles::new(ULP_SLEEP_CYCLES)),
+                // UlpCoreWakeupSource::Timer(UlpCoreTimerCycles::new(ULP_SLEEP_CYCLES)),
+                UlpCoreWakeupSource::Gpio,
                 ulp_arg_pin,
             );
 

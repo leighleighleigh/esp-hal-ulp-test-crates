@@ -30,7 +30,7 @@ fn counter_read() -> u32 {
 }
 
 #[inline]
-fn counter_write(val : u32) {
+fn counter_write(val: u32) {
     unsafe {
         let counter = ADDRESS as *mut u32;
         counter.write_volatile(val);
@@ -42,20 +42,25 @@ fn main(mut button: Input<0>) {
     // Clear the GPIO wake-up flag
     esp_lp_hal::gpio::gpio_wakeup_clear();
 
-    // Incriment counter
-    counter_write(counter_read()+1);
+    // Increment counter
+    let mut c = counter_read();
+    counter_write(c+1);
 
-    // Re-enable the wakeup bit
-    esp_lp_hal::gpio::gpio_wakeup_enable(true);
+    esp_lp_hal::wake_hp_core();
 
     // let peripherals = Peripherals::take().unwrap();
     // let mut io = Io::new(peripherals.RTC_IO);
     // io.set_interrupt_handler(gpio_interrupt_handler);
-    //critical_section::with(|cs| {
+    // critical_section::with(|cs| {
     //    button.listen(Event::FallingEdge);
     //    BUTTON.borrow_ref_mut(cs).replace(button);
     //});
     // interrupt::bind_handler(Interrupt::RISCV_START_INT, startup_interrupt_handler);
+
+
+    // Re-enable the wakeup bit
+    esp_lp_hal::gpio::gpio_wakeup_enable(true);
+
 }
 
 #[handler]
@@ -66,7 +71,7 @@ fn startup_interrupt_handler() {
     // On entry, immediately disable any more start-up interrupts.
     // This is needed, because RISCV_START_INT is driven from the ULP Timer,
     // which may be called multiple times before main() has finished execution.
-    interrupt::set_enabled(Interrupt::RISCV_START_INT,false);
+    interrupt::set_enabled(Interrupt::RISCV_START_INT, false);
 }
 
 #[handler]

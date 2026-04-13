@@ -13,7 +13,7 @@ bench = false
 [features]
 default = [] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.
 main-core-sleeps = [] # Main core will enter deep sleep
-esp32s3 = ["esp-metadata-generated/esp32s3", "esp-hal/esp32s3", "esp-bootloader-esp-idf/esp32s3", "esp-backtrace/esp32s3", "esp-println/esp32s3" ]
+esp32s3 = ["esp-metadata-generated/esp32s3", "esp-hal/esp32s3", "esp-bootloader-esp-idf/esp32s3", "esp-backtrace/esp32s3", "esp-println/esp32s3", "main-core-sleeps" ]
 esp32s2 = ["esp-metadata-generated/esp32s2", "esp-hal/esp32s2", "esp-bootloader-esp-idf/esp32s2", "esp-backtrace/esp32s2", "esp-println/esp32s2" ]
 esp32c6 = ["esp-metadata-generated/esp32c6", "esp-hal/esp32c6", "esp-bootloader-esp-idf/esp32c6", "esp-backtrace/esp32c6", "esp-println/esp32c6" ]
 

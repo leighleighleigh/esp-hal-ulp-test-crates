@@ -15,7 +15,13 @@ use esp_hal::time::{Duration, Instant};
 #[cfg(any(esp32s2, esp32s3))]
 use esp_hal::ulp_core::{UlpCore, UlpCoreTimerCycles, UlpCoreWakeupSource};
 use esp_hal::{
-    clock::CpuClock, delay::Delay, gpio::InputConfig, load_lp_code, main, peripherals::RTC_IO, system::{SleepSource, wakeup_cause}
+    clock::CpuClock,
+    delay::Delay,
+    gpio::{InputConfig, WakeEvent},
+    load_lp_code,
+    main,
+    peripherals::RTC_IO,
+    system::{SleepSource, wakeup_cause},
 };
 use log::{error, info};
 
@@ -34,7 +40,7 @@ use esp_hal::gpio::{
 #[cfg(esp32c6)]
 use esp_hal::lp_core::{LpCore, LpCoreWakeupSource};
 // For power pin
-use esp_hal::peripherals::{GPIO0,GPIO2};
+use esp_hal::peripherals::{GPIO0, GPIO2};
 
 use crate::ulp_debug::FromRegister;
 
@@ -47,9 +53,6 @@ const SAMPLE_TIMEOUT_MILLIS: u64 = 2500;
 
 // Affects how fast the ULP code is executed
 const ULP_SLEEP_CYCLES: u32 = 53;
-
-#[cfg(feature = "main-core-sleeps")]
-const SAMPLE_LOOP_COUNT: u32 = 10;
 
 #[allow(
     clippy::large_stack_frames,
@@ -81,6 +84,10 @@ fn main() -> ! {
         <GPIO2 as RtcPinWithResistors>::rtcio_pullup(&io_reg_en, true);
     }
 
+    // Delay to allow USB to connect
+    let dly = Delay::new();
+    dly.delay_millis(2000);
+
     // Pointer to the shared counter variable in memory
     let counter_ptr = (0x5000_1000) as *mut u32;
 
@@ -106,15 +113,10 @@ fn main() -> ! {
             #[cfg(esp32c6)]
             let ulp_core_code = load_lp_code!("./ulp-apps/esp32c6-ulp-blinky");
 
-            // The GPIO0 peripheral is unsafely cloned
             let io_boot = peripherals.GPIO0;
-            let ulp_arg_pin = LowPowerInput::new(unsafe { io_boot.clone_unchecked() });
-            // Configure RTC_IO wakeup on GPIO0
-            {
-                let mut flash_button = Flex::new(unsafe { io_boot.clone_unchecked() });
-                flash_button.wakeup_enable(true, esp_hal::gpio::WakeEvent::LowLevel).expect("GPIO0 wakeup enabled");
-            }
-
+            let ulp_arg_pin = LowPowerInput::new(io_boot);
+            ulp_arg_pin.wakeup_enable(Some(WakeEvent::LowLevel));
+            
             // Reset the counter
             unsafe {
                 counter_ptr.write_volatile(0);
@@ -133,15 +135,9 @@ fn main() -> ! {
         }
     }
 
-    // Delay to allow USB to connect
-    let dly = Delay::new();
-    dly.delay_millis(500);
-
     // Measure the ULP counter quickly in a loop,
     // and try to estimate the frequency of ULP counter updates.
-    #[cfg(feature = "main-core-sleeps")]
-    let mut loop_limit = SAMPLE_LOOP_COUNT;
-
+    let mut waiting_first_sample = true;
     let mut last_change_time = Instant::now();
     let mut last_counter = unsafe { counter_ptr.read_volatile() };
 
@@ -172,18 +168,16 @@ fn main() -> ! {
                 "value {new_count}, samples {single_count_samples}, avg_period {avg_period}, avg_rate {avg_rate}"
             );
 
-            #[cfg(feature = "main-core-sleeps")]
-            {
-                loop_limit -= 1;
-
-                if loop_limit == 0 {
-                    break;
-                }
+            if waiting_first_sample {
+                waiting_first_sample = false;
+                single_count_samples = 0;
+                single_count_period = 0;
             }
         } else if last_change_time.elapsed().as_millis() > SAMPLE_TIMEOUT_MILLIS {
             info!("No change in {SAMPLE_TIMEOUT_MILLIS}... (value: {new_count})");
             last_counter = new_count;
             last_change_time = new_time;
+            waiting_first_sample = true;
 
             // Print some debug information
             let cocpu_debug = ulp_debug::CocpuDebug::read();
@@ -199,6 +193,11 @@ fn main() -> ! {
                     error!("{e:?}");
                 }
             };
+
+            #[cfg(feature = "main-core-sleeps")]
+            {
+              break;
+            }
         }
     }
 
@@ -208,6 +207,7 @@ fn main() -> ! {
         let mut rtc = esp_hal::rtc_cntl::Rtc::new(peripherals.LPWR);
         let ulp_wakeup = UlpWakeupSource::new();
         let wake_sources: &[&dyn WakeSource] = &[&ulp_wakeup];
+
         let config: RtcSleepConfig = RtcSleepConfig::deep();
         rtc.sleep(&config, &wake_sources);
 

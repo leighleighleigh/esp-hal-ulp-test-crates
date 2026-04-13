@@ -1,4 +1,5 @@
 {
+  "rust-analyzer.server.path": "/var/run/current-system/sw/bin/rust-analyzer",
   "rust-analyzer.cargo.autoreload": true,
 
   // For ESP32-S3

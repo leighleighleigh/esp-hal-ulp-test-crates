@@ -28,7 +28,7 @@ pkgs.mkShell rec {
         esp-rs 
         #esp-openocd
         #pkgs.espflash
-        #pkgs.rust-analyzer
+        pkgs.rust-analyzer
         #pkgs.rustup 
         pkgs.stdenv.cc 
         pkgs.just 

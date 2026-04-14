@@ -8,7 +8,7 @@
 extern crate panic_halt;
 
 use core::cell::RefCell;
-
+use embedded_hal::digital::InputPin;
 use critical_section::Mutex;
 use esp_lp_hal::{
     gpio::{Event, Input, Io, WakeEvent},
@@ -38,15 +38,19 @@ fn counter_write(val: u32) {
 }
 
 #[entry]
-fn main(mut button: Input<0>) {
+fn main(mut button: Input<5>) {
+
+    // WIP: This may be breaking deep-sleep operation?
     // Clear the GPIO wake-up flag
-    esp_lp_hal::gpio::gpio_wakeup_clear();
+    // esp_lp_hal::gpio::gpio_wakeup_clear();
 
-    // Increment counter
-    let mut c = counter_read();
-    counter_write(c+1);
+    // Increment counter while button is pressed
+    if button.is_high().unwrap() {
+        let c = counter_read();
+        counter_write(c+1);
 
-    esp_lp_hal::wake_hp_core();
+        esp_lp_hal::wake_hp_core();
+    }
 
     // let peripherals = Peripherals::take().unwrap();
     // let mut io = Io::new(peripherals.RTC_IO);
@@ -58,9 +62,9 @@ fn main(mut button: Input<0>) {
     // interrupt::bind_handler(Interrupt::RISCV_START_INT, startup_interrupt_handler);
 
 
+    // WIP: This may be breaking deep-sleep operation?
     // Re-enable the wakeup bit
-    esp_lp_hal::gpio::gpio_wakeup_enable(true);
-
+    // esp_lp_hal::gpio::gpio_wakeup_enable(true);
 }
 
 #[handler]

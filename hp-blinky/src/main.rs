@@ -40,7 +40,7 @@ use esp_hal::gpio::{
 #[cfg(esp32c6)]
 use esp_hal::lp_core::{LpCore, LpCoreWakeupSource};
 // For power pin
-use esp_hal::peripherals::{GPIO0, GPIO2};
+use esp_hal::peripherals::{GPIO5, GPIO0, GPIO2};
 
 use crate::ulp_debug::FromRegister;
 
@@ -86,7 +86,7 @@ fn main() -> ! {
 
     // Delay to allow USB to connect
     let dly = Delay::new();
-    dly.delay_millis(2000);
+    dly.delay_millis(500);
 
     // Pointer to the shared counter variable in memory
     let counter_ptr = (0x5000_1000) as *mut u32;
@@ -113,9 +113,16 @@ fn main() -> ! {
             #[cfg(esp32c6)]
             let ulp_core_code = load_lp_code!("./ulp-apps/esp32c6-ulp-blinky");
 
-            let io_boot = peripherals.GPIO0;
-            let ulp_arg_pin = LowPowerInput::new(io_boot);
-            ulp_arg_pin.wakeup_enable(Some(WakeEvent::LowLevel));
+          
+            // STOMP PIN
+            let ulp_button = unsafe { peripherals.GPIO5.clone_unchecked() };
+            let ulp_arg_pin = LowPowerInput::new(ulp_button);
+            ulp_arg_pin.wakeup_enable(Some(WakeEvent::HighLevel));
+            
+            unsafe {
+                let ulp_button_rtc = unsafe { peripherals.GPIO5.clone_unchecked() };
+                <GPIO5 as RtcPin>::rtcio_pad_hold(&ulp_button_rtc, true);
+            }
             
             // Reset the counter
             unsafe {
@@ -125,8 +132,8 @@ fn main() -> ! {
             #[cfg(any(esp32s2, esp32s3))]
             ulp_core_code.run(
                 &mut ulp_core,
-                // UlpCoreWakeupSource::Timer(UlpCoreTimerCycles::new(ULP_SLEEP_CYCLES)),
-                UlpCoreWakeupSource::Gpio,
+                UlpCoreWakeupSource::Timer(UlpCoreTimerCycles::new(ULP_SLEEP_CYCLES)),
+                // UlpCoreWakeupSource::Gpio,
                 ulp_arg_pin,
             );
 

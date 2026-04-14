@@ -33,6 +33,7 @@ use esp_hal::gpio::{
     Flex,
     OutputConfig,
     Pull,
+    InputPin,
     RtcPin,
     RtcPinWithResistors,
     rtc_io::LowPowerInput,
@@ -113,16 +114,25 @@ fn main() -> ! {
             #[cfg(esp32c6)]
             let ulp_core_code = load_lp_code!("./ulp-apps/esp32c6-ulp-blinky");
 
-          
+
             // STOMP PIN
             let ulp_button = unsafe { peripherals.GPIO5.clone_unchecked() };
             let ulp_arg_pin = LowPowerInput::new(ulp_button);
             ulp_arg_pin.wakeup_enable(Some(WakeEvent::HighLevel));
             
-            unsafe {
-                let ulp_button_rtc = unsafe { peripherals.GPIO5.clone_unchecked() };
-                <GPIO5 as RtcPin>::rtcio_pad_hold(&ulp_button_rtc, true);
-            }
+            // Needed for sleep.
+            // unsafe {
+            //    // Hold the GPIO pin, and also the RTC pin, settings.
+            //    let ulp_button_rtc = unsafe { peripherals.GPIO5.clone_unchecked() };
+            //    <GPIO5 as RtcPin>::rtcio_pad_hold(&ulp_button_rtc, true);
+            // }
+
+            /* Configure the button GPIO as input, enable wakeup */
+            // rtc_gpio_init(WAKEUP_PIN);
+            // rtc_gpio_set_direction(WAKEUP_PIN, RTC_GPIO_MODE_INPUT_ONLY);
+            // rtc_gpio_pulldown_dis(WAKEUP_PIN);
+            // rtc_gpio_pullup_en(WAKEUP_PIN);
+            // rtc_gpio_wakeup_enable(WAKEUP_PIN, GPIO_INTR_NEGEDGE);
             
             // Reset the counter
             unsafe {
@@ -132,8 +142,8 @@ fn main() -> ! {
             #[cfg(any(esp32s2, esp32s3))]
             ulp_core_code.run(
                 &mut ulp_core,
-                UlpCoreWakeupSource::Timer(UlpCoreTimerCycles::new(ULP_SLEEP_CYCLES)),
-                // UlpCoreWakeupSource::Gpio,
+                // UlpCoreWakeupSource::Timer(UlpCoreTimerCycles::new(ULP_SLEEP_CYCLES)),
+                UlpCoreWakeupSource::Gpio,
                 ulp_arg_pin,
             );
 

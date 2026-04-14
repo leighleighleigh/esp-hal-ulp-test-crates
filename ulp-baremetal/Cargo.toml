@@ -23,6 +23,7 @@ critical-section = "1.2.0"
 
 [features]
 default = [] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.
+interrupts = []
 
 [profile.release]
 debug = false
@@ -33,7 +34,7 @@ opt-level = "s"
 codegen-units = 1 # LLVM can perform better optimizations using a single thread
 # Enabling LTO breaks the weak linkage used for the ulp_irq_handler function...
 # https://github.com/riscvarchive/riscv-gcc/issues/172
-# lto = false
+lto = true
 
 #[patch.crates-io]
 #esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }

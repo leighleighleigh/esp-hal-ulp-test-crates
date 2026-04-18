@@ -22,7 +22,7 @@ esp-lp-hal = { version = "0.3.0", features = [ "esp32s3" ], path = "/home/leigh/
 critical-section = "1.2.0"
 
 [features]
-default = ["interrupts"] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.
+default = [] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.
 interrupts = ["esp-lp-hal/interrupts"]
 
 [profile.release]

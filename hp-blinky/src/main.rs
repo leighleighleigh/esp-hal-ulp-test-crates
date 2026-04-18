@@ -100,6 +100,21 @@ fn main() -> ! {
             info!("Woke from ULP interrupt!");
         }
         _ => {
+            // Print some debug information
+            let cocpu_debug = ulp_debug::CocpuDebug::read();
+            info!("{cocpu_debug:?}");
+            ulp_debug::dump_coproc_pc_instructions(&cocpu_debug);
+            let (_pc, instr) = ulp_debug::get_cocpu_pc_instr(&cocpu_debug);
+            // Decode the instruction type
+            match riscv_decode::decode(instr) {
+                Ok(i) => {
+                    info!("{i:?}");
+                }
+                Err(e) => {
+                    error!("{e:?}");
+                }
+            };
+
             // Else, reprogram the ULP
             #[cfg(any(esp32s2, esp32s3))]
             let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE);

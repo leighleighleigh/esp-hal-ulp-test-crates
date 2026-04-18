@@ -42,8 +42,6 @@ use esp_hal::lp_core::{LpCore, LpCoreWakeupSource};
 // For power pin
 use esp_hal::peripherals::{GPIO5, GPIO0, GPIO2};
 
-use crate::ulp_debug::FromRegister;
-
 // This creates a default app-descriptor required by the esp-idf bootloader.
 // For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -84,9 +82,6 @@ fn main() -> ! {
     let ulp_button = unsafe { peripherals.GPIO5.clone_unchecked() };
     let ulp_arg_pin = LowPowerInput::new(ulp_button);
     ulp_arg_pin.wakeup_enable(Some(WakeEvent::HighLevel));
-    // Needed for sleep.
-    // let ulp_button_rtc = unsafe { peripherals.GPIO5.clone_unchecked() };
-    // <GPIO5 as RtcPin>::rtcio_pad_hold(&ulp_button_rtc, true);
    
     // Delay to allow USB to connect
     let dly = Delay::new();
@@ -99,7 +94,8 @@ fn main() -> ! {
         SleepSource::Ulp => {
             info!("Woke from ULP interrupt!");
         }
-        _ => {
+        other => {
+            info!("Woke from {other:?}");
             // Else, reprogram the ULP
             #[cfg(any(esp32s2, esp32s3))]
             let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE);
@@ -127,46 +123,42 @@ fn main() -> ! {
         }
     }
 
+
+    const ADDR: usize = 0x5000_1000;
+    let data = (ADDR) as *const u32;
+
+    loop {
+        info!("Current {:x}           \u{000d}", unsafe {
+            data.read_volatile()
+        });
+
+        dly.delay_millis(500);
+
+        #[cfg(feature="deep-sleep")]
+        break;
+    }
+
     info!("Going to sleep...");
-    dly.delay_millis(500);
-        
     let mut rtc = esp_hal::rtc_cntl::Rtc::new(peripherals.LPWR);
     let ulp_wakeup = UlpWakeupSource::new();
     let wake_sources: &[&dyn WakeSource] = &[&ulp_wakeup];
-    let mut config: RtcSleepConfig = RtcSleepConfig::deep();
-
-    // gpio_deep_sleep_hold_en()
-    // let rtc_cntl = unsafe {&*RTC_CNTL::PTR};
-    // rtc_cntl.dig_iso().write(|w|w.dg_pad_force_unhold().clear_bit());
-    // rtc_cntl.dig_iso().write(|w|w.dg_pad_autohold_en().set_bit());
+    let config: RtcSleepConfig = RtcSleepConfig::deep();
 
     // SAME AS RtcPin method
     let lpwr = peripherals::LPWR::regs();
     lpwr.pad_hold().modify(|_, w| w.touch_pad5().bit(true));
 
     // SET_PERI_REG_MASK(rtc_io_desc[rtcio_num].reg, rtc_io_desc[rtcio_num].slpie);
-    let sens = unsafe { &*SENS::PTR };
-    sens.sar_peri_clk_gate_conf().modify(|_, w| w.iomux_clk_en().set_bit());
-
-    // ALT
-    // // Force hold on GPIO5, using RTC_CNTL registers
-    // // SET_PERI_REG_MASK(RTC_CNTL_PAD_HOLD_REG, rtc_io_desc[rtcio_num].hold_force);
-    // let rtc_cntl = unsafe {&*RTC_CNTL::PTR};
-    // rtc_cntl.pad_hold().write(|w| w.touch_pad5().set_bit());
-    // rtc_cntl.dig_pad_hold().modify(|_,w| unsafe { w.dig_pad_hold().bits(0b100100) });
-
+    // let sens = unsafe { &*SENS::PTR };
+    // sens.sar_peri_clk_gate_conf().modify(|_, w| w.iomux_clk_en().set_bit());
     // Need to enable the RTC clock so the pin can be sampled during sleep
     // SENS.sar_peri_clk_gate_conf.iomux_clk_en = enable;
-    let sens = unsafe { &*SENS::PTR };
-    sens.sar_peri_clk_gate_conf().modify(|_, w| w.iomux_clk_en().set_bit());
-
     // let sens = unsafe { &*SENS::PTR };
-    // sens.sar_peri_clk_gate_conf()
-    //     .modify(|_, w| w.iomux_clk_en().set_bit());
-    config.set_rtc_peri_pd_en(false);
-    config.set_rtc_regulator_fpu(true);
-
+    // sens.sar_peri_clk_gate_conf().modify(|_, w| w.iomux_clk_en().set_bit());
+    // Unsure if needed
+    // config.set_rtc_peri_pd_en(false);
+    // config.set_rtc_regulator_fpu(true);
+    // Enter sleep
     rtc.sleep(&config, &wake_sources);
-
     loop{}
 }

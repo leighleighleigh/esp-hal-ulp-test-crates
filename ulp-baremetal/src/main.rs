@@ -9,7 +9,7 @@ extern crate panic_halt;
 
 use embedded_hal::digital::InputPin;
 use esp_lp_hal::{
-    gpio::{Event, Input, Io, WakeEvent},
+    gpio::{Input, Io},
     pac::Peripherals,
     prelude::*,
 };
@@ -22,7 +22,7 @@ use core::cell::RefCell;
 #[cfg(feature="interrupts")]
 use critical_section::Mutex;
 #[cfg(feature="interrupts")]
-use esp_lp_hal::interrupt::{self, Interrupt};
+use esp_lp_hal::{interrupt::{self, Interrupt},gpio::Event};
 #[cfg(feature="interrupts")]
 static BUTTON: Mutex<RefCell<Option<Input<5>>>> = Mutex::new(RefCell::new(None));
 
@@ -53,7 +53,7 @@ fn main(mut button: Input<5>) {
     //         let mut io = Io::new(peripherals.RTC_IO);
     //         io.set_interrupt_handler(gpio_interrupt_handler);
     //         critical_section::with(|cs| {
-    //             button.listen(Event::HighLevel);
+    //             button.listen(Event::HighLevel,false);
     //             BUTTON.borrow_ref_mut(cs).replace(button);
     //         });
     //     }

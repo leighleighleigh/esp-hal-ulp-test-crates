@@ -2,6 +2,7 @@
 esp32c6 = "build --release --features=esp32c6 --target riscv32imac-unknown-none-elf"
 esp32s2 = "build --release --features=esp32s2 --target xtensa-esp32s2-none-elf"
 esp32s3 = "build --release --features=esp32s3 --target xtensa-esp32s3-none-elf"
+#esp32c6 = "build --release --features=esp32c6 --target riscv32imac-unknown-none-elf"
 
 [target.xtensa-esp32s3-none-elf]
 runner = "espflash flash --monitor --chip esp32s3"
@@ -9,14 +10,18 @@ runner = "espflash flash --monitor --chip esp32s3"
 [target.xtensa-esp32s2-none-elf]
 runner = "espflash flash --monitor --chip esp32s2"
 
-[target.'cfg(target_arch = "riscv32")']
-rustflags = [
-  "-C", "link-arg=-Tlink.x",
-]
+[target.riscv32imac-unknown-none-elf]
+runner = "espflash flash --monitor --chip esp32c6"
 
 [target.'cfg(target_arch = "xtensa")']
 rustflags = [
   "-C", "link-arg=-nostartfiles",
+]
+
+[target.'cfg(target_arch = "riscv32")']
+rustflags = [
+  "-C", "link-arg=-Tlinkall.x",
+  "-C", "force-frame-pointers",
 ]
 
 [unstable]

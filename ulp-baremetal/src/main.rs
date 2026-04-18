@@ -8,22 +8,30 @@
 extern crate panic_halt;
 
 use embedded_hal::digital::InputPin;
+
 use esp_lp_hal::{
     gpio::{Input, Io},
     pac::Peripherals,
     prelude::*,
 };
 
+#[cfg(any(esp32s3, esp32s2))]
 const ADDRESS: u32 = 0x1000;
+#[cfg(esp32c6)]
+const ADDRESS: u32 = 0x5000_1000;
 
 // Only if interrupt supported
-#[cfg(feature="interrupts")]
+#[cfg(feature = "interrupts")]
 use core::cell::RefCell;
-#[cfg(feature="interrupts")]
+
+#[cfg(feature = "interrupts")]
 use critical_section::Mutex;
-#[cfg(feature="interrupts")]
-use esp_lp_hal::{interrupt::{self, Interrupt},gpio::Event};
-#[cfg(feature="interrupts")]
+#[cfg(feature = "interrupts")]
+use esp_lp_hal::{
+    gpio::Event,
+    interrupt::{self, Interrupt},
+};
+#[cfg(feature = "interrupts")]
 static BUTTON: Mutex<RefCell<Option<Input<5>>>> = Mutex::new(RefCell::new(None));
 
 #[inline]
@@ -43,11 +51,22 @@ fn counter_write(val: u32) {
 }
 
 #[entry]
-fn main(mut button: Input<5>) {
+fn main(mut button: Input<0>) {
     // Increment whenever woken up
     let c = counter_read();
-    // Increment counter while button is pressed
-    counter_write(c+1);
+    counter_write(c + 1);
+
+    let dly = esp_lp_hal::delay::Delay {};
+
+    #[cfg(esp32c6)]
+    loop {
+        dly.delay_millis(500);
+        let c = counter_read();
+        counter_write(c + 1);
+        if button.is_high().unwrap() {
+            esp_lp_hal::wake_hp_core();
+        }
+    }
 
     // NOTE: Chaning the button listen / interrupt condition will affect GPIO wakeup.
     cfg_if::cfg_if! {
@@ -68,34 +87,33 @@ fn main(mut button: Input<5>) {
           esp_lp_hal::wake_hp_core();
 
           // Debounce button
-          let dly = esp_lp_hal::delay::Delay {};
-          dly.delay_millis(500);
+          dly.delay_millis(1000);
 
           // Re-set the wake-up flag for next iteration
-          esp_lp_hal::gpio_wakeup_enable();
+          // esp_lp_hal::gpio_wakeup_enable();
         }
     }
 }
 
-#[cfg(feature="interrupts")]
+#[cfg(feature = "interrupts")]
 #[handler]
 fn gpio_interrupt_handler() {
-   // Check if BUTTON has an interrupt pending
-   if critical_section::with(|cs| {
-       BUTTON
-           .borrow_ref_mut(cs)
-           .as_mut()
-           .unwrap()
-           .is_interrupt_set()
-   }) {
-      // The button was the source of the interrupt, reset the counter to 0.
-      counter_write(0);
-   }
-   critical_section::with(|cs| {
-       BUTTON
-           .borrow_ref_mut(cs)
-           .as_mut()
-           .unwrap()
-           .clear_interrupt()
-   });
+    // Check if BUTTON has an interrupt pending
+    if critical_section::with(|cs| {
+        BUTTON
+            .borrow_ref_mut(cs)
+            .as_mut()
+            .unwrap()
+            .is_interrupt_set()
+    }) {
+        // The button was the source of the interrupt, reset the counter to 0.
+        counter_write(0);
+    }
+    critical_section::with(|cs| {
+        BUTTON
+            .borrow_ref_mut(cs)
+            .as_mut()
+            .unwrap()
+            .clear_interrupt()
+    });
 }

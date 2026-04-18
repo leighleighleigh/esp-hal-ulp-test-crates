@@ -67,8 +67,10 @@ dependencies = [
  "embedded-hal",
  "embedded-hal-nb",
  "esp-hal-procmacros",
- "esp-metadata-generated",
+ "esp-metadata-generated 0.4.0",
+ "esp32c6-lp",
  "esp32s3-ulp",
+ "nb",
  "portable-atomic",
  "riscv",
 ]
@@ -78,9 +80,24 @@ name = "esp-metadata-generated"
 version = "0.4.0"
 
 [[package]]
+name = "esp-metadata-generated"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42c2ee95b945a4780796e4359e72c033aed3b45073880e8029458f538532db8a"
+
+[[package]]
+name = "esp32c6-lp"
+version = "0.3.0"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=f0a1b2c#f0a1b2cf11f09fbdefd6b4c616e569286971d0f6"
+dependencies = [
+ "critical-section",
+ "vcell",
+]
+
+[[package]]
 name = "esp32s3-ulp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=86d386a#86d386ad9d0d4adc7e12638faf5bac7578cc6b19"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=f0a1b2c#f0a1b2cf11f09fbdefd6b4c616e569286971d0f6"
 dependencies = [
  "critical-section",
  "vcell",
@@ -273,6 +290,7 @@ dependencies = [
  "critical-section",
  "embedded-hal",
  "esp-lp-hal",
+ "esp-metadata-generated 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "panic-halt",
 ]
 

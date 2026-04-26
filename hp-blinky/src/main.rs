@@ -8,42 +8,54 @@
 #![deny(clippy::large_stack_frames)]
 
 use esp_backtrace as _;
-#[cfg(feature = "main-core-sleeps")]
+#[cfg(esp32c6)]
+use esp_hal::gpio::lp_io::LowPowerInput;
+#[cfg(esp32c6)]
+use esp_hal::lp_core::{LpCore, LpCoreWakeupSource};
+#[cfg(feature = "deep-sleep")]
 use esp_hal::rtc_cntl::sleep::{RtcSleepConfig, UlpWakeupSource, WakeSource};
+
+#[cfg(any(esp32s2, esp32s3))]
+use esp_hal::gpio::rtc_io::LowPowerInput;
+
 #[allow(unused_imports)]
 use esp_hal::time::{Duration, Instant};
+
 #[cfg(any(esp32s2, esp32s3))]
-use esp_hal::ulp_core::{UlpCore, UlpCoreTimerCycles, UlpCoreWakeupSource};
+use esp_hal::ulp_core::{
+    UlpCore as LpCore,
+    UlpCoreTimerCycles as LpCoreTimerCycles,
+    UlpCoreWakeupSource as LpCoreWakeupSource,
+};
 use esp_hal::{
     clock::CpuClock,
     delay::Delay,
-    gpio::{InputConfig, WakeEvent},
+    gpio::{
+        DriveMode,
+        Flex,
+        InputConfig,
+        InputPin,
+        OutputConfig,
+        Pin,
+        Pull,
+        RtcPin,
+        RtcPinWithResistors,
+        WakeEvent,
+    },
     load_lp_code,
     main,
-    peripherals::RTC_IO,
+    peripherals::{GPIO0, GPIO2, GPIO5},
     system::{SleepSource, wakeup_cause},
 };
 use log::{error, info};
 
 #[cfg(any(esp32s2, esp32s3))]
 mod ulp_debug;
-
-use esp_hal::gpio::{
-    DriveMode,
-    Flex,
-    OutputConfig,
-    Pull,
-    InputPin,
-    RtcPin,
-    RtcPinWithResistors,
-    rtc_io::LowPowerInput,
-};
-#[cfg(esp32c6)]
-use esp_hal::lp_core::{LpCore, LpCoreWakeupSource};
-// For power pin
-use esp_hal::peripherals::{GPIO5, GPIO0, GPIO2};
-
+#[cfg(any(esp32s2, esp32s3))]
 use crate::ulp_debug::FromRegister;
+
+mod counter_tacho;
+use counter_tacho::{DEBUG_ADDRESS, ADDRESS,reg_read,reg_write,SampleTachometer,Sample};
 
 // This creates a default app-descriptor required by the esp-idf bootloader.
 // For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
@@ -51,9 +63,78 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 // Timeout period when no count is detected
 const SAMPLE_TIMEOUT_MILLIS: u64 = 2500;
-
 // Affects how fast the ULP code is executed
 const ULP_SLEEP_CYCLES: u32 = 53;
+
+// Print some debug info
+fn print_ulp_debug_info() {
+    // Print some debug information
+    #[cfg(not(esp32c6))]
+    {
+        let cocpu_debug = ulp_debug::CocpuDebug::read();
+        info!("{cocpu_debug:?}");
+        ulp_debug::dump_coproc_pc_instructions(&cocpu_debug);
+        let (_pc, instr) = ulp_debug::get_cocpu_pc_instr(&cocpu_debug);
+        // Decode the instruction type
+        match riscv_decode::decode(instr) {
+            Ok(i) => {
+                info!("{i:?}");
+            }
+            Err(e) => {
+                error!("{e:?}");
+            }
+        };
+    }
+}
+
+// Type aliasing for peripheral type
+#[cfg(any(esp32s2, esp32s3))]
+type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
+#[cfg(esp32c6)]
+type LpCorePeripheral = esp_hal::peripherals::LP_CORE<'static>;
+
+// Setup the ULP core
+fn setup_ulp_core(core: LpCorePeripheral) {
+    // Else, reprogram the ULP
+    let mut ulp_core = LpCore::new(core);
+
+    // Load the application
+    #[cfg(esp32s3)]
+    let ulp_core_code = load_lp_code!("./ulp-apps/esp32s3-ulp-blinky");
+    #[cfg(esp32s2)]
+    let ulp_core_code = load_lp_code!("./ulp-apps/esp32s2-ulp-blinky");
+    #[cfg(esp32c6)]
+    let ulp_core_code = load_lp_code!("./ulp-apps/esp32c6-ulp-blinky");
+
+    // STOMP PIN
+    let _ulp_button = unsafe { esp_hal::peripherals::GPIO5::steal() };
+    let _ulp_button_in = esp_hal::gpio::Input::new(_ulp_button, InputConfig::default());
+
+    let ulp_button = unsafe { esp_hal::peripherals::GPIO5::steal() };
+    let ulp_arg_pin = LowPowerInput::new(ulp_button);
+    // ulp_arg_pin.wakeup_enable(Some(WakeEvent::HighLevel));
+    // ulp_arg_pin.wakeup_enable(Some(WakeEvent::HighLevel));
+
+    // Needed for sleep.
+    // unsafe {
+    //    // Hold the GPIO pin, and also the RTC pin, settings.
+    //    let ulp_button_rtc = unsafe { esp_hal::peripherals::GPIO5::steal() };
+    //    <GPIO5 as RtcPin>::rtcio_pad_hold(&ulp_button_rtc, true);
+    // }
+
+    // Reset the counter
+    reg_write(ADDRESS,0);
+
+    #[cfg(any(esp32s2, esp32s3))]
+    ulp_core_code.run(
+        &mut ulp_core,
+        LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(ULP_SLEEP_CYCLES)),
+        ulp_arg_pin,
+    );
+
+    #[cfg(esp32c6)]
+    ulp_core_code.run(&mut ulp_core, LpCoreWakeupSource::HpCpu);
+}
 
 #[allow(
     clippy::large_stack_frames,
@@ -89,152 +170,56 @@ fn main() -> ! {
     let dly = Delay::new();
     dly.delay_millis(500);
 
-    // Pointer to the shared counter variable in memory
-    let counter_ptr = (0x5000_1000) as *mut u32;
-
     // Check ESP wake-up condition.
     let wakeup_reason = wakeup_cause();
 
+    // Wakeup reason differs depending on feature flags
     match wakeup_reason {
+        #[cfg(feature = "deep-sleep")]
         SleepSource::Ulp => {
             info!("Woke from ULP interrupt!");
         }
+        // re-program the ULP on any other wake-up condition
         _ => {
-            // Print some debug information
-            let cocpu_debug = ulp_debug::CocpuDebug::read();
-            info!("{cocpu_debug:?}");
-            ulp_debug::dump_coproc_pc_instructions(&cocpu_debug);
-            let (_pc, instr) = ulp_debug::get_cocpu_pc_instr(&cocpu_debug);
-            // Decode the instruction type
-            match riscv_decode::decode(instr) {
-                Ok(i) => {
-                    info!("{i:?}");
-                }
-                Err(e) => {
-                    error!("{e:?}");
-                }
-            };
-
-            // Else, reprogram the ULP
-            #[cfg(any(esp32s2, esp32s3))]
-            let mut ulp_core = UlpCore::new(peripherals.ULP_RISCV_CORE);
-            #[cfg(esp32c6)]
-            let mut ulp_core = LpCore::new(peripherals.LP_CORE);
-
-            // Load the application
-            #[cfg(esp32s3)]
-            let ulp_core_code = load_lp_code!("./ulp-apps/esp32s3-ulp-blinky");
-            #[cfg(esp32s2)]
-            let ulp_core_code = load_lp_code!("./ulp-apps/esp32s2-ulp-blinky");
-            #[cfg(esp32c6)]
-            let ulp_core_code = load_lp_code!("./ulp-apps/esp32c6-ulp-blinky");
-
-
-            // STOMP PIN
-            let ulp_button = unsafe { peripherals.GPIO5.clone_unchecked() };
-            let ulp_arg_pin = LowPowerInput::new(ulp_button);
-            // ulp_arg_pin.wakeup_enable(Some(WakeEvent::HighLevel));
-            
-            // Needed for sleep.
-            // unsafe {
-            //    // Hold the GPIO pin, and also the RTC pin, settings.
-            //    let ulp_button_rtc = unsafe { peripherals.GPIO5.clone_unchecked() };
-            //    <GPIO5 as RtcPin>::rtcio_pad_hold(&ulp_button_rtc, true);
-            // }
-
-            /* Configure the button GPIO as input, enable wakeup */
-            // rtc_gpio_init(WAKEUP_PIN);
-            // rtc_gpio_set_direction(WAKEUP_PIN, RTC_GPIO_MODE_INPUT_ONLY);
-            // rtc_gpio_pulldown_dis(WAKEUP_PIN);
-            // rtc_gpio_pullup_en(WAKEUP_PIN);
-            // rtc_gpio_wakeup_enable(WAKEUP_PIN, GPIO_INTR_NEGEDGE);
-            
-            // Reset the counter
-            unsafe {
-                counter_ptr.write_volatile(0);
-            }
-
-            #[cfg(any(esp32s2, esp32s3))]
-            ulp_core_code.run(
-                &mut ulp_core,
-                UlpCoreWakeupSource::Timer(UlpCoreTimerCycles::new(ULP_SLEEP_CYCLES)),
-                //UlpCoreWakeupSource::Gpio,
-                ulp_arg_pin,
-            );
+            print_ulp_debug_info();
 
             #[cfg(esp32c6)]
-            ulp_core_code.run(&mut ulp_core, LpCoreWakeupSource::HpCpu);
+            setup_ulp_core(peripherals.LP_CORE);
+            #[cfg(any(esp32s2,esp32s3))]
+            setup_ulp_core(peripherals.ULP_RISCV_CORE);
         }
     }
 
-    // Measure the ULP counter quickly in a loop,
-    // and try to estimate the frequency of ULP counter updates.
-    let mut waiting_first_sample = true;
-    let mut last_change_time = Instant::now();
-    let mut last_counter = unsafe { counter_ptr.read_volatile() };
-
-    let mut single_count_samples: u64 = 0;
-    let mut single_count_period: u64 = 0;
+    // Sample the counter
+    let mut tacho = SampleTachometer::new();
+    let mut dbg_sample = reg_read(DEBUG_ADDRESS);
 
     loop {
-        let new_count = unsafe { counter_ptr.read_volatile() };
-        let new_time = Instant::now();
-
-        if new_count != last_counter {
-            let dc = new_count - last_counter;
-            let dt = new_time - last_change_time;
-
-            // Calculate micros
-            let dtmicros = dt.as_micros();
-            // calculate micros per count
-            let count_period = dtmicros / (dc as u64);
-
-            single_count_samples += 1;
-            single_count_period += count_period;
-            last_counter = new_count;
-            last_change_time = new_time;
-
-            let avg_period = single_count_period / single_count_samples;
-            let avg_rate = 1000000.0 / (avg_period as f64);
-            info!(
-                "value {new_count}, samples {single_count_samples}, avg_period {avg_period}, avg_rate {avg_rate}"
-            );
-
-            if waiting_first_sample {
-                waiting_first_sample = false;
-                single_count_samples = 0;
-                single_count_period = 0;
-            }
-        } else if last_change_time.elapsed().as_millis() > SAMPLE_TIMEOUT_MILLIS {
-            info!("No change in {SAMPLE_TIMEOUT_MILLIS}... (value: {new_count})");
-            last_counter = new_count;
-            last_change_time = new_time;
-            waiting_first_sample = true;
-
-            // Print some debug information
-            let cocpu_debug = ulp_debug::CocpuDebug::read();
-            info!("{cocpu_debug:?}");
-            ulp_debug::dump_coproc_pc_instructions(&cocpu_debug);
-            let (_pc, instr) = ulp_debug::get_cocpu_pc_instr(&cocpu_debug);
-            // Decode the instruction type
-            match riscv_decode::decode(instr) {
-                Ok(i) => {
-                    info!("{i:?}");
-                }
-                Err(e) => {
-                    error!("{e:?}");
-                }
-            };
-
-            #[cfg(feature = "main-core-sleeps")]
-            {
-              break;
-            }
+        // Do debug sampling
+        let new_dbg_sample = reg_read(DEBUG_ADDRESS);
+        if new_dbg_sample != dbg_sample {
+            info!("DEBUG: 0x{:08x}",new_dbg_sample);
         }
+        dbg_sample = new_dbg_sample;
+
+        // Get a sample
+        let sample = Sample::new();
+        tacho.update(sample);
+
+        // Keep sampling if unchanged
+        if ! tacho.changed() {
+            continue;
+        }
+
+        // Else print!
+        info!("{:?}, {:?}, {:?}", tacho.count_period(), tacho.count_rate(), sample);
+
+        #[cfg(feature = "deep-sleep")]
+        break;
     }
 
     // Now go to sleep deep sleep, until the ulp wakes us up!
-    #[cfg(feature = "main-core-sleeps")]
+    #[cfg(feature = "deep-sleep")]
     {
         let mut rtc = esp_hal::rtc_cntl::Rtc::new(peripherals.LPWR);
         let ulp_wakeup = UlpWakeupSource::new();

@@ -47,7 +47,8 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "esp-hal-procmacros"
-version = "0.22.0"
+version = "0.21.0"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?rev=83fbf871f3ff9ba539c2bcdecee8ed4938458d59#83fbf871f3ff9ba539c2bcdecee8ed4938458d59"
 dependencies = [
  "document-features",
  "proc-macro-crate",
@@ -60,6 +61,7 @@ dependencies = [
 [[package]]
 name = "esp-lp-hal"
 version = "0.3.0"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?rev=83fbf871f3ff9ba539c2bcdecee8ed4938458d59#83fbf871f3ff9ba539c2bcdecee8ed4938458d59"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -67,7 +69,7 @@ dependencies = [
  "embedded-hal",
  "embedded-hal-nb",
  "esp-hal-procmacros",
- "esp-metadata-generated 0.4.0",
+ "esp-metadata-generated 0.3.0",
  "esp32c6-lp",
  "esp32s3-ulp",
  "nb",
@@ -77,7 +79,8 @@ dependencies = [
 
 [[package]]
 name = "esp-metadata-generated"
-version = "0.4.0"
+version = "0.3.0"
+source = "git+https://github.com/leighleighleigh/esp-hal.git?rev=83fbf871f3ff9ba539c2bcdecee8ed4938458d59#83fbf871f3ff9ba539c2bcdecee8ed4938458d59"
 
 [[package]]
 name = "esp-metadata-generated"
@@ -88,7 +91,7 @@ checksum = "42c2ee95b945a4780796e4359e72c033aed3b45073880e8029458f538532db8a"
 [[package]]
 name = "esp32c6-lp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=cba62523#cba62523183b82fc4460c704bb361ff9ba7c3496"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=5ff8e30e#5ff8e30e2ad103415490381635f471ccaae24d67"
 dependencies = [
  "critical-section",
  "vcell",
@@ -97,7 +100,7 @@ dependencies = [
 [[package]]
 name = "esp32s3-ulp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=cba62523#cba62523183b82fc4460c704bb361ff9ba7c3496"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=5ff8e30e#5ff8e30e2ad103415490381635f471ccaae24d67"
 dependencies = [
  "critical-section",
  "vcell",
@@ -105,15 +108,15 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.16.1"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
+checksum = "4f467dd6dccf739c208452f8014c75c18bb8301b050ad1cfb27153803edb0f51"
 
 [[package]]
 name = "indexmap"
-version = "2.13.0"
+version = "2.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7714e70437a7dc3ac8eb7e6f8df75fd8eb422675fc7678aff7364301092b1017"
+checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
 dependencies = [
  "equivalent",
  "hashbrown",
@@ -191,7 +194,19 @@ dependencies = [
  "critical-section",
  "embedded-hal",
  "paste",
+ "riscv-macros",
  "riscv-pac",
+]
+
+[[package]]
+name = "riscv-macros"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d323d13972c1b104aa036bc692cd08b822c8bbf23d79a27c526095856499799"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -242,18 +257,18 @@ dependencies = [
 
 [[package]]
 name = "toml_datetime"
-version = "1.0.1+spec-1.1.0"
+version = "1.1.1+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b320e741db58cac564e26c607d3cc1fdc4a88fd36c879568c07856ed83ff3e9"
+checksum = "3165f65f62e28e0115a00b2ebdd37eb6f3b641855f9d636d3cd4103767159ad7"
 dependencies = [
  "serde_core",
 ]
 
 [[package]]
 name = "toml_edit"
-version = "0.25.5+spec-1.1.0"
+version = "0.25.11+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ca1a40644a28bce036923f6a431df0b34236949d111cc07cb6dca830c9ef2e1"
+checksum = "0b59c4d22ed448339746c59b905d24568fcbb3ab65a500494f7b8c3e97739f2b"
 dependencies = [
  "indexmap",
  "toml_datetime",
@@ -263,9 +278,9 @@ dependencies = [
 
 [[package]]
 name = "toml_parser"
-version = "1.0.10+spec-1.1.0"
+version = "1.1.2+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7df25b4befd31c4816df190124375d5a20c6b6921e2cad937316de3fccd63420"
+checksum = "a2abe9b86193656635d2411dc43050282ca48aa31c2451210f4202550afb7526"
 dependencies = [
  "winnow",
 ]
@@ -278,7 +293,7 @@ dependencies = [
  "critical-section",
  "embedded-hal",
  "esp-lp-hal",
- "esp-metadata-generated 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "esp-metadata-generated 0.4.0",
  "panic-halt",
 ]
 
@@ -320,9 +335,9 @@ dependencies = [
 
 [[package]]
 name = "winnow"
-version = "1.0.0"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a90e88e4667264a994d34e6d1ab2d26d398dcdca8b7f52bec8668957517fc7d8"
+checksum = "2ee1708bef14716a11bae175f579062d4554d95be2c6829f518df847b7b3fdd0"
 dependencies = [
  "memchr",
 ]

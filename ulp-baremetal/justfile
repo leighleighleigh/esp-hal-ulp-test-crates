@@ -16,9 +16,9 @@ cargo-format:
   shopt -s globstar 
   cargo fmt --all -- --config-path=rustfmt.toml src/**/*.rs
 
-cargo-clippy:
+cargo-clippy CHIP:
   #!/usr/bin/env bash
-  cargo clippy --release -- -D warnings --no-deps
+  cargo clippy --release --features {{CHIP}} -- -D warnings --no-deps
 
 ###### BINUTILS ######
 

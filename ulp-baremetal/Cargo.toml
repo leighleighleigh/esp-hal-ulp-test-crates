@@ -14,15 +14,18 @@ bench = false
 cfg-if = "1"
 embedded-hal = "1.0.0"
 panic-halt = "1.0.0"
-esp-lp-hal = { version = "0.3.0", path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
+#esp-lp-hal = { version = "0.3.0", path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
+esp-lp-hal = "0.3.0"
 critical-section = "1.2.0"
 
 [build-dependencies]
 esp-metadata-generated = { version = "0.4.0", features = ["build-script"] }
 
 [features]
-default = ['interrupts'] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.
-interrupts = []
+default = [ 'gpio-interrupt', 'ulp-timer' ] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.
+gpio-interrupt = []
+gpio-wakeup = []
+ulp-timer = []
 esp32s3 = ["esp-lp-hal/esp32s3", "esp-metadata-generated/esp32s3" ]
 esp32c6 = ["esp-lp-hal/esp32c6", "esp-metadata-generated/esp32c6" ]
 
@@ -37,6 +40,7 @@ codegen-units = 1 # LLVM can perform better optimizations using a single thread
 # https://github.com/riscvarchive/riscv-gcc/issues/172
 lto = true
 
-#[patch.crates-io]
+[patch.crates-io]
+#esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", rev = "53d72f1b4f1c087549d8c722634d8d5755b1ac26" }
+esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", rev = "83fbf871f3ff9ba539c2bcdecee8ed4938458d59" }
 #esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
-#esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", branch = "leighleighleigh/ulp-interrupt-handler" }

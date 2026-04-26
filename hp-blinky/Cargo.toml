@@ -12,7 +12,7 @@ bench = false
 
 [features]
 default = [] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.
-main-core-sleeps = [] # Main core will enter deep sleep
+deep-sleep = [] # Main core will enter deep sleep
 esp32s3 = ["esp-metadata-generated/esp32s3", "esp-hal/esp32s3", "esp-bootloader-esp-idf/esp32s3", "esp-backtrace/esp32s3", "esp-println/esp32s3" ]
 esp32s2 = ["esp-metadata-generated/esp32s2", "esp-hal/esp32s2", "esp-bootloader-esp-idf/esp32s2", "esp-backtrace/esp32s2", "esp-println/esp32s2" ]
 esp32c6 = ["esp-metadata-generated/esp32c6", "esp-hal/esp32c6", "esp-bootloader-esp-idf/esp32c6", "esp-backtrace/esp32c6", "esp-println/esp32c6" ]
@@ -20,14 +20,19 @@ esp32c6 = ["esp-metadata-generated/esp32c6", "esp-hal/esp32c6", "esp-bootloader-
 [dependencies]
 log = "0.4.27"
 critical-section = "1.2.0"
-esp-backtrace = { version = "0.19.0", features = ["panic-handler", "println"]}
-esp-println = { version = "0.17.0", features = ["log-04"]}
-esp-bootloader-esp-idf = { version = "0.5.0", features = ["log-04"]}
 riscv-decode = "0.2.3"
 
-[dependencies.esp-hal]
-version = "1.1.0-rc.0"
-features = ["unstable", "log-04"]
+# new versions
+#esp-backtrace = { version = "0.19.0", features = ["panic-handler", "println"]}
+#esp-println = { version = "0.17.0", features = ["log-04"]}
+#esp-bootloader-esp-idf = { version = "0.5.0", features = ["log-04"]}
+#esp-hal = { version = "1.1.0-rc.0", features = ["unstable", "log-04"] }
+
+# old versions
+esp-backtrace = { version = "0.18.1", features = ["panic-handler", "println"]}
+esp-println = { version = "0.16.1", features = ["log-04"]}
+esp-bootloader-esp-idf = { version = "0.4.0", features = ["log-04"]}
+esp-hal = { version = "1.0.0", features = ["unstable", "log-04"] }
 
 [build-dependencies]
 esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }
@@ -46,15 +51,19 @@ codegen-units = 1
 lto = true
 
 ## Mainline
-#[patch.crates-io]
-#esp-hal = { git = "https://github.com/esp-rs/esp-hal", rev = "6ba09ad" }
-#esp-bootloader-esp-idf = { git = "https://github.com/esp-rs/esp-hal", rev = "6ba09ad" }
-#esp-backtrace = { git = "https://github.com/esp-rs/esp-hal", rev = "6ba09ad" }
-#esp-println = { git = "https://github.com/esp-rs/esp-hal", rev = "6ba09ad" }
+[patch.crates-io]
+#esp-hal = { git = "https://github.com/esp-rs/esp-hal", rev = "53d72f1b4f1c087549d8c722634d8d5755b1ac26" }
+#esp-bootloader-esp-idf = { git = "https://github.com/esp-rs/esp-hal", rev = "53d72f1b4f1c087549d8c722634d8d5755b1ac26" }
+#esp-backtrace = { git = "https://github.com/esp-rs/esp-hal", rev = "53d72f1b4f1c087549d8c722634d8d5755b1ac26" }
+#esp-println = { git = "https://github.com/esp-rs/esp-hal", rev = "53d72f1b4f1c087549d8c722634d8d5755b1ac26" }
+esp-hal = { git = "https://github.com/esp-rs/esp-hal", rev = "83fbf871f3ff9ba539c2bcdecee8ed4938458d59" }
+esp-bootloader-esp-idf = { git = "https://github.com/esp-rs/esp-hal", rev = "83fbf871f3ff9ba539c2bcdecee8ed4938458d59" }
+esp-backtrace = { git = "https://github.com/esp-rs/esp-hal", rev = "83fbf871f3ff9ba539c2bcdecee8ed4938458d59" }
+esp-println = { git = "https://github.com/esp-rs/esp-hal", rev = "83fbf871f3ff9ba539c2bcdecee8ed4938458d59" }
 
 # Local development
-[patch.crates-io]
-esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
-esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
-esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
-esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
+#[patch.crates-io]
+#esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
+#esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
+#esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
+#esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }

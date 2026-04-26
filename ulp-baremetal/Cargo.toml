@@ -21,7 +21,7 @@ critical-section = "1.2.0"
 esp-metadata-generated = { version = "0.4.0", features = ["build-script"] }
 
 [features]
-default = [] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.
+default = ['interrupts'] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.
 interrupts = []
 esp32s3 = ["esp-lp-hal/esp32s3", "esp-metadata-generated/esp32s3" ]
 esp32c6 = ["esp-lp-hal/esp32c6", "esp-metadata-generated/esp32c6" ]

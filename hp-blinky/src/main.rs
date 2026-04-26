@@ -133,7 +133,7 @@ fn main() -> ! {
             // STOMP PIN
             let ulp_button = unsafe { peripherals.GPIO5.clone_unchecked() };
             let ulp_arg_pin = LowPowerInput::new(ulp_button);
-            ulp_arg_pin.wakeup_enable(Some(WakeEvent::HighLevel));
+            // ulp_arg_pin.wakeup_enable(Some(WakeEvent::HighLevel));
             
             // Needed for sleep.
             // unsafe {
@@ -157,8 +157,8 @@ fn main() -> ! {
             #[cfg(any(esp32s2, esp32s3))]
             ulp_core_code.run(
                 &mut ulp_core,
-                // UlpCoreWakeupSource::Timer(UlpCoreTimerCycles::new(ULP_SLEEP_CYCLES)),
-                UlpCoreWakeupSource::Gpio,
+                UlpCoreWakeupSource::Timer(UlpCoreTimerCycles::new(ULP_SLEEP_CYCLES)),
+                //UlpCoreWakeupSource::Gpio,
                 ulp_arg_pin,
             );
 

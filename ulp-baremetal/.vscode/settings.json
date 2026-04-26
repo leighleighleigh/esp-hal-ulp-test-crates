@@ -2,8 +2,11 @@
   "rust-analyzer.server.path": "/var/run/current-system/sw/bin/rust-analyzer",
   "rust-analyzer.cargo.autoreload": true,
 
-  "rust-analyzer.cargo.features": ["esp32c6"],
-  "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf",
+  // "rust-analyzer.cargo.features": ["esp32c6"],
+  // "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf",
+
+  "rust-analyzer.cargo.features": ["esp32s3"],
+  "rust-analyzer.cargo.target": "riscv32imc-unknown-none-elf",
 
   // For ESP32-S2
   // "rust-analyzer.cargo.features": ["esp32s2"],

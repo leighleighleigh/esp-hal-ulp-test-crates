@@ -88,7 +88,7 @@ checksum = "42c2ee95b945a4780796e4359e72c033aed3b45073880e8029458f538532db8a"
 [[package]]
 name = "esp32c6-lp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=f0a1b2c#f0a1b2cf11f09fbdefd6b4c616e569286971d0f6"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=cba62523#cba62523183b82fc4460c704bb361ff9ba7c3496"
 dependencies = [
  "critical-section",
  "vcell",
@@ -97,7 +97,7 @@ dependencies = [
 [[package]]
 name = "esp32s3-ulp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=f0a1b2c#f0a1b2cf11f09fbdefd6b4c616e569286971d0f6"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=cba62523#cba62523183b82fc4460c704bb361ff9ba7c3496"
 dependencies = [
  "critical-section",
  "vcell",
@@ -191,19 +191,7 @@ dependencies = [
  "critical-section",
  "embedded-hal",
  "paste",
- "riscv-macros",
  "riscv-pac",
-]
-
-[[package]]
-name = "riscv-macros"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d323d13972c1b104aa036bc692cd08b822c8bbf23d79a27c526095856499799"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]

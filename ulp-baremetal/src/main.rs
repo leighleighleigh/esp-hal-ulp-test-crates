@@ -8,7 +8,6 @@
 extern crate panic_halt;
 
 use embedded_hal::digital::InputPin;
-
 use esp_lp_hal::{
     gpio::{Input, Io},
     pac::Peripherals,
@@ -34,7 +33,7 @@ use esp_lp_hal::{
 #[cfg(feature = "interrupts")]
 static BUTTON: Mutex<RefCell<Option<Input<5>>>> = Mutex::new(RefCell::new(None));
 
-#[inline]
+// #[inline]
 fn counter_read() -> u32 {
     unsafe {
         let counter = ADDRESS as *mut u32;
@@ -42,7 +41,7 @@ fn counter_read() -> u32 {
     }
 }
 
-#[inline]
+// #[inline]
 fn counter_write(val: u32) {
     unsafe {
         let counter = ADDRESS as *mut u32;
@@ -51,7 +50,7 @@ fn counter_write(val: u32) {
 }
 
 #[entry]
-fn main(mut button: Input<0>) {
+fn main(mut button: Input<5>) {
     // Increment whenever woken up
     let c = counter_read();
     counter_write(c + 1);
@@ -76,9 +75,10 @@ fn main(mut button: Input<0>) {
             let mut io = Io::new(peripherals.RTC_IO);
             io.set_interrupt_handler(gpio_interrupt_handler);
             critical_section::with(|cs| {
-                button.listen(Event::FallingEdge,false);
+                button.listen(Event::HighLevel,false);
                 BUTTON.borrow_ref_mut(cs).replace(button);
             });
+            dly.delay_millis(1);
         } else {
           // Clear the GPIO wake-up flag
           esp_lp_hal::gpio_wakeup_clear();
@@ -98,6 +98,7 @@ fn main(mut button: Input<0>) {
 #[cfg(feature = "interrupts")]
 #[handler]
 fn gpio_interrupt_handler() {
+
     // Check if BUTTON has an interrupt pending
     if critical_section::with(|cs| {
         BUTTON
@@ -108,6 +109,9 @@ fn gpio_interrupt_handler() {
     }) {
         // The button was the source of the interrupt, reset the counter to 0.
         counter_write(0);
+        // // The button was the source of the interrupt, increment the counter.
+        // let c = counter_read();
+        // counter_write(c + 1);
     }
     critical_section::with(|cs| {
         BUTTON

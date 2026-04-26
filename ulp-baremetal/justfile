@@ -1,8 +1,8 @@
 ###### RECIPES ######
 build:
   #cargo build --release
-  # cargo esp32s3
-  cargo esp32c6
+  cargo esp32s3
+  #cargo esp32c6
 
 # Finds the last-built application file
 find-last-built-app-elf:

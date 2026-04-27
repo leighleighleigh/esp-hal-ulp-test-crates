@@ -57,12 +57,6 @@ fn reg_write(addr : u32, val: u32) {
 fn main(mut button: Input<5>) {
     let dly = esp_lp_hal::delay::Delay {};
 
-    #[cfg(feature = "ulp-timer")]
-    #[cfg(feature = "gpio-wakeup")]
-    {
-        compile_error!("Cannot use both ulp-timer and gpio-wakeup features together!");
-    }
-
     #[cfg(feature = "gpio-interrupt")]
     #[cfg(feature = "gpio-wakeup")]
     {
@@ -80,15 +74,13 @@ fn main(mut button: Input<5>) {
         #[cfg(esp32c6)]
         let mut io = Io::new(peripherals.LP_IO);
 
+        critical_section::with(|cs| {
+            button.listen(Event::RisingEdge, false);
+            BUTTON.borrow_ref_mut(cs).replace(button);
+        });
+
         io.set_interrupt_handler(gpio_interrupt_handler);
         interrupt::bind_handler(interrupt::Interrupt::RISCV_START_INT, startup_interrupt_handler);
-        interrupt::set_enabled(interrupt::Interrupt::GPIO_INT, true);
-        interrupt::set_enabled(interrupt::Interrupt::RISCV_START_INT, true);
-
-        // critical_section::with(|cs| {
-        //     button.listen(Event::RisingEdge, false);
-        //     BUTTON.borrow_ref_mut(cs).replace(button);
-        // });
 
         dly.delay_millis(1);
     }
@@ -101,19 +93,30 @@ fn main(mut button: Input<5>) {
         esp_lp_hal::wake_hp_core();
         // Debounce button
         dly.delay_millis(1000);
-        // Re-set the wake-up flag for next iteration
-        // esp_lp_hal::gpio_wakeup_enable();
+        // Reset the wake-up flag, so that we can wake up again.
+        esp_lp_hal::gpio_wakeup_enable();
+    }
+
+    #[cfg(not(feature = "gpio-wakeup"))]
+    {
+        esp_lp_hal::gpio_wakeup_clear();
+        esp_lp_hal::gpio_wakeup_disable();
+
+        unsafe { &*esp_lp_hal::pac::RTC_CNTL::PTR }
+            .rtc_ulp_cp_timer()
+            .write(|w| w.ulp_cp_slp_timer_en().bit(true));
     }
 
     loop {
         // Increment whenever woken up
         let c = reg_read(ADDRESS);
         reg_write(ADDRESS, c + 1);
+
         // If ulp timer is enabled, the main loop will break.
-        #[cfg(feature = "ulp-timer")]
+        #[cfg(not(feature = "keep-awake"))]
         break;
+
         // else, a small delay so it runs at 10Hz
-        #[cfg(not(feature = "ulp-timer"))]
         dly.delay_millis(100);
     }
 }

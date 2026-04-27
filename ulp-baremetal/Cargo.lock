@@ -47,8 +47,7 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "esp-hal-procmacros"
-version = "0.21.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?rev=83fbf871f3ff9ba539c2bcdecee8ed4938458d59#83fbf871f3ff9ba539c2bcdecee8ed4938458d59"
+version = "0.22.0"
 dependencies = [
  "document-features",
  "proc-macro-crate",
@@ -61,7 +60,6 @@ dependencies = [
 [[package]]
 name = "esp-lp-hal"
 version = "0.3.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?rev=83fbf871f3ff9ba539c2bcdecee8ed4938458d59#83fbf871f3ff9ba539c2bcdecee8ed4938458d59"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -69,7 +67,7 @@ dependencies = [
  "embedded-hal",
  "embedded-hal-nb",
  "esp-hal-procmacros",
- "esp-metadata-generated 0.3.0",
+ "esp-metadata-generated 0.4.0",
  "esp32c6-lp",
  "esp32s3-ulp",
  "nb",
@@ -79,8 +77,7 @@ dependencies = [
 
 [[package]]
 name = "esp-metadata-generated"
-version = "0.3.0"
-source = "git+https://github.com/leighleighleigh/esp-hal.git?rev=83fbf871f3ff9ba539c2bcdecee8ed4938458d59#83fbf871f3ff9ba539c2bcdecee8ed4938458d59"
+version = "0.4.0"
 
 [[package]]
 name = "esp-metadata-generated"
@@ -91,7 +88,7 @@ checksum = "42c2ee95b945a4780796e4359e72c033aed3b45073880e8029458f538532db8a"
 [[package]]
 name = "esp32c6-lp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=5ff8e30e#5ff8e30e2ad103415490381635f471ccaae24d67"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=cba62523#cba62523183b82fc4460c704bb361ff9ba7c3496"
 dependencies = [
  "critical-section",
  "vcell",
@@ -100,7 +97,7 @@ dependencies = [
 [[package]]
 name = "esp32s3-ulp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=5ff8e30e#5ff8e30e2ad103415490381635f471ccaae24d67"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=cba62523#cba62523183b82fc4460c704bb361ff9ba7c3496"
 dependencies = [
  "critical-section",
  "vcell",
@@ -194,19 +191,7 @@ dependencies = [
  "critical-section",
  "embedded-hal",
  "paste",
- "riscv-macros",
  "riscv-pac",
-]
-
-[[package]]
-name = "riscv-macros"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d323d13972c1b104aa036bc692cd08b822c8bbf23d79a27c526095856499799"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -293,7 +278,7 @@ dependencies = [
  "critical-section",
  "embedded-hal",
  "esp-lp-hal",
- "esp-metadata-generated 0.4.0",
+ "esp-metadata-generated 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "panic-halt",
 ]
 

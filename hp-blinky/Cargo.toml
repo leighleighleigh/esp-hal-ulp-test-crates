@@ -11,8 +11,11 @@ test = false
 bench = false
 
 [features]
-default = [] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.
+default = [ 'ulp-timer-wakeup' ] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.
 deep-sleep = [] # Main core will enter deep sleep
+ulp-hp-cpu-wakeup = [] # ULP woken by HpCpu
+ulp-timer-wakeup = [] # ULP will run off timer
+ulp-gpio-wakeup = [] # ULP will be woken up by GPIO
 esp32s3 = ["esp-metadata-generated/esp32s3", "esp-hal/esp32s3", "esp-bootloader-esp-idf/esp32s3", "esp-backtrace/esp32s3", "esp-println/esp32s3" ]
 esp32s2 = ["esp-metadata-generated/esp32s2", "esp-hal/esp32s2", "esp-bootloader-esp-idf/esp32s2", "esp-backtrace/esp32s2", "esp-println/esp32s2" ]
 esp32c6 = ["esp-metadata-generated/esp32c6", "esp-hal/esp32c6", "esp-bootloader-esp-idf/esp32c6", "esp-backtrace/esp32c6", "esp-println/esp32c6" ]
@@ -23,16 +26,16 @@ critical-section = "1.2.0"
 riscv-decode = "0.2.3"
 
 # new versions
-#esp-backtrace = { version = "0.19.0", features = ["panic-handler", "println"]}
-#esp-println = { version = "0.17.0", features = ["log-04"]}
-#esp-bootloader-esp-idf = { version = "0.5.0", features = ["log-04"]}
-#esp-hal = { version = "1.1.0-rc.0", features = ["unstable", "log-04"] }
+esp-backtrace = { version = "0.19.0", features = ["panic-handler", "println"]}
+esp-println = { version = "0.17.0", features = ["log-04"]}
+esp-bootloader-esp-idf = { version = "0.5.0", features = ["log-04"]}
+esp-hal = { version = "1.1.0-rc.0", features = ["unstable", "log-04"] }
 
 # old versions
-esp-backtrace = { version = "0.18.1", features = ["panic-handler", "println"]}
-esp-println = { version = "0.16.1", features = ["log-04"]}
-esp-bootloader-esp-idf = { version = "0.4.0", features = ["log-04"]}
-esp-hal = { version = "1.0.0", features = ["unstable", "log-04"] }
+#esp-backtrace = { version = "0.18.1", features = ["panic-handler", "println"]}
+#esp-println = { version = "0.16.1", features = ["log-04"]}
+#esp-bootloader-esp-idf = { version = "0.4.0", features = ["log-04"]}
+#esp-hal = { version = "1.0.0", features = ["unstable", "log-04"] }
 
 [build-dependencies]
 esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }
@@ -50,20 +53,16 @@ opt-level = 3
 codegen-units = 1
 lto = true
 
-## Mainline
-[patch.crates-io]
+# Upstream
+#[patch.crates-io]
 #esp-hal = { git = "https://github.com/esp-rs/esp-hal", rev = "53d72f1b4f1c087549d8c722634d8d5755b1ac26" }
 #esp-bootloader-esp-idf = { git = "https://github.com/esp-rs/esp-hal", rev = "53d72f1b4f1c087549d8c722634d8d5755b1ac26" }
 #esp-backtrace = { git = "https://github.com/esp-rs/esp-hal", rev = "53d72f1b4f1c087549d8c722634d8d5755b1ac26" }
 #esp-println = { git = "https://github.com/esp-rs/esp-hal", rev = "53d72f1b4f1c087549d8c722634d8d5755b1ac26" }
-esp-hal = { git = "https://github.com/esp-rs/esp-hal", rev = "83fbf871f3ff9ba539c2bcdecee8ed4938458d59" }
-esp-bootloader-esp-idf = { git = "https://github.com/esp-rs/esp-hal", rev = "83fbf871f3ff9ba539c2bcdecee8ed4938458d59" }
-esp-backtrace = { git = "https://github.com/esp-rs/esp-hal", rev = "83fbf871f3ff9ba539c2bcdecee8ed4938458d59" }
-esp-println = { git = "https://github.com/esp-rs/esp-hal", rev = "83fbf871f3ff9ba539c2bcdecee8ed4938458d59" }
 
 # Local development
-#[patch.crates-io]
-#esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
-#esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
-#esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
-#esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
+[patch.crates-io]
+esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
+esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
+esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
+esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }

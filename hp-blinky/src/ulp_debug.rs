@@ -4,14 +4,19 @@
 // Originally written for stompy-ulp/hp-core project,
 // on the 2nd of January 2026.
 #![allow(dead_code)]
+use core::fmt::Display;
+
 use esp_hal::peripherals;
 use log::info;
+use riscv_decode::{self, DecodingError, Instruction};
+
+const COPROC_ADDRESS_BASE: usize = 0x5000_0000;
 
 pub trait FromRegister {
     fn read() -> Self;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[allow(unused)]
 pub struct SarCocpuState {
     clk_en_st: bool,
@@ -25,6 +30,7 @@ impl FromRegister for SarCocpuState {
     #[cfg(esp32s3)]
     fn read() -> Self {
         let r = unsafe { &*peripherals::SENS::PTR }.sar_cocpu_state().read();
+
         SarCocpuState {
             clk_en_st: r.sar_cocpu_clk_en_st().bit_is_set(),
             reset_n: r.sar_cocpu_reset_n().bit_is_set(),
@@ -46,7 +52,7 @@ impl FromRegister for SarCocpuState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[allow(unused)]
 pub struct CocpuDebug {
     pc: u16,
@@ -95,6 +101,23 @@ impl CocpuDebug {
             state: SarCocpuState::read(),
         };
     }
+
+    /// Returns the program counter in the HP-core memory space
+    pub fn pc_address(&self) -> u32 {
+        self.pc as u32 + COPROC_ADDRESS_BASE as u32
+    }
+
+    /// Get the instruction code pointed at by the program counter
+    pub fn pc_instruction(&self) -> u32 {
+        let pc = self.pc_address() as *mut u32;
+        unsafe { pc.read_unaligned() }
+    }
+
+    /// Decodes the RISCV instruction at the PC
+    pub fn decode_instruction(&self) -> Result<Instruction, DecodingError> {
+        let instr = self.pc_instruction();
+        riscv_decode::decode(instr)
+    }
 }
 
 impl FromRegister for CocpuDebug {
@@ -110,16 +133,27 @@ impl FromRegister for CocpuDebug {
     }
 }
 
-pub fn get_cocpu_pc_instr(dbg: &CocpuDebug) -> (u32, u32) {
-    // Using the 'pc' field of CocpuDebug,
-    // calculates the HP-core-relative PC address,
-    // reads the data from RTC_SLOW_MEM.
-    let pc = (dbg.pc as u32 + 0x50000000) as *mut u32;
-    let instr = unsafe { pc.read_unaligned() };
-    (dbg.pc as u32, instr)
+impl Display for CocpuDebug {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("CocpuDebug")
+            .field("pc", &format_args!("0x{:04X}", &self.pc))
+            .field("*pc", &format_args!("0x{:08X}", &self.pc_instruction()))
+            .field("instr", &self.decode_instruction())
+            .field("state", &self.state)
+            .finish()
+    }
 }
 
-pub fn dump_coproc_pc_instructions(dbg: &CocpuDebug) {
-    let (pc, instr) = get_cocpu_pc_instr(dbg);
-    info!("*PC(0x{pc:x}): {instr:08x}");
-}
+// pub fn get_cocpu_pc_instr(dbg: &CocpuDebug) -> (u32, u32) {
+//     // Using the 'pc' field of CocpuDebug,
+//     // calculates the HP-core-relative PC address,
+//     // reads the data from RTC_SLOW_MEM.
+//     let pc = (dbg.pc as u32 + COPROC_ADDRESS_BASE as u32) as *mut u32;
+//     let instr = unsafe { pc.read_unaligned() };
+//     (dbg.pc as u32, instr)
+// }
+
+// pub fn dump_coproc_pc_instructions(dbg: &CocpuDebug) {
+//     let (pc, instr) = get_cocpu_pc_instr(dbg);
+//     info!("*PC(0x{pc:x}): {instr:08x}");
+// }

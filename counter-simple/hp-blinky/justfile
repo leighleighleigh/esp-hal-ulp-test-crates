@@ -1,0 +1,18 @@
+# hp-blinky
+
+## Set recipe parameters
+# hp_crate.just params
+chip := "esp32s3" 
+ulp_app_crate := "../ulp-blinky/"  
+# binutils.just params
+bin_name := "app"
+bin_arch := "xtensa-esp-elf"
+
+# Import common recipes
+set allow-duplicate-variables
+import "../../binutils.just"
+import "../../clippy.just"
+import "../../hp_crate.just"
+
+default:
+  just build

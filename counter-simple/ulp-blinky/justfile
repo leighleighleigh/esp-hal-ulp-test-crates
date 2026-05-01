@@ -1,0 +1,17 @@
+# ulp-blinky
+
+# Set recipe parameters
+chip := "esp32s3"
+bin_name := "blinky"
+bin_arch := "riscv32-esp-elf"
+
+# Import common recipes
+set allow-duplicate-variables
+import "../../binutils.just"
+import "../../clippy.just"
+
+default:
+  just build
+
+build:
+  cargo {{chip}}

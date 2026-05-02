@@ -16,13 +16,13 @@ espflash_flags := "--no-skip --ignore_app_descriptor --partition-table ./partiti
 [doc('Build LP and HP crates, flash chip, and monitor serial')]
 all:
   #!/usr/bin/env bash
-  set +eou pipefail
+  set -eou pipefail
   just build && just flash && just monitor 
 
 [doc('Build LP & HP crates')]
 build ULPAPP=ulp_app_crate CHIP=chip:
   #!/usr/bin/env bash
-  set +eou pipefail
+  set -eou pipefail
   just build-ulp-app {{ULPAPP}} {{CHIP}} && \
   cargo {{CHIP}}
 
@@ -30,7 +30,7 @@ build ULPAPP=ulp_app_crate CHIP=chip:
 [private]
 build-ulp-app APPCRATE CHIP:
   #!/usr/bin/env bash
-  set +eou pipefail
+  set -eou pipefail
   # Move into the ULP/LP app crate directory
   appdir="$(realpath {{APPCRATE}})"
   pushd "${appdir}" >/dev/null

@@ -2,6 +2,7 @@
 
 # Set recipe parameters
 chip := "esp32s3"
+target := "riscv32imc-unknown-none-elf"
 bin_name := "app"
 bin_arch := "riscv32-esp-elf"
 

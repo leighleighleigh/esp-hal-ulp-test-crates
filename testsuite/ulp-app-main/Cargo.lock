@@ -231,6 +231,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "shared"
+version = "0.1.0"
+
+[[package]]
 name = "syn"
 version = "2.0.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -281,7 +285,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ulp-blinky"
+name = "ulp-app-main"
 version = "0.1.0"
 dependencies = [
  "cfg-if",
@@ -289,6 +293,7 @@ dependencies = [
  "esp-lp-hal",
  "esp-metadata-generated 0.3.0",
  "panic-halt",
+ "shared",
 ]
 
 [[package]]

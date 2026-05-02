@@ -1,0 +1,86 @@
+[package]
+edition      = "2024"
+name         = "hp-test"
+rust-version = "1.88"
+version      = "0.1.0"
+
+[lib]
+name = "hil_test"
+
+[[bin]]
+name              = "main"
+harness           = false
+
+[[bin]]
+name              = "simple"
+harness           = false
+
+[features]
+default = []
+esp32s2 = [
+    "embedded-test/xtensa-semihosting",
+    "esp-hal/esp32s2",
+    "esp-bootloader-esp-idf/esp32s2",
+    "esp-metadata-generated/esp32s2",
+]
+esp32s3 = [
+    "embedded-test/xtensa-semihosting",
+    "esp-hal/esp32s3",
+    "esp-bootloader-esp-idf/esp32s3",
+    "esp-metadata-generated/esp32s3",
+]
+esp32c6 = [
+    "esp-hal/esp32c6",
+    "esp-bootloader-esp-idf/esp32c6",
+    "esp-metadata-generated/esp32c6",
+]
+unstable = ["esp-hal/unstable"]
+# Add the `embedded-test/defmt` feature for more verbose testing
+defmt = ["dep:defmt-rtt", "embedded-test/defmt", "esp-hal/defmt" ]
+
+[dependencies]
+log = "0.4.27"
+critical-section = "1.2.0"
+riscv-decode = "0.2.3"
+#esp-backtrace = { version = "0.19.0", features = ["panic-handler", "println"]}
+#esp-println = { version = "0.17.0", features = ["log-04"]}
+esp-bootloader-esp-idf = { version = "0.5.0", features = ["log-04"]}
+esp-hal = { version = "1.1.0-rc.0", features = ["unstable", "log-04"] }
+
+# test-specific crates
+#embassy-executor   = { version = "0.10.0", default-features = false }
+embedded-hal       = "1.0.0"
+defmt              = "1.0.1"
+defmt-rtt          = { version = "1.0.0", optional = true }
+semihosting        = { version = "0.1", features= ["stdio", "panic-handler"] }
+embedded-test       = { version = "0.7.1", default-features = false, features = ["external-executor", "semihosting"] }
+shared = { version = "0.1.0", path = "../shared" }
+
+[build-dependencies]
+esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }
+
+# Local development patches
+[patch.crates-io]
+esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
+esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
+esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
+esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
+
+# https://doc.rust-lang.org/cargo/reference/profiles.html#test
+# Test and bench profiles inherit from dev and release respectively.
+[profile.dev]
+codegen-units    = 1
+debug            = 2
+debug-assertions = true
+incremental      = false
+opt-level        = "z"
+overflow-checks  = true
+
+[profile.release]
+codegen-units    = 1
+debug            = 2
+debug-assertions = true
+incremental      = false
+opt-level        = 3
+lto              = false # LTO (thin or fat) miscompiles some tests on RISC-V
+overflow-checks  = true

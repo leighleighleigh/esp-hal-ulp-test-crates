@@ -4,7 +4,7 @@
 chip := "esp32s3"
 target := "riscv32imc-unknown-none-elf"
 
-bin_name := "blinky"
+bin_name := "app"
 bin_arch := "riscv32-esp-elf"
 
 # Import common recipes

@@ -15,9 +15,7 @@ import "../../binutils.just"
 import "../../clippy.just"
 import "../../hp_crate.just"
 
-tests:
-  cargo run --target xtensa-esp32s3-none-elf --features unstable,esp32s3 --bin simple
-  cargo run --target xtensa-esp32s3-none-elf --features unstable,esp32s3 --bin main
-
 default:
-  just all # build, flash, monitor
+  just build-ulp-app {{ulp_app_crate}} {{chip}}
+  cargo run --target xtensa-esp32s3-none-elf --features unstable,defmt,esp32s3 --bin main
+  #cargo run --target xtensa-esp32s3-none-elf --features unstable,esp32s3 --bin simple

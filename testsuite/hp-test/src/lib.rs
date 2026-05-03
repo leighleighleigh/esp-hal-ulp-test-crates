@@ -1,4 +1,5 @@
 #![no_std]
+#![no_main]
 
 // By default, we don't want probe-rs to interfere with test timings by halting
 // cores and polling RTT. The tests don't produce output most of the time

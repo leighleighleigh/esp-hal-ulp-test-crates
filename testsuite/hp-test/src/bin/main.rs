@@ -20,6 +20,8 @@ mod tests {
         time::{Duration, Instant},
     };
     use hil_test as _;
+    use shared::{COMMAND_ADDRESS, COUNTER_ADDRESS, REPLY_ADDRESS, UlpCommand, UlpReply, reg_read, reg_write, RW};
+    // use defmt::{info,warn};
     
     struct Context {
         p: Peripherals,
@@ -31,6 +33,90 @@ mod tests {
             p: esp_hal::init(esp_hal::Config::default()),
         }
     }
+
+    /// Test utils for ULP stuff
+    use esp_hal::load_lp_code;
+    use esp_hal::ulp_core::{
+        UlpCore as LpCore,
+        UlpCoreWakeupSource as LpCoreWakeupSource,
+        UlpCoreTimerCycles as LpCoreTimerCycles
+    };
+
+    // Type aliasing for peripheral type
+    type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
+
+    fn stop_ulp_core() {
+        let rtc_cntl = esp_hal::peripherals::LPWR::regs();
+        rtc_cntl
+            .ulp_cp_timer()
+            .modify(|_, w| w.ulp_cp_slp_timer_en().clear_bit());
+
+        // suspends the ulp operation
+        rtc_cntl
+            .cocpu_ctrl()
+            .modify(|_, w| w.cocpu_done().set_bit());
+
+        // Resets the processor
+        rtc_cntl
+            .cocpu_ctrl()
+            .modify(|_, w| w.cocpu_shut_reset_en().set_bit());
+
+        Delay::new().delay_us(20);
+
+        // above doesn't seem to halt the ULP core - this will
+        rtc_cntl
+            .cocpu_ctrl()
+            .modify(|_, w| w.cocpu_clkgate_en().clear_bit());
+    }
+
+    fn start_ulp_core(core: LpCorePeripheral) {
+        // Else, reprogram the ULP
+        let mut ulp_core = LpCore::new(core);
+        let ulp_core_code = load_lp_code!("lp_app");
+        
+        // Reset counter
+        reg_write(COUNTER_ADDRESS, 0);
+        // Reset reply
+        // reg_write(REPLY_ADDRESS, UlpReply::RISCV_COMMAND_INVALID as u32);
+        Delay::new().delay_ms(10);
+
+        ulp_core_code.run(
+            &mut ulp_core,
+            LpCoreWakeupSource::HpCpu,
+        );
+    }
+
+    fn ulp_is_running(counter_address : u32) -> bool
+    {
+        let a = reg_read(counter_address);
+        Delay::new().delay_ms(500);
+        let b = reg_read(counter_address);
+        defmt::info!("a =  {}, b = {}",a,b);
+        a != b
+    }
+
+    #[test]
+    fn ulp_counter(ctx : Context)
+    {
+        stop_ulp_core();
+        UlpCommand::RISCV_COUNTER_TEST.write();
+
+        let cmd = UlpCommand::read();
+        defmt::info!("cmd: 0x{:08x}",cmd as u32);
+
+        start_ulp_core(ctx.p.ULP_RISCV_CORE);
+
+        Delay::new().delay_ms(100);
+
+        let cmd = UlpCommand::read();
+        let rpl = UlpReply::read();
+        defmt::info!("cmd: 0x{:08x}",cmd as u32);
+        defmt::info!("reply: 0x{:08x}",rpl as u32);
+
+        assert!(ulp_is_running(COUNTER_ADDRESS));
+        assert_eq!(rpl,UlpReply::RISCV_COMMAND_OK);
+    } 
+
 
     #[test]
     fn delay_ns() {
@@ -69,7 +155,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(usb_serial_jtag_driver_supported)]
     fn creating_peripheral_does_not_break_debug_connection(ctx: Context) {
         use esp_hal::usb_serial_jtag::UsbSerialJtag;
 
@@ -89,9 +174,7 @@ mod tests {
 //     UlpCore as LpCore,
 //     UlpCoreWakeupSource as LpCoreWakeupSource,
 // };
-
 // use esp_hal::ulp_core::UlpCoreTimerCycles as LpCoreTimerCycles;
-
 // use esp_hal::{
 //     clock::CpuClock,
 //     delay::Delay,

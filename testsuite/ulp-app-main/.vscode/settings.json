@@ -1,5 +1,6 @@
 {
   "rust-analyzer.cargo.autoreload": true,
+  "rust-analyzer.server.path": "/run/current-system/sw/bin/rust-analyzer",
 
   // For ESP32-S3
   "rust-analyzer.cargo.target": "riscv32imc-unknown-none-elf",

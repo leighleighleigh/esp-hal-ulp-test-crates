@@ -4,3 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+
+[build-dependencies]
+esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }
+
+[features]
+default = []
+is-lp-core = []
+esp32s3 = []
+esp32s2 = []
+esp32c6 = []

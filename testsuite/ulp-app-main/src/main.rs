@@ -39,10 +39,13 @@ fn main() {
           break
         },
         UlpCommand::RISCV_NO_COMMAND => {
-          // UlpReply::RISCV_COMMAND_INVALID.write();
-          // reg_write(COMMAND_ADDRESS, cmd as u32);
+          UlpReply::RISCV_COMMAND_OK.write();
+          // reg_write(COMMAND_ADDRESS, cmd.into_raw());
           break;
         }, // loop forever, no increment
+        UlpCommand::RISCV_UNKNOWN_COMMAND(cmdval) => {
+          UlpReply::RISCV_COMMAND_UNKNOWN(cmdval).write();
+        }
       }
     }
 }

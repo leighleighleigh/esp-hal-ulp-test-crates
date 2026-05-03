@@ -5,4 +5,3 @@ fn main() -> Result<(), Box<dyn Error>> {
     esp_metadata_generated::Chip::from_cargo_feature()?.define_cfgs();
     Ok(())
 }
-

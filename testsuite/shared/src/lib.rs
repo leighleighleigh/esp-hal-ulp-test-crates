@@ -31,7 +31,7 @@ pub const COUNTER_ADDRESS: u32 = 0x1000;
 #[cfg(any(esp32s2, esp32s3))]
 pub const COUNTER_ADDRESS: u32 = 0x5000_1000;
 
-#[inline]
+// #[inline]
 pub fn reg_read(addr: u32) -> u32 {
     unsafe {
         let counter = addr as *mut u32;
@@ -39,7 +39,7 @@ pub fn reg_read(addr: u32) -> u32 {
     }
 }
 
-#[inline]
+// #[inline]
 pub fn reg_write(addr: u32, val: u32) {
     unsafe {
         let counter = addr as *mut u32;
@@ -47,17 +47,27 @@ pub fn reg_write(addr: u32, val: u32) {
     }
 }
 
-pub trait RW {
-    fn read() -> Self;
-    fn write(self);
+pub trait RW: Sized {
+    const ADDR: u32;
+
+    fn read() -> Self {
+        Self::from_raw(reg_read(Self::ADDR))
+    }
+
+    fn write(&self) {
+        let v = self.into_raw();
+        reg_write(Self::ADDR, v);
+    }
+
+    fn into_raw(&self) -> u32;
+    fn from_raw(value: u32) -> Self;
 }
 
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, defmt::Format)]
 #[allow(non_camel_case_types)]
-#[repr(C)]
+#[repr(u32)]
 pub enum UlpCommand {
-    RISCV_COUNTER_TEST = 1,
+    RISCV_COUNTER_TEST           = 1,
     RISCV_ULP_TIMER_COUNTER_TEST = 2,
     // RISCV_READ_WRITE_TEST = 1,
     // RISCV_DEEP_SLEEP_WAKEUP_SHORT_DELAY_TEST,
@@ -65,52 +75,56 @@ pub enum UlpCommand {
     // RISCV_LIGHT_SLEEP_WAKEUP_TEST,
     // RISCV_STOP_TEST,
     // RISCV_MUTEX_TEST,
-    RISCV_NO_COMMAND = 3,
+    RISCV_NO_COMMAND             = 3,
+    RISCV_UNKNOWN_COMMAND(u32),
 }
 
 impl RW for UlpCommand {
-    fn read() -> Self {
-        match reg_read(COMMAND_ADDRESS) {
+    const ADDR: u32 = COMMAND_ADDRESS;
+    fn from_raw(value: u32) -> Self {
+        match value {
             1 => Self::RISCV_COUNTER_TEST,
             2 => Self::RISCV_ULP_TIMER_COUNTER_TEST,
-            _ => Self::RISCV_NO_COMMAND,
+            3 => Self::RISCV_NO_COMMAND,
+            v => Self::RISCV_UNKNOWN_COMMAND(v),
         }
     }
-
-    fn write(self) {
-        let v = match self {
+    fn into_raw(&self) -> u32 {
+        match self {
             Self::RISCV_COUNTER_TEST => 1,
             Self::RISCV_ULP_TIMER_COUNTER_TEST => 2,
             Self::RISCV_NO_COMMAND => 3,
-        };
-        reg_write(COMMAND_ADDRESS, v);
+            Self::RISCV_UNKNOWN_COMMAND(v) => *v,
+        }
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, defmt::Format)]
 #[allow(non_camel_case_types)]
-#[repr(C)]
+#[repr(u32)]
 pub enum UlpReply {
-    RISCV_COMMAND_OK = 1,
-    RISCV_COMMAND_NOK = 2,
-    RISCV_COMMAND_INVALID = 3,
+    RISCV_COMMAND_OK            = 1,
+    RISCV_COMMAND_NOK           = 2,
+    RISCV_COMMAND_UNIMPLIMENTED = 3,
+    RISCV_COMMAND_UNKNOWN(u32),
 }
 
 impl RW for UlpReply {
-    fn read() -> Self {
-        match reg_read(REPLY_ADDRESS) {
+    const ADDR: u32 = REPLY_ADDRESS;
+    fn from_raw(value: u32) -> Self {
+        match value {
             1 => Self::RISCV_COMMAND_OK,
             2 => Self::RISCV_COMMAND_NOK,
-            _ => Self::RISCV_COMMAND_INVALID
+            3 => Self::RISCV_COMMAND_UNIMPLIMENTED,
+            v => Self::RISCV_COMMAND_UNKNOWN(v),
         }
     }
-
-    fn write(self) {
-        let v = match self {
-            Self::RISCV_COMMAND_OK=> 1,
+    fn into_raw(&self) -> u32 {
+        match self {
+            Self::RISCV_COMMAND_OK => 1,
             Self::RISCV_COMMAND_NOK => 2,
-            Self::RISCV_COMMAND_INVALID => 3,
-        };
-        reg_write(REPLY_ADDRESS, v);
+            Self::RISCV_COMMAND_UNIMPLIMENTED => 3,
+            Self::RISCV_COMMAND_UNKNOWN(va) => *va,
+        }
     }
 }

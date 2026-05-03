@@ -10,7 +10,7 @@
 //% CHIPS: esp32c6 esp32s2 esp32s3
 //% FEATURES: unstable
 
-#[embedded_test::tests(default_timeout=2)]
+#[embedded_test::tests(default_timeout = 2)]
 mod tests {
     use embedded_hal::delay::DelayNs;
     use esp_hal::{
@@ -20,9 +20,18 @@ mod tests {
         time::{Duration, Instant},
     };
     use hil_test as _;
-    use shared::{COMMAND_ADDRESS, COUNTER_ADDRESS, REPLY_ADDRESS, UlpCommand, UlpReply, reg_read, reg_write, RW};
+    use shared::{
+        COMMAND_ADDRESS,
+        COUNTER_ADDRESS,
+        REPLY_ADDRESS,
+        RW,
+        UlpCommand,
+        UlpReply,
+        reg_read,
+        reg_write,
+    };
     // use defmt::{info,warn};
-    
+
     struct Context {
         p: Peripherals,
     }
@@ -38,8 +47,8 @@ mod tests {
     use esp_hal::load_lp_code;
     use esp_hal::ulp_core::{
         UlpCore as LpCore,
+        UlpCoreTimerCycles as LpCoreTimerCycles,
         UlpCoreWakeupSource as LpCoreWakeupSource,
-        UlpCoreTimerCycles as LpCoreTimerCycles
     };
 
     // Type aliasing for peripheral type
@@ -73,36 +82,31 @@ mod tests {
         // Else, reprogram the ULP
         let mut ulp_core = LpCore::new(core);
         let ulp_core_code = load_lp_code!("lp_app");
-        
+
         // Reset counter
         reg_write(COUNTER_ADDRESS, 0);
         // Reset reply
         // reg_write(REPLY_ADDRESS, UlpReply::RISCV_COMMAND_INVALID as u32);
         Delay::new().delay_ms(10);
 
-        ulp_core_code.run(
-            &mut ulp_core,
-            LpCoreWakeupSource::HpCpu,
-        );
+        ulp_core_code.run(&mut ulp_core, LpCoreWakeupSource::HpCpu);
     }
 
-    fn ulp_is_running(counter_address : u32) -> bool
-    {
+    fn ulp_is_running(counter_address: u32) -> bool {
         let a = reg_read(counter_address);
         Delay::new().delay_ms(500);
         let b = reg_read(counter_address);
-        defmt::info!("a =  {}, b = {}",a,b);
+        defmt::info!("a =  {}, b = {}", a, b);
         a != b
     }
 
     #[test]
-    fn ulp_counter(ctx : Context)
-    {
+    fn ulp_counter(ctx: Context) {
         stop_ulp_core();
+        
         UlpCommand::RISCV_COUNTER_TEST.write();
-
         let cmd = UlpCommand::read();
-        defmt::info!("cmd: 0x{:08x}",cmd as u32);
+        defmt::info!("cmd: 0x{:08x}", cmd.into_raw());
 
         start_ulp_core(ctx.p.ULP_RISCV_CORE);
 
@@ -110,13 +114,12 @@ mod tests {
 
         let cmd = UlpCommand::read();
         let rpl = UlpReply::read();
-        defmt::info!("cmd: 0x{:08x}",cmd as u32);
-        defmt::info!("reply: 0x{:08x}",rpl as u32);
+        defmt::info!("cmd: 0x{:?}", cmd);
+        defmt::info!("reply: 0x{:?}", rpl);
 
         assert!(ulp_is_running(COUNTER_ADDRESS));
-        assert_eq!(rpl,UlpReply::RISCV_COMMAND_OK);
-    } 
-
+        assert_eq!(rpl, UlpReply::RISCV_COMMAND_OK);
+    }
 
     #[test]
     fn delay_ns() {
@@ -242,7 +245,6 @@ mod tests {
 
 //     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
 //     let peripherals = esp_hal::init(config);
-
 
 //     {
 //         // REQUIRED FOR LEIGHLEIGHLEIGH's CUSTOM DEVBOARD ONLY

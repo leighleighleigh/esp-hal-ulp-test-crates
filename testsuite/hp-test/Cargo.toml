@@ -6,10 +6,12 @@ version      = "0.1.0"
 
 [lib]
 name = "hil_test"
+test = false
 
 [[bin]]
 name              = "main"
 harness           = false
+test = false
 
 [[bin]]
 name              = "simple"

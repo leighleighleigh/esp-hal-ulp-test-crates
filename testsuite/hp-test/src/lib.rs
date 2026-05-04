@@ -9,6 +9,8 @@
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+pub mod ulp_utils;
+
 use esp_hal as _;
 
 #[cfg(not(feature = "defmt"))]

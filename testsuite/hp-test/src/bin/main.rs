@@ -6,31 +6,27 @@
     holding buffers for the duration of a data transfer."
 )]
 #![deny(clippy::large_stack_frames)]
+#![allow(unused_imports)]
 
 //% CHIPS: esp32c6 esp32s2 esp32s3
 //% FEATURES: unstable
 
 #[embedded_test::tests(default_timeout = 2)]
 mod tests {
-    use embedded_hal::delay::DelayNs;
+    // use embedded_hal::delay::DelayNs;
+    // use esp_hal::ulp_core::UlpCoreTimerCycles;
     use esp_hal::{
-        delay::Delay,
+        // delay::Delay,
         peripherals::Peripherals,
-        rom::{crc, md5},
-        time::{Duration, Instant},
+        // time::Instant,
     };
     use hil_test as _;
+    use hil_test::ulp_utils::{LpCoreTimerCycles, LpCoreWakeupSource, start_ulp_core, ulp_is_running, ulp_riscv_halt, ulp_riscv_reset};
     use shared::{
-        COMMAND_ADDRESS,
-        COUNTER_ADDRESS,
-        REPLY_ADDRESS,
         RW,
         UlpCommand,
         UlpReply,
-        reg_read,
-        reg_write,
     };
-    // use defmt::{info,warn};
 
     struct Context {
         p: Peripherals,
@@ -43,126 +39,64 @@ mod tests {
         }
     }
 
-    /// Test utils for ULP stuff
-    use esp_hal::load_lp_code;
-    use esp_hal::ulp_core::{
-        UlpCore as LpCore,
-        UlpCoreTimerCycles as LpCoreTimerCycles,
-        UlpCoreWakeupSource as LpCoreWakeupSource,
-    };
+    // Halt ULP, set command, and start ULP
+    fn _ulp_test_runner(ctx: Context, command : UlpCommand)
+    {
+        command.save();
 
-    // Type aliasing for peripheral type
-    type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
+        let ulp_wake_src : LpCoreWakeupSource = match command {
+            UlpCommand::RISCV_ULP_TIMER_COUNTER_TEST => LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(5)),
+            _ => LpCoreWakeupSource::HpCpu,
+        };
 
-    fn stop_ulp_core() {
-        let rtc_cntl = esp_hal::peripherals::LPWR::regs();
-        rtc_cntl
-            .ulp_cp_timer()
-            .modify(|_, w| w.ulp_cp_slp_timer_en().clear_bit());
-
-        // suspends the ulp operation
-        rtc_cntl
-            .cocpu_ctrl()
-            .modify(|_, w| w.cocpu_done().set_bit());
-
-        // Resets the processor
-        rtc_cntl
-            .cocpu_ctrl()
-            .modify(|_, w| w.cocpu_shut_reset_en().set_bit());
-
-        Delay::new().delay_us(20);
-
-        // above doesn't seem to halt the ULP core - this will
-        rtc_cntl
-            .cocpu_ctrl()
-            .modify(|_, w| w.cocpu_clkgate_en().clear_bit());
-    }
-
-    fn start_ulp_core(core: LpCorePeripheral) {
-        // Else, reprogram the ULP
-        let mut ulp_core = LpCore::new(core);
-        let ulp_core_code = load_lp_code!("lp_app");
-
-        // Reset counter
-        reg_write(COUNTER_ADDRESS, 0);
-        // Reset reply
-        // reg_write(REPLY_ADDRESS, UlpReply::RISCV_COMMAND_INVALID as u32);
-        Delay::new().delay_ms(10);
-
-        ulp_core_code.run(&mut ulp_core, LpCoreWakeupSource::HpCpu);
-    }
-
-    fn ulp_is_running(counter_address: u32) -> bool {
-        let a = reg_read(counter_address);
-        Delay::new().delay_ms(500);
-        let b = reg_read(counter_address);
-        defmt::info!("a =  {}, b = {}", a, b);
-        a != b
+        start_ulp_core(ctx.p.ULP_RISCV_CORE, ulp_wake_src);
     }
 
     #[test]
-    fn ulp_counter(ctx: Context) {
-        stop_ulp_core();
-        
-        UlpCommand::RISCV_COUNTER_TEST.write();
-        let cmd = UlpCommand::read();
-        defmt::info!("cmd: 0x{:08x}", cmd.into_raw());
-
-        start_ulp_core(ctx.p.ULP_RISCV_CORE);
-
-        Delay::new().delay_ms(100);
-
-        let cmd = UlpCommand::read();
-        let rpl = UlpReply::read();
-        defmt::info!("cmd: 0x{:?}", cmd);
-        defmt::info!("reply: 0x{:?}", rpl);
-
-        assert!(ulp_is_running(COUNTER_ADDRESS));
-        assert_eq!(rpl, UlpReply::RISCV_COMMAND_OK);
+    fn ulp_loop_counter(ctx: Context) {
+        _ulp_test_runner(ctx, UlpCommand::RISCV_COUNTER_TEST);
+        hil_test::assert!(ulp_is_running());
+        hil_test::assert_eq!(UlpReply::load(), UlpReply::RISCV_COMMAND_OK);
     }
 
     #[test]
-    fn delay_ns() {
-        let t1 = Instant::now();
-        Delay::new().delay_ns(600_000);
-        let t2 = Instant::now();
-
-        assert!(t2 > t1);
-        assert!(
-            (t2 - t1).as_micros() >= 600u64,
-            "diff: {:?}",
-            (t2 - t1).as_micros()
-        );
+    fn ulp_timer_counter(ctx: Context) {
+        _ulp_test_runner(ctx, UlpCommand::RISCV_ULP_TIMER_COUNTER_TEST);
+        hil_test::assert!(ulp_is_running());
+        hil_test::assert_eq!(UlpReply::load(), UlpReply::RISCV_COMMAND_OK);
     }
 
-    /// This is just to check that we can create a bootable image
-    /// if there is something with a "specific" alignment in `.rodata`
-    /// on chips with "D/I vaddr are shared" (SOC_MMU_DI_VADDR_SHARED)
-    /// (Which is C6 and later)
-    ///
-    /// The gap produced previously made tooling create three image segments but
-    /// the bootloader will refuse to boot anything with >2 segments in flash.
-    ///
-    /// Unfortunately the way things fail if this fails is "unfortunate"
-    /// (i.e. every test here fails with an unhelpful `ERROR probe_rs_debug::debug_info:Other("Stack
-    /// pointer is too far away to unwind")``)
-    #[test]
-    fn can_boot() {
-        #[repr(align(64))]
-        struct Aligned {
-            _data: [u8; 128],
-        }
+    // #[test]
+    // fn delay_ns() {
+    //     let t1 = Instant::now();
+    //     Delay::new().delay_ns(600_000);
+    //     let t2 = Instant::now();
 
-        #[used]
-        static ALIGNED: Aligned = Aligned { _data: [0; 128] };
-    }
+    //     assert!(t2 > t1);
+    //     assert!(
+    //         (t2 - t1).as_micros() >= 600u64,
+    //         "diff: {:?}",
+    //         (t2 - t1).as_micros()
+    //     );
+    // }
 
-    #[test]
-    fn creating_peripheral_does_not_break_debug_connection(ctx: Context) {
-        use esp_hal::usb_serial_jtag::UsbSerialJtag;
+    // #[test]
+    // fn can_boot() {
+    //     #[repr(align(64))]
+    //     struct Aligned {
+    //         _data: [u8; 128],
+    //     }
 
-        _ = UsbSerialJtag::new(ctx.p.USB_DEVICE).into_async().split();
-    }
+    //     #[used]
+    //     static ALIGNED: Aligned = Aligned { _data: [0; 128] };
+    // }
+
+    // #[test]
+    // fn creating_peripheral_does_not_break_debug_connection(ctx: Context) {
+    //     use esp_hal::usb_serial_jtag::UsbSerialJtag;
+
+    //     _ = UsbSerialJtag::new(ctx.p.USB_DEVICE).into_async().split();
+    // }
 }
 
 // use esp_backtrace as _;

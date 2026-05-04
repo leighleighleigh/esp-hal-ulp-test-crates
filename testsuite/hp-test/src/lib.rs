@@ -10,6 +10,7 @@
 esp_bootloader_esp_idf::esp_app_desc!();
 
 pub mod ulp_utils;
+pub mod ulp_debug;
 
 use esp_hal as _;
 

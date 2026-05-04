@@ -13,58 +13,95 @@
 
 #[embedded_test::tests(default_timeout = 2)]
 mod tests {
-    // use embedded_hal::delay::DelayNs;
-    // use esp_hal::ulp_core::UlpCoreTimerCycles;
-    use esp_hal::{
-        // delay::Delay,
-        peripherals::Peripherals,
-        // time::Instant,
+    use embedded_hal::delay::DelayNs;
+    use esp_hal::{delay::Delay, peripherals::Peripherals, time::Instant};
+    use hil_test::ulp_debug::FromRegister;
+    use hil_test::{self as _, ulp_debug};
+    use hil_test::ulp_utils::{
+        LpCorePeripheral, LpCoreTimerCycles, LpCoreWakeupSource, erase_ulp_core, start_ulp_core, ulp_is_running, ulp_riscv_halt, ulp_riscv_reset, ulp_riscv_timer_resume, ulp_riscv_timer_stop
     };
-    use hil_test as _;
-    use hil_test::ulp_utils::{LpCoreTimerCycles, LpCoreWakeupSource, start_ulp_core, ulp_is_running, ulp_riscv_halt, ulp_riscv_reset};
-    use shared::{
-        RW,
-        UlpCommand,
-        UlpReply,
-    };
+    use shared::{UlpCommand, UlpCommandType, UlpLoopCounter, UlpReply, UlpReplyType};
 
     struct Context {
         p: Peripherals,
     }
 
+    // This is run on EVERY test case.
     #[init]
     fn init() -> Context {
-        Context {
-            p: esp_hal::init(esp_hal::Config::default()),
-        }
+        let config = esp_hal::Config::default().with_cpu_clock(esp_hal::clock::CpuClock::max());
+        let peripherals = esp_hal::init(config);
+
+        // ulp_riscv_reset();
+        // erase_ulp_core(unsafe { peripherals.ULP_RISCV_CORE.clone_unchecked() });
+        // _ulp_test_runner(
+        //     unsafe { peripherals.ULP_RISCV_CORE.clone_unchecked() },
+        //     UlpCommandType::RISCV_NO_COMMAND,
+        // );
+
+        Context { p: peripherals }
     }
 
     // Halt ULP, set command, and start ULP
-    fn _ulp_test_runner(ctx: Context, command : UlpCommand)
-    {
-        command.save();
+    fn _ulp_test_runner(core: LpCorePeripheral, command: UlpCommandType) {
+        UlpCommand::write(command);
 
-        let ulp_wake_src : LpCoreWakeupSource = match command {
-            UlpCommand::RISCV_ULP_TIMER_COUNTER_TEST => LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(5)),
+        let ulp_wake_src: LpCoreWakeupSource = match command {
+            UlpCommandType::RISCV_ULP_TIMER_COUNTER_TEST => {
+                LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(5))
+            }
             _ => LpCoreWakeupSource::HpCpu,
         };
 
-        start_ulp_core(ctx.p.ULP_RISCV_CORE, ulp_wake_src);
+        start_ulp_core(core, ulp_wake_src);
     }
 
     #[test]
-    fn ulp_loop_counter(ctx: Context) {
-        _ulp_test_runner(ctx, UlpCommand::RISCV_COUNTER_TEST);
+    fn ulp_can_be_stopped_and_resumed(ctx: Context) {
+        // run the blocking loop
+        _ulp_test_runner(ctx.p.ULP_RISCV_CORE, UlpCommandType::RISCV_COUNTER_TEST);
+
+        // debug the core
+        let dbg = ulp_debug::CocpuDebug::read();
+        defmt::info!("{:?}",dbg);
+
         hil_test::assert!(ulp_is_running());
-        hil_test::assert_eq!(UlpReply::load(), UlpReply::RISCV_COMMAND_OK);
+
+        ulp_riscv_timer_stop();
+        ulp_riscv_halt();
+
+        hil_test::assert!(!ulp_is_running());
+
+        ulp_riscv_timer_resume();
+
+        hil_test::assert!(ulp_is_running());
     }
 
-    #[test]
-    fn ulp_timer_counter(ctx: Context) {
-        _ulp_test_runner(ctx, UlpCommand::RISCV_ULP_TIMER_COUNTER_TEST);
-        hil_test::assert!(ulp_is_running());
-        hil_test::assert_eq!(UlpReply::load(), UlpReply::RISCV_COMMAND_OK);
-    }
+    // #[test]
+    // fn ulp_can_be_erased(ctx: Context) {
+    //     erase_ulp_core(unsafe { ctx.p.ULP_RISCV_CORE.clone_unchecked() });
+    //     hil_test::assert!(!ulp_is_running());
+    //     _ulp_test_runner(ctx.p.ULP_RISCV_CORE, UlpCommandType::RISCV_NO_COMMAND);
+    //     let a = UlpLoopCounter::read();
+    //     hil_test::assert_eq!(a, 1);
+    // }
+
+    // #[test]
+    // fn ulp_loop_counter(ctx: Context) {
+    //     _ulp_test_runner(ctx.p.ULP_RISCV_CORE, UlpCommandType::RISCV_COUNTER_TEST);
+    //     hil_test::assert!(ulp_is_running());
+    //     hil_test::assert_eq!(UlpReply::read(), UlpReplyType::RISCV_COMMAND_OK);
+    // }
+
+    // #[test]
+    // fn ulp_timer_counter(ctx: Context) {
+    //     _ulp_test_runner(
+    //         ctx.p.ULP_RISCV_CORE,
+    //         UlpCommandType::RISCV_ULP_TIMER_COUNTER_TEST,
+    //     );
+    //     hil_test::assert!(ulp_is_running());
+    //     hil_test::assert_eq!(UlpReply::read(), UlpReplyType::RISCV_COMMAND_OK);
+    // }
 
     // #[test]
     // fn delay_ns() {

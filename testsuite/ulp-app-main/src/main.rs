@@ -3,48 +3,50 @@
 #![no_std]
 #![no_main]
 
-use esp_lp_hal::prelude::*;
-use esp_lp_hal::delay::Delay;
+use esp_lp_hal::{delay::Delay, prelude::*};
 use panic_halt as _;
+use shared::{UlpCommand, UlpCommandType, UlpLoopCounter, UlpReply, UlpReplyType};
 
-use shared::{UlpLoopCounter, UlpCommand, UlpReply, RW};
+// This return type is used to indicate if the command should exit the loop or not
+enum CmdResult {
+    Continue,
+    Break,
+}
 
-fn increment_counter() {
-    let mut count : u32 = UlpLoopCounter::load().into_raw();
-    count = count.wrapping_add(1u32);
-    UlpLoopCounter::from_raw(count).save();
+fn handle_command(cmd: UlpCommandType) -> CmdResult {
+    let dly = Delay {};
+
+    match cmd {
+        UlpCommandType::RISCV_UNKNOWN_COMMAND => {
+            UlpReply::write(UlpReplyType::RISCV_COMMAND_UNKNOWN);
+            CmdResult::Continue
+        }
+        UlpCommandType::RISCV_COUNTER_TEST => {
+            // Blocking counter in the loop
+            UlpReply::write(UlpReplyType::RISCV_COMMAND_OK);
+            dly.delay_millis(100);
+            UlpLoopCounter::increment();
+            CmdResult::Continue
+        }
+        UlpCommandType::RISCV_ULP_TIMER_COUNTER_TEST => {
+            UlpReply::write(UlpReplyType::RISCV_COMMAND_OK);
+            CmdResult::Break
+        }
+        UlpCommandType::RISCV_NO_COMMAND => {
+            UlpReply::write(UlpReplyType::RISCV_COMMAND_OK);
+            CmdResult::Break
+        }
+    }
 }
 
 #[entry]
 fn main() {
     // Increment counter on boot
-    increment_counter();
+    UlpLoopCounter::increment();
 
     // Handle command
-    let dly = Delay {};
-    let cmd : UlpCommand = UlpCommand::load();
+    let cmd: UlpCommandType = UlpCommand::read();
 
-    loop {
-      match cmd {
-        UlpCommand::RISCV_COUNTER_TEST => {
-          // command is ok
-          UlpReply::RISCV_COMMAND_OK.save();
-          // run in the loop, incrementing and delaying
-          dly.delay_millis(100);
-          increment_counter();
-        },
-        UlpCommand::RISCV_ULP_TIMER_COUNTER_TEST => {
-          UlpReply::RISCV_COMMAND_OK.save();
-          // break! only increment on boot
-          break
-        },
-        UlpCommand::RISCV_NO_COMMAND => {
-          UlpReply::RISCV_COMMAND_OK.save();
-          break;
-        }, // loop forever, no increment
-        UlpCommand::RISCV_UNKNOWN_COMMAND(cmdval) => {
-          UlpReply::RISCV_COMMAND_UNKNOWN(cmdval).save();
-        }
-      }
-    }
+    // Loop until command says to stop
+    while let CmdResult::Continue = handle_command(cmd) {}
 }

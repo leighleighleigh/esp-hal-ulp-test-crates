@@ -1,34 +1,31 @@
 /// Test utils for ULP stuff
 use embedded_hal::delay::DelayNs;
-use esp_hal::delay::Delay;
-
-use shared::{RW, UlpLoopCounter};
-
-use esp_hal::load_lp_code;
 pub use esp_hal::ulp_core::{
     UlpCore as LpCore,
     UlpCoreTimerCycles as LpCoreTimerCycles,
     UlpCoreWakeupSource as LpCoreWakeupSource,
 };
+use esp_hal::{delay::Delay, load_lp_code};
+use shared::UlpLoopCounter;
 
 // Type aliasing for peripheral type
 pub type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
 
-pub fn ulp_riscv_timer_stop()
-{
+pub fn ulp_riscv_timer_stop() {
     let rtc_cntl = esp_hal::peripherals::LPWR::regs();
-    rtc_cntl.ulp_cp_timer().write(|w| w.ulp_cp_slp_timer_en().clear_bit());
+    rtc_cntl
+        .ulp_cp_timer()
+        .write(|w| w.ulp_cp_slp_timer_en().clear_bit());
 }
 
-pub fn ulp_riscv_timer_resume()
-{
+pub fn ulp_riscv_timer_resume() {
     let rtc_cntl = esp_hal::peripherals::LPWR::regs();
-    rtc_cntl.ulp_cp_timer().write(|w| w.ulp_cp_slp_timer_en().set_bit());
+    rtc_cntl
+        .ulp_cp_timer()
+        .write(|w| w.ulp_cp_slp_timer_en().set_bit());
 }
 
-
-pub fn ulp_riscv_halt()
-{
+pub fn ulp_riscv_halt() {
     ulp_riscv_timer_stop();
     let rtc_cntl = esp_hal::peripherals::LPWR::regs();
 
@@ -61,23 +58,26 @@ pub fn ulp_riscv_reset() {
     });
 }
 
-pub fn start_ulp_core(core: LpCorePeripheral, wakeup_source : LpCoreWakeupSource) {
+pub fn erase_ulp_core(core: LpCorePeripheral) -> LpCore<'static> {
     ulp_riscv_timer_stop();
     ulp_riscv_halt();
-    let mut ulp_core = LpCore::new(core);
-    let ulp_core_code = load_lp_code!("lp_app");
+    let ulp_core = LpCore::new(core);
+    ulp_core
+}
 
+pub fn start_ulp_core(core: LpCorePeripheral, wakeup_source: LpCoreWakeupSource) {
+    let mut ulp_core = erase_ulp_core(core);
+    let ulp_code = load_lp_code!("lp_app");
     // Reset counter
-    UlpLoopCounter::from_raw(0).save();
-
-    // ulp_core_code.run(&mut ulp_core, LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(53)));
-    ulp_core_code.run(&mut ulp_core, wakeup_source);
+    UlpLoopCounter::reset();
+    ulp_code.run(&mut ulp_core, wakeup_source);
 }
 
 pub fn ulp_is_running() -> bool {
-    let a = UlpLoopCounter::load().into_raw();
+    let a = UlpLoopCounter::read();
     Delay::new().delay_ms(500);
-    let b = UlpLoopCounter::load().into_raw();
+    let b = UlpLoopCounter::read();
     defmt::info!("a =  {}, b = {}", a, b);
     a != b
 }
+

@@ -19,6 +19,8 @@ harness           = false
 
 [features]
 default = ["unstable","defmt"]
+unstable = ["esp-hal/unstable"]
+defmt = ["dep:defmt-rtt", "embedded-test/defmt", "esp-hal/defmt"]
 esp32s2 = [
     "embedded-test/xtensa-semihosting",
     "esp-hal/esp32s2",
@@ -39,9 +41,6 @@ esp32c6 = [
     "esp-metadata-generated/esp32c6",
     "shared/esp32c6" 
 ]
-unstable = ["esp-hal/unstable"]
-# Add the `embedded-test/defmt` feature for more verbose testing
-defmt = ["dep:defmt-rtt", "embedded-test/defmt", "esp-hal/defmt"]
 
 [dependencies]
 log = "0.4.27"

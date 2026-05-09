@@ -1,9 +1,9 @@
 SECTIONS
 {
     /* Placed at the 'heap' location, after bss */
-    . = ORIGIN(ram) + LENGTH(ram);
+    /* . = ORIGIN(ram) + LENGTH(ram); */
 
-    .ulp ALIGN(0x10):
+    .ulp ALIGN(4):
     {
         *(.ulp)
         *(.ulp*)

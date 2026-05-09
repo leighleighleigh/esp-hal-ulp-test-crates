@@ -4,30 +4,35 @@
 #![allow(static_mut_refs)]
 
 #[cfg_attr(feature = "is-lp-core", unsafe(link_section = ".ulp"))]
+#[cfg_attr(not(feature = "is-lp-core"), unsafe(link_section = ".ulp.ULP_COMMAND"))]
+#[unsafe(no_mangle)]
+#[used]
+pub static mut ULP_COMMAND: UlpCommandType = UlpCommandType::NOOP;
+
+#[cfg_attr(feature = "is-lp-core", unsafe(link_section = ".ulp"))]
+#[cfg_attr(not(feature = "is-lp-core"), unsafe(link_section = ".ulp.ULP_REPLY"))]
+#[unsafe(no_mangle)]
+#[used]
+pub static mut ULP_REPLY: UlpReplyType = UlpReplyType::REPLY_UNKNOWN;
+
+#[cfg_attr(feature = "is-lp-core", unsafe(link_section = ".ulp"))]
 #[cfg_attr(
     not(feature = "is-lp-core"),
     unsafe(link_section = ".ulp.ULP_LOOP_COUNTER")
 )]
 #[unsafe(no_mangle)]
+#[used]
 pub static mut ULP_LOOP_COUNTER: u32 = 0;
 
-#[cfg_attr(feature = "is-lp-core", unsafe(link_section = ".ulp"))]
-#[cfg_attr(not(feature = "is-lp-core"), unsafe(link_section = ".ulp.ULP_COMMAND"))]
-#[unsafe(no_mangle)]
-pub static mut ULP_COMMAND: UlpCommandType = UlpCommandType::RISCV_NO_COMMAND;
 
-#[cfg_attr(feature = "is-lp-core", unsafe(link_section = ".ulp"))]
-#[cfg_attr(not(feature = "is-lp-core"), unsafe(link_section = ".ulp.ULP_REPLY"))]
-#[unsafe(no_mangle)]
-pub static mut ULP_REPLY: UlpReplyType = UlpReplyType::RISCV_COMMAND_OK;
-
-#[repr(C, align(2))]
-#[derive(Clone, Copy, PartialEq, Debug, defmt::Format)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[cfg_attr(not(feature = "is-lp-core"), derive(Debug))]
+#[derive(Clone, Copy, PartialOrd, PartialEq)]
+#[repr(u32)]
 pub enum UlpCommandType {
-    RISCV_UNKNOWN_COMMAND = 0,
-    RISCV_NO_COMMAND,
-    RISCV_COUNTER_TEST,
-    RISCV_ULP_TIMER_COUNTER_TEST,
+    NOOP,
+    LOOP_COUNTER_TEST,
+    TIMER_COUNTER_TEST,
     // RISCV_READ_WRITE_TEST = 1,
     // RISCV_DEEP_SLEEP_WAKEUP_SHORT_DELAY_TEST,
     // RISCV_DEEP_SLEEP_WAKEUP_LONG_DELAY_TEST,
@@ -36,62 +41,112 @@ pub enum UlpCommandType {
     // RISCV_MUTEX_TEST,
 }
 
-#[repr(C, align(2))]
-#[derive(Clone, Copy, PartialEq, Debug, defmt::Format)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[cfg_attr(not(feature = "is-lp-core"), derive(Debug))]
+#[derive(Clone, Copy, PartialOrd, PartialEq)]
+#[repr(u32)]
 pub enum UlpReplyType {
-    RISCV_COMMAND_UNKNOWN = 0,
-    RISCV_COMMAND_OK,
-    RISCV_COMMAND_NOK,
-    RISCV_COMMAND_UNIMPLIMENTED,
+    REPLY_UNKNOWN,
+    REPLY_OK,
+    REPLY_NOK,
+    REPLY_UNIMPLEMENTED,
 }
 
-#[derive(Clone, Copy, Debug, defmt::Format)]
+
+
+
 pub struct UlpCommand {}
 
 impl UlpCommand {
+    #[inline(never)]
     pub fn read() -> UlpCommandType {
-        critical_section::with(|_cs| unsafe { ULP_COMMAND.clone() })
+        // critical_section::with(|_cs| unsafe { ULP_COMMAND.clone() })
+        unsafe { 
+            ULP_COMMAND
+        }
+        // unsafe {
+        //     let p_mut = &mut ULP_COMMAND as *mut UlpCommandType;
+        //     p_mut.read_unaligned()
+        // }
     }
 
+    #[inline(never)]
     pub fn write(value: UlpCommandType) {
-        critical_section::with(|_cs| unsafe {
+        // critical_section::with(|_cs| unsafe {
+        //     ULP_COMMAND = value;
+        // })
+        unsafe {
             ULP_COMMAND = value;
-        })
+        }
+        // unsafe {
+        //     let p_mut = &mut ULP_COMMAND as *mut UlpCommandType;
+        //     p_mut.write_unaligned(value);
+        // }
     }
 }
 
-#[derive(Clone, Copy, Debug, defmt::Format)]
+
+
 pub struct UlpReply {}
 
 impl UlpReply {
+    #[inline(never)]
     pub fn read() -> UlpReplyType {
-        critical_section::with(|_cs| unsafe { ULP_REPLY.clone() })
+        // critical_section::with(|_cs| unsafe { ULP_REPLY.clone() })
+        unsafe { 
+            ULP_REPLY
+        }
+        // unsafe {
+        //     let p_mut = &mut ULP_REPLY as *mut UlpReplyType;
+        //     p_mut.read_unaligned()
+        // }
     }
 
+    #[inline(never)]
     pub fn write(value: UlpReplyType) {
-        critical_section::with(|_cs| unsafe {
+        // critical_section::with(|_cs| unsafe {
+        //     ULP_REPLY = value;
+        // })
+        unsafe {
             ULP_REPLY = value;
-        })
+        }
+        // unsafe {
+        //     let p_mut = &mut ULP_REPLY as *mut UlpReplyType;
+        //     p_mut.write_unaligned(value);
+        // }
     }
 }
 
-#[derive(Clone, Copy, Debug, defmt::Format)]
+
+
 pub struct UlpLoopCounter {}
 
 impl UlpLoopCounter {
+    #[inline(never)]
     pub fn read() -> u32 {
-        critical_section::with(|_cs| unsafe { ULP_LOOP_COUNTER.clone() })
+        // critical_section::with(|_cs| unsafe { ULP_LOOP_COUNTER.clone() })
+        unsafe { ULP_LOOP_COUNTER }
+        // unsafe {
+        //     let p_mut: *mut u32 = &mut ULP_LOOP_COUNTER as *mut u32;
+        //     p_mut.read_unaligned()
+        // }
     }
 
+    #[inline(never)]
     pub fn write(value: u32) {
-        critical_section::with(|_cs| unsafe {
-            ULP_LOOP_COUNTER = value;
-        })
+        // critical_section::with(|_cs| unsafe {
+        //     ULP_LOOP_COUNTER = value;
+        // })
+        unsafe { ULP_LOOP_COUNTER = value };
+        // unsafe {
+        //     let p_mut = &mut ULP_LOOP_COUNTER as *mut u32;
+        //     p_mut.write_unaligned(value);
+        // }
     }
 
     pub fn increment() {
-        let c = Self::read() + 1;
-        Self::write(c);
+        let c = Self::read();
+        Self::write(c + 1);
     }
 
     pub fn reset() {

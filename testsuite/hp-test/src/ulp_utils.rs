@@ -6,7 +6,7 @@ pub use esp_hal::ulp_core::{
     UlpCoreWakeupSource as LpCoreWakeupSource,
 };
 use esp_hal::{delay::Delay, load_lp_code};
-use shared::UlpLoopCounter;
+use shared::{UlpCommand, UlpCommandType, UlpLoopCounter, UlpReply};
 
 // Type aliasing for peripheral type
 pub type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
@@ -38,6 +38,12 @@ pub fn ulp_riscv_halt() {
     rtc_cntl
         .cocpu_ctrl()
         .modify(|_, w| w.cocpu_shut_reset_en().set_bit());
+
+    // BELOW: NOT IN ESP-HAL, but is in esp-rs
+    Delay::new().delay_us(20);
+    rtc_cntl
+        .cocpu_ctrl()
+        .modify(|_, w| w.cocpu_clkgate_en().clear_bit());
 }
 
 pub fn ulp_riscv_reset() {
@@ -56,20 +62,26 @@ pub fn ulp_riscv_reset() {
         w.cocpu_done().set_bit();
         w.cocpu_shut_reset_en().set_bit()
     });
+
+    Delay::new().delay_us(20);
 }
 
+#[allow(clippy::let_and_return)]
 pub fn erase_ulp_core(core: LpCorePeripheral) -> LpCore<'static> {
-    ulp_riscv_timer_stop();
-    ulp_riscv_halt();
     let ulp_core = LpCore::new(core);
     ulp_core
 }
 
-pub fn start_ulp_core(core: LpCorePeripheral, wakeup_source: LpCoreWakeupSource) {
+pub fn start_ulp_core(
+    core: LpCorePeripheral,
+    wakeup_source: LpCoreWakeupSource,
+    command: UlpCommandType,
+) {
     let mut ulp_core = erase_ulp_core(core);
     let ulp_code = load_lp_code!("lp_app");
-    // Reset counter
     UlpLoopCounter::reset();
+    UlpCommand::write(command);
+    UlpReply::write(shared::UlpReplyType::REPLY_UNKNOWN);
     ulp_code.run(&mut ulp_core, wakeup_source);
 }
 
@@ -80,4 +92,3 @@ pub fn ulp_is_running() -> bool {
     defmt::info!("a =  {}, b = {}", a, b);
     a != b
 }
-

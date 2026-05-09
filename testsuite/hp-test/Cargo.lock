@@ -477,6 +477,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
+name = "esp-backtrace"
+version = "0.19.0"
+dependencies = [
+ "cfg-if",
+ "defmt 1.0.1",
+ "document-features",
+ "esp-config",
+ "esp-metadata-generated 0.4.0",
+ "esp-println",
+ "heapless 0.9.3",
+ "riscv",
+ "semihosting",
+ "xtensa-lx",
+]
+
+[[package]]
 name = "esp-bootloader-esp-idf"
 version = "0.5.0"
 dependencies = [
@@ -581,6 +597,17 @@ checksum = "9a93e39c8ad8d390d248dc7b9f4b59a873f313bf535218b8e2351356972399e3"
 [[package]]
 name = "esp-metadata-generated"
 version = "0.4.0"
+
+[[package]]
+name = "esp-println"
+version = "0.17.0"
+dependencies = [
+ "document-features",
+ "esp-metadata-generated 0.4.0",
+ "esp-sync",
+ "log",
+ "portable-atomic",
+]
 
 [[package]]
 name = "esp-riscv-rt"
@@ -833,9 +860,11 @@ dependencies = [
  "defmt-rtt",
  "embedded-hal 1.0.0",
  "embedded-test",
+ "esp-backtrace",
  "esp-bootloader-esp-idf",
  "esp-hal",
  "esp-metadata-generated 0.3.0",
+ "esp-println",
  "log",
  "riscv-decode",
  "semihosting",
@@ -1190,7 +1219,7 @@ dependencies = [
 
 [[package]]
 name = "shared"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "critical-section",
  "defmt 1.0.1",

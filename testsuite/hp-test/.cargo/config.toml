@@ -15,7 +15,7 @@ rustflags = [
 ]
 
 [target.'cfg(target_arch = "xtensa")']
-runner    = "probe-rs run --preverify"
+runner    = "probe-rs run"
 rustflags = [
     "--cfg", "embedded_test",
 
@@ -23,18 +23,18 @@ rustflags = [
     "-C", "link-arg=-Tembedded-test.x",
     "-C", "link-arg=-Tdefmt.x",
     "-C", "link-arg=-Wl,-Tlinkall.x",
+    
+    # Required to obtain backtraces (e.g. when using the "esp-backtrace" crate.)
+    # NOTE: May negatively impact performance of produced code
+    # "-C", "force-frame-pointers",
 ]
 
 [env]
-DEFMT_LOG = "info,embedded_test=warn"
+DEFMT_LOG = "info,embedded_test=error"
+ESP_LOG = "info"
 
 [unstable]
 build-std = ["core", "alloc"]
 
 [net]
 git-fetch-with-cli = true
-
-#[alias]
-#esp32c6 = "build --release --features=esp32c6 --target riscv32imac-unknown-none-elf"
-#esp32s2 = "build --release --features=esp32s2 --target xtensa-esp32s2-none-elf"
-#esp32s3 = "build --release --features=esp32s3 --target xtensa-esp32s3-none-elf"

@@ -1,17 +1,18 @@
 [package]
 name = "shared"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
 critical-section = "1.2.0"
-defmt = "1.0.1"
+defmt = { version = "1.0.1", optional = true }
 
 [build-dependencies]
 esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }
 
 [features]
 default = []
+defmt = [ "dep:defmt" ] # for extra logging on the HP
 is-lp-core = []
 esp32s3 = []
 esp32s2 = []

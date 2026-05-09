@@ -7,12 +7,15 @@
 // development, and when a test fails. In these cases, you can enable
 // the `defmt` feature to get the output.
 
-esp_bootloader_esp_idf::esp_app_desc!();
-
-pub mod ulp_utils;
 pub mod ulp_debug;
+pub mod ulp_utils;
+
+#[cfg(feature = "defmt")]
+use defmt_rtt as _;
 
 use esp_hal as _;
+
+esp_bootloader_esp_idf::esp_app_desc!();
 
 #[cfg(not(feature = "defmt"))]
 #[defmt::global_logger]
@@ -25,9 +28,6 @@ unsafe impl defmt::Logger for Logger {
     unsafe fn release() {}
     unsafe fn write(_bytes: &[u8]) {}
 }
-
-#[cfg(feature = "defmt")]
-use defmt_rtt as _;
 
 #[cfg(feature = "defmt")]
 #[macro_export]

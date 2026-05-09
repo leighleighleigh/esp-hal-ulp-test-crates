@@ -18,7 +18,7 @@ panic-halt = "1.0.0"
 # LP HAL from esp-hal
 # which will need a chip feature-flag specified,
 # in order to provide the right linker script.
-esp-lp-hal = "0.3.0"
+esp-lp-hal = { version = "0.3.0", default-features = false }
 
 [build-dependencies]
 esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }

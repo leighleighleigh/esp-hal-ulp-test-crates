@@ -15,53 +15,53 @@ import "../../clippy.just"
 default:
   just build
 
-build:
+# Build the crate and generate linker script
+build CHIP=chip:
   #!/usr/bin/env bash
-  set -e
-  cargo {{chip}}
+  set -eou pipefail
+  cargo {{CHIP}}
+  ecode="$?"
   app_file="$(just find-last-built-app-elf)"
-  just build-shared-linkscript <(just extract-shared-symbols) "${app_file%.*}.x"
+  # NEW 2026-05-13
+  #   No longer using scripts to build the shared linker script.
+  #   Instead, uses the '../shared/' crate binary to do this.
+  # Step 1. Get base address for CHIP
+  chip_base_addr="$(just get-chip-base-address {{CHIP}})"
+  # Step 2. Build linker script for app
+  just build-linker-script "${app_file}" "${chip_base_addr}"
 
-extract-shared-symbols ELF=`just find-last-built-app-elf`:
-  #!/usr/bin/env bash
-  # objcopy to a tempfile, to get only the data in .ulp section. then nm that object to produce a shared mem list.
-  outa="$(mktemp)"
-  outf="$(mktemp)"
-  riscv32-esp-elf-objcopy -j .ulp {{ELF}} "${outf}" 2>/dev/null && \
-  riscv32-esp-elf-nm --demangle=rust -n "${outf}" >"${outa}" && \
-  cat "${outa}" && \
-  rm -f "${outa}" && \
-  rm -f "${outf}"
-
+# USAGE: just build-linker-script
+# Runs the shared CLI tool to extract global variables from the ULP ELF,
+# and save them to a linker script co-located with the ELF file.
 [private]
-build-shared-linkscript INFILE OUTFILE:
+build-linker-script ELF BASE_ADDRESS:
+  #!/usr/bin/env bash
+  # Save absolute paths to the input file
+  app_file="$(realpath {{ELF}})"
+  # The output file is the same as the input, with the '.x' suffix.
+  out_file="${app_file%.*}.x"
+  # navigate to teh shared crate
+  mydir="{{justfile_directory()}}"
+  shared_crate="${mydir}/../shared/"
+  pushd "${shared_crate}"
+  # Extract the symbols, adding base address
+  just cli -f "${app_file}" -l -b {{BASE_ADDRESS}} | tee "${out_file}"
+  ecode="$?"
+  # Exit directory
+  popd
+  # Return result
+  exit "${ecode}"
+
+# USAGE: just get-chip-base-address CHIP
+# RETURNS: 0x50000000 for esp32s3/esp32s2, else 0x60000000 for esp32c6
+[private]
+get-chip-base-address CHIP:
   #!/usr/bin/env python3
-  # Parses an input .syms file, which should contain the result of 'riscv32-esp-elf-nm -n --demangle=rust ...'.
-  # Prodices an .ld file which can be used by the esp32s3 program to compile against.
-  infile = "{{INFILE}}"
-  outfile = "{{OUTFILE}}"
-  base_addr = 0x50000000 # address in ESP32S3
-  # Parse the symbols, which are in address,type,name format.
-  symlist = []
-  with open(infile,"r") as f:
-    for l in f.readlines():
-      addr,kind,name = l.split(" ",3)
-      new_addr = hex(base_addr + int(addr,16))
-      if kind == 'D': # data 
-        new_name = f".ulp.{name.strip().lstrip()}"
-      elif kind == 'A': # address
-        new_name = f"{name.strip().lstrip()}"
-      symlist.append((new_addr,new_name,kind))
-  with open(outfile,"w") as f:
-    f.write("SECTIONS {\n")
-    for (a,n,k) in symlist:
-      if k == 'A':
-        # address 
-        f.write(f"  PROVIDE({n} = {a});\n")
-      elif k == 'D':
-        # data
-        f.write(f"  {n} {a} (NOLOAD):\n")
-        f.write("  {\n")
-        f.write(f"    *({n})\n")
-        f.write("  }\n")
-    f.write("}\n")
+  chips = {}
+  chips |= {"esp32s3" : 0x50000000}
+  chips |= {"esp32s2" : 0x50000000}
+  chips |= {"esp32c6" : 0x60000000}
+  chip_key = "{{CHIP}}".lower().strip().lstrip()
+  chip_addr = chips[chip_key]
+  # format as hex
+  print(hex(chip_addr)) 

@@ -26,9 +26,9 @@ esp-metadata-generated = { version = "0.4.0", features = ["build-script"] }
 
 [features]
 default = [] 
-esp32s3 = ["esp-metadata-generated/esp32s3", "esp-lp-hal/esp32s3", "shared/esp32s3" ]
-esp32s2 = ["esp-metadata-generated/esp32s2", "esp-lp-hal/esp32s2", "shared/esp32s2" ]
-esp32c6 = ["esp-metadata-generated/esp32c6", "esp-lp-hal/esp32c6", "shared/esp32c6" ]
+esp32s3 = ["esp-metadata-generated/esp32s3", "esp-lp-hal/esp32s3" ]
+esp32s2 = ["esp-metadata-generated/esp32s2", "esp-lp-hal/esp32s2" ]
+esp32c6 = ["esp-metadata-generated/esp32c6", "esp-lp-hal/esp32c6" ]
 
 [profile.release]
 debug = false

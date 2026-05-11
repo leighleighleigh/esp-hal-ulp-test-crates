@@ -1,0 +1,10 @@
+#!/usr/bin/env just
+
+# Prevent argument splitting
+set positional-arguments
+
+# Runs the CLI tool, on the host machine.
+# example: just cli -f ../hp-test/lp_app
+cli *ARGS:
+  #!/usr/bin/env bash
+  cargo run --target "x86_64-unknown-linux-gnu" --features "cli" -- "$@"

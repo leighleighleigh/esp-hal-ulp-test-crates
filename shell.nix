@@ -32,11 +32,14 @@ pkgs.mkShell rec {
         #pkgs.rustup 
         pkgs.stdenv.cc 
         pkgs.just 
+        pkgs.just-lsp
         pkgs.inotify-tools
         pkgs.picocom
         pkgs.libusb1
         # for libudev
         pkgs.systemdMinimal
+        # for documents built by rust
+        pkgs.ncurses
     ];
 
     LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";

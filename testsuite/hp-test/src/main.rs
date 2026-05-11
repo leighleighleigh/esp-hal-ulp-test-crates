@@ -90,17 +90,7 @@ fn main() -> ! {
         if debug_timestamp.elapsed().as_secs() >= 2 {
             // print debug info for the ulp core
             let dbg = CocpuDebug::read();
-            log::info!("{:?}", dbg);
-
-            match dbg.decode_instruction() {
-                Ok(i) => {
-                    log::info!("{:?}", i);
-                }
-                Err(e) => {
-                    log::info!("{:?}", e);
-                }
-            }
-
+            log::info!("{}", dbg);
             debug_timestamp = Instant::now();
         }
     }

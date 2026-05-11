@@ -3,26 +3,47 @@
 #![allow(non_camel_case_types)]
 #![allow(static_mut_refs)]
 
-#[cfg_attr(feature = "is-lp-core", unsafe(link_section = ".ulp"))]
-#[cfg_attr(not(feature = "is-lp-core"), unsafe(link_section = ".ulp.ULP_COMMAND"))]
-#[unsafe(no_mangle)]
-#[used]
-pub static mut ULP_COMMAND: UlpCommandType = UlpCommandType::NOOP;
+// #[cfg_attr(feature = "is-lp-core", unsafe(link_section = ".ulp"))]
+// #[cfg_attr(not(feature = "is-lp-core"), unsafe(link_section = ".ulp.ULP_COMMAND"))]
+// #[unsafe(no_mangle)]
+// #[used]
+// pub static mut ULP_COMMAND: UlpCommandType = UlpCommandType::NOOP;
+// #[cfg_attr(feature = "is-lp-core", unsafe(link_section = ".ulp"))]
+// #[cfg_attr(not(feature = "is-lp-core"), unsafe(link_section = ".ulp.ULP_REPLY"))]
+// #[unsafe(no_mangle)]
+// #[used]
+// pub static mut ULP_REPLY: UlpReplyType = UlpReplyType::REPLY_UNKNOWN;
+// #[cfg_attr(feature = "is-lp-core", unsafe(link_section = ".ulp"))]
+// #[cfg_attr(
+//     not(feature = "is-lp-core"),
+//     unsafe(link_section = ".ulp.ULP_LOOP_COUNTER")
+// )]
+// #[unsafe(no_mangle)]
+// #[used]
+// pub static mut ULP_LOOP_COUNTER: u32 = 0;
 
-#[cfg_attr(feature = "is-lp-core", unsafe(link_section = ".ulp"))]
-#[cfg_attr(not(feature = "is-lp-core"), unsafe(link_section = ".ulp.ULP_REPLY"))]
-#[unsafe(no_mangle)]
-#[used]
-pub static mut ULP_REPLY: UlpReplyType = UlpReplyType::REPLY_UNKNOWN;
-
-#[cfg_attr(feature = "is-lp-core", unsafe(link_section = ".ulp"))]
-#[cfg_attr(
-    not(feature = "is-lp-core"),
-    unsafe(link_section = ".ulp.ULP_LOOP_COUNTER")
-)]
-#[unsafe(no_mangle)]
-#[used]
-pub static mut ULP_LOOP_COUNTER: u32 = 0;
+cfg_if::cfg_if! {
+    if #[cfg(feature = "is-lp-core")] {
+        // #[cfg_attr(feature = "is-lp-core", unsafe(link_section = ".ulp"))]
+        #[unsafe(no_mangle)]
+        #[used]
+        pub static mut ULP_COMMAND: UlpCommandType = UlpCommandType::NOOP;
+        // #[cfg_attr(feature = "is-lp-core", unsafe(link_section = ".ulp"))]
+        #[unsafe(no_mangle)]
+        #[used]
+        pub static mut ULP_REPLY: UlpReplyType = UlpReplyType::REPLY_UNKNOWN;
+        // #[cfg_attr(feature = "is-lp-core", unsafe(link_section = ".ulp"))]
+        #[unsafe(no_mangle)]
+        #[used]
+        pub static mut ULP_LOOP_COUNTER: u32 = 0;
+    } else {
+        unsafe extern "Rust" {
+            pub static mut ULP_COMMAND: UlpCommandType;
+            pub static mut ULP_REPLY: UlpReplyType;
+            pub static mut ULP_LOOP_COUNTER: u32;
+        }
+    }
+}
 
 
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]

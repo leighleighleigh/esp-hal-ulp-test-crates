@@ -1221,9 +1221,9 @@ dependencies = [
 name = "shared"
 version = "0.2.0"
 dependencies = [
+ "cfg-if",
  "critical-section",
  "defmt 1.0.1",
- "esp-metadata-generated 0.3.0",
 ]
 
 [[package]]

@@ -3,17 +3,42 @@ name = "shared"
 version = "0.2.0"
 edition = "2024"
 
+[lib]
+name = "shared"
+test = false
+bench = false
+
+[[bin]]
+name = "cli"
+path = "src/main.rs"
+required-features = ["cli"]
+test = false
+bench = false
+
 [dependencies]
+cfg-if = "1.0.4"
 critical-section = "1.2.0"
 defmt = { version = "1.0.1", optional = true }
 
-[build-dependencies]
-esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }
+# BEGN CLI utility deps
+clap = { version = "4", features = ["derive", "unicode"], optional = true }
+comfy-table = { version = "7.1", optional = true }
+elf = { version = "0.7.4", optional = true }
+clap-num = {version = "1.2.0", optional = true }
+# END CLI utility deps
 
 [features]
 default = []
-defmt = [ "dep:defmt" ] # for extra logging on the HP
+# for extra logging on the HP
+defmt = ["dep:defmt"]
+
+# affects how the shared variables are defined
 is-lp-core = []
-esp32s3 = []
-esp32s2 = []
-esp32c6 = []
+
+# for the CLI program
+cli = [
+    "dep:clap",
+    "dep:comfy-table",
+    "dep:elf",
+    "dep:clap-num",
+]

@@ -18,7 +18,6 @@ rustflags = [
 runner    = "probe-rs run"
 rustflags = [
     "--cfg", "embedded_test",
-
     "-C", "link-arg=-nostartfiles",
     "-C", "link-arg=-Tembedded-test.x",
     "-C", "link-arg=-Tdefmt.x",
@@ -30,7 +29,7 @@ rustflags = [
 ]
 
 [env]
-DEFMT_LOG = "info,embedded_test=error"
+DEFMT_LOG = "info,embedded_test=off"
 ESP_LOG = "info"
 
 [unstable]

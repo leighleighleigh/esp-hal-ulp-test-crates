@@ -62,6 +62,7 @@ name = "esp-lp-hal"
 version = "0.3.0"
 dependencies = [
  "cfg-if",
+ "critical-section",
  "document-features",
  "embedded-hal",
  "embedded-hal-nb",
@@ -71,6 +72,7 @@ dependencies = [
  "esp32s2-ulp",
  "esp32s3-ulp",
  "nb",
+ "portable-atomic",
  "riscv",
 ]
 
@@ -87,7 +89,7 @@ checksum = "42c2ee95b945a4780796e4359e72c033aed3b45073880e8029458f538532db8a"
 [[package]]
 name = "esp32c6-lp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=fc3e6d4#fc3e6d4b34cfc885f750641d27e6fe3e63bad5d2"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=46b575d9#46b575d94ec3620d78fa116bc7815e1b1d0e2a45"
 dependencies = [
  "critical-section",
  "vcell",
@@ -96,7 +98,7 @@ dependencies = [
 [[package]]
 name = "esp32s2-ulp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=fc3e6d4#fc3e6d4b34cfc885f750641d27e6fe3e63bad5d2"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=c6f21b60#c6f21b60a573ea79d83b0025cedfcf154666418a"
 dependencies = [
  "critical-section",
  "vcell",
@@ -105,7 +107,7 @@ dependencies = [
 [[package]]
 name = "esp32s3-ulp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=fc3e6d4#fc3e6d4b34cfc885f750641d27e6fe3e63bad5d2"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=c6f21b60#c6f21b60a573ea79d83b0025cedfcf154666418a"
 dependencies = [
  "critical-section",
  "vcell",
@@ -158,6 +160,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
+name = "portable-atomic"
+version = "1.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c33a9471896f1c69cecef8d20cbe2f7accd12527ce60845ff44c153bb2a21b49"
+
+[[package]]
 name = "proc-macro-crate"
 version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -193,19 +201,7 @@ dependencies = [
  "critical-section",
  "embedded-hal",
  "paste",
- "riscv-macros",
  "riscv-pac",
-]
-
-[[package]]
-name = "riscv-macros"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d323d13972c1b104aa036bc692cd08b822c8bbf23d79a27c526095856499799"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -342,9 +338,9 @@ dependencies = [
 
 [[package]]
 name = "winnow"
-version = "1.0.2"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ee1708bef14716a11bae175f579062d4554d95be2c6829f518df847b7b3fdd0"
+checksum = "0592e1c9d151f854e6fd382574c3a0855250e1d9b2f99d9281c6e6391af352f1"
 dependencies = [
  "memchr",
 ]

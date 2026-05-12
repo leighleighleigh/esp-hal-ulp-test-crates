@@ -19,7 +19,7 @@ panic-halt = "1.0.0"
 # which will need a chip feature-flag specified,
 # in order to provide the right linker script.
 shared = { version = "0.2.0", path = "../shared", features = ["is-lp-core"] }
-esp-lp-hal = "0.3.0"
+esp-lp-hal = { version = "0.3.0" }
 
 [build-dependencies]
 esp-metadata-generated = { version = "0.4.0", features = ["build-script"] }
@@ -39,6 +39,6 @@ codegen-units = 1 # LLVM can perform better optimizations using a single thread
 lto = false
 
 [patch.crates-io]
-#esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
-esp-lp-hal = { path = "/home/leigh/Git/esp-hal-mainline/esp-lp-hal" }
+esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
+#esp-lp-hal = { path = "/home/leigh/Git/esp-hal-mainline/esp-lp-hal" }
 

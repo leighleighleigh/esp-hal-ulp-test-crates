@@ -6,9 +6,9 @@ use esp_hal::{
     clock::CpuClock,
     delay::Delay,
     gpio::{DriveMode, Flex, OutputConfig, Pull, RtcPin, RtcPinWithResistors},
-    peripherals::GPIO2,
     // load_lp_code,
     main,
+    peripherals::GPIO2,
     time::Instant,
     ulp_core::{
         // UlpCore as LpCore,
@@ -18,7 +18,7 @@ use esp_hal::{
 };
 use hil_test::{
     ulp_debug::{CocpuDebug, FromRegister},
-    ulp_utils,
+    ulp_utils::{self, ulp_riscv_timer_resume},
 };
 use shared::{UlpCommandType, UlpLoopCounter};
 
@@ -27,12 +27,11 @@ type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
 
 // Setup the ULP core
 fn setup_ulp_core(core: LpCorePeripheral) {
-    // ulp_utils::ulp_riscv_reset();
-    ulp_utils::start_ulp_core(
+    ulp_utils::reprogram_ulp_core(
         core,
-        LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(53)),
-        // LpCoreWakeupSource::HpCpu,
-        UlpCommandType::LOOP_COUNTER_TEST,
+        // LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(530)),
+        LpCoreWakeupSource::HpCpu,
+        UlpCommandType::NOOP,
     );
 }
 
@@ -76,12 +75,18 @@ fn main() -> ! {
     let mut debug_timestamp = Instant::now();
 
     loop {
+        dly.delay_millis(100);
         let new_count = UlpLoopCounter::read();
         let new_time = Instant::now();
 
         if count != new_count {
             let time_delta = new_time - timestamp;
-            log::info!("[{} us] counter: {} -> {}", time_delta.as_micros(), count, new_count);
+            log::info!(
+                "[{} us] counter: {} -> {}",
+                time_delta.as_micros(),
+                count,
+                new_count
+            );
             count = new_count;
             timestamp = new_time;
             debug_timestamp = timestamp;

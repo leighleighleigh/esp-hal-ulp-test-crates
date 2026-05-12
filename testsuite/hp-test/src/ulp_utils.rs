@@ -25,25 +25,28 @@ pub fn ulp_riscv_timer_resume() {
         .write(|w| w.ulp_cp_slp_timer_en().set_bit());
 }
 
+#[doc(hidden)]
+fn ulp_timer_period(cycles: u32) {
+    let rtc_cntl = esp_hal::peripherals::LPWR::regs();
+    rtc_cntl
+        .ulp_cp_timer_1()
+        .write(|w| unsafe { w.ulp_cp_timer_slp_cycle().bits(cycles << 8) });
+    rtc_cntl
+        .ulp_cp_ctrl()
+        .modify(|_, w| w.ulp_cp_force_start_top().clear_bit());
+}
+
 pub fn ulp_riscv_halt() {
     ulp_riscv_timer_stop();
     let rtc_cntl = esp_hal::peripherals::LPWR::regs();
-
     // suspends the ulp operation
     rtc_cntl
         .cocpu_ctrl()
         .modify(|_, w| w.cocpu_done().set_bit());
-
     // Resets the processor
     rtc_cntl
         .cocpu_ctrl()
         .modify(|_, w| w.cocpu_shut_reset_en().set_bit());
-
-    // BELOW: NOT IN ESP-HAL, but is in esp-rs
-    Delay::new().delay_us(20);
-    rtc_cntl
-        .cocpu_ctrl()
-        .modify(|_, w| w.cocpu_clkgate_en().clear_bit());
 }
 
 pub fn ulp_riscv_reset() {
@@ -66,23 +69,17 @@ pub fn ulp_riscv_reset() {
     Delay::new().delay_us(20);
 }
 
-#[allow(clippy::let_and_return)]
-pub fn erase_ulp_core(core: LpCorePeripheral) -> LpCore<'static> {
-    let ulp_core = LpCore::new(core);
-    ulp_core
-}
-
-pub fn start_ulp_core(
-    core: LpCorePeripheral,
+pub fn reprogram_ulp_core(
+    ulp_core: &mut LpCore,
     wakeup_source: LpCoreWakeupSource,
     command: UlpCommandType,
 ) {
-    let mut ulp_core = erase_ulp_core(core);
+    ulp_riscv_reset(); // this is required, to stop the ULP core from doing stuff while we program it.
     let ulp_code = load_lp_code!("lp_app");
     UlpLoopCounter::reset();
     UlpCommand::write(command);
-    UlpReply::write(shared::UlpReplyType::REPLY_UNKNOWN);
-    ulp_code.run(&mut ulp_core, wakeup_source);
+    UlpReply::write(shared::UlpReplyType::UNKNOWN);
+    ulp_code.run(ulp_core, wakeup_source);
 }
 
 pub fn ulp_is_running() -> bool {

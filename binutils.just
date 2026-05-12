@@ -27,6 +27,10 @@ objdump *ARGS="-d":
   #!/usr/bin/env bash
   just binutil objdump {{objdump_defaults}} {{ARGS}}
 
+objcopy *ARGS="":
+  #!/usr/bin/env bash
+  just binutil objcopy {{ARGS}}
+
 readelf *ARGS="":
   #!/usr/bin/env bash
   just binutil readelf {{readelf_defaults}} {{ARGS}}

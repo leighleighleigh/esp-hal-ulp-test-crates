@@ -1,0 +1,36 @@
+# hp-blinky
+
+## Set recipe parameters
+chip := "esp32s3" 
+target := "xtensa-esp32s3-none-elf"
+ulp_app_crate := "../ulp-app-main/"  
+
+# binutils.just params
+bin_name := "example-esp32s3"
+bin_arch := "xtensa-esp-elf"
+
+# Import common recipes
+set allow-duplicate-variables
+import "../../binutils.just"
+import "../../clippy.just"
+import "../../hp_crate.just"
+
+
+default: prepare
+  #!/usr/bin/env bash
+  # Run a specific test 
+  cargo test --release --target xtensa-esp32s3-none-elf --features esp32s3 --test integration
+  # Runs all tests, even if they fail
+  #cargo test --target xtensa-esp32s3-none-elf --features esp32s3 --no-fail-fast
+
+example: prepare
+  #!/usr/bin/env bash
+  # Flash the regular binary, doesnt perform any testing, but confirms that the ULP code is working!
+  cargo build --release --target xtensa-esp32s3-none-elf --features esp32s3,println --bin example-esp32s3
+  just flash && just monitor
+
+prepare:
+  #!/usr/bin/env bash
+  set -eou pipefail
+  # Build the ULP core application, and copy it over to here
+  just build-ulp-app {{ulp_app_crate}} {{chip}}

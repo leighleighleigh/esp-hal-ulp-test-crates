@@ -34,8 +34,17 @@ build-ulp-app APPCRATE CHIP:
   # Move into the ULP/LP app crate directory
   appdir="$(realpath {{APPCRATE}})"
   pushd "${appdir}" >/dev/null
+
+  # OLD (removed 2026-05-13)
   # Run the build alias, and save the return code
-  cargo {{CHIP}}
+  #cargo {{CHIP}}
+
+  # NEW 2026-05-13
+  # Use 'just build CHIP' in the ULP crate,
+  # which allows it to perform other linker-script generating steps,
+  # if necessary.
+  just build {{CHIP}}
+
   ecode="$?"
   # Get the absolute path to the built ELF,
   # and return to the HP crate directory
@@ -44,6 +53,7 @@ build-ulp-app APPCRATE CHIP:
   # Copy the built application to lp_app
   outfile="$(realpath ./)/lp_app"
   cp -v "${appfile}" "${outfile}"
+  test -f "${appfile%.*}.x" && cp -v "${appfile%.*}.x" "${outfile}.x"
   exit $ecode
 
 # Repeatedly attempts to flash until successful

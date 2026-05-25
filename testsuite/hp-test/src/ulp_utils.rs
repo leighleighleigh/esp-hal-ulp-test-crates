@@ -25,8 +25,7 @@ pub fn ulp_riscv_timer_resume() {
         .write(|w| w.ulp_cp_slp_timer_en().set_bit());
 }
 
-#[doc(hidden)]
-fn ulp_timer_period(cycles: u32) {
+pub fn ulp_timer_period(cycles: u32) {
     let rtc_cntl = esp_hal::peripherals::LPWR::regs();
     rtc_cntl
         .ulp_cp_timer_1()
@@ -84,8 +83,9 @@ pub fn reprogram_ulp_core(
 
 pub fn ulp_is_running() -> bool {
     let a = UlpLoopCounter::read();
-    Delay::new().delay_ms(500);
+    Delay::new().delay_ms(50);
     let b = UlpLoopCounter::read();
+    defmt::println!("");
     defmt::info!("a =  {}, b = {}", a, b);
     a != b
 }

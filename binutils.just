@@ -20,7 +20,7 @@ find-last-built-app-elf:
 [private]
 binutil TOOL_NAME *ARGS="":
   #!/usr/bin/env bash
-  elffile="$(just find-last-built-app-elf)"
+  elffile="$(just find-last-built-app-elf || echo '')"
   {{bin_arch}}-{{TOOL_NAME}} "${elffile}" {{ARGS}}
 
 objdump *ARGS="-d":

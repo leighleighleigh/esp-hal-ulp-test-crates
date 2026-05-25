@@ -70,10 +70,10 @@ esp-println = { version = "0.17.0", features = [ "log-04" ], optional = true }
 embedded-hal       = "1.0.0"
 defmt              = "1.0.1"
 defmt-rtt          = { version = "1.0.0", optional = true }
-# semihosting        = { version = "0.1", features= ["stdio", "panic-handler"] }
-# semihosting        = { version = "0.1", features= ["panic-handler"] }
-# semihosting        = { version = "0.1", default-features = false }
-embedded-test       = { version = "0.7.1", default-features = false, features = ["panic-handler", "external-executor", "semihosting"] }
+
+#embedded-test       = { version = "0.7.1", default-features = false, features = ["panic-handler", "external-executor", "semihosting"] }
+embedded-test       = { version = "0.7.1", default-features = false, features = ["panic-handler", "semihosting"] }
+
 shared = { version = "0.2.0", path = "../shared", features = [ "defmt" ] }
 
 [build-dependencies]
@@ -90,6 +90,9 @@ esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
 #esp-backtrace = { path = "/home/leigh/Git/esp-hal-mainline/esp-backtrace" }
 #esp-println = { path = "/home/leigh/Git/esp-hal-mainline/esp-println" }
 
+# Fork with branch to show the test buttons inside of VSCode
+# embedded-test = { git = "https://github.com/leighleighleigh/embedded-test.git", branch = "rust-analyzer" }
+
 # https://doc.rust-lang.org/cargo/reference/profiles.html#test
 # Test and bench profiles inherit from dev and release respectively.
 [profile.dev]
@@ -99,6 +102,7 @@ debug-assertions = true
 incremental      = false
 opt-level        = "z"
 overflow-checks  = true
+# lto = true
 
 [profile.release]
 codegen-units    = 1
@@ -107,4 +111,5 @@ debug-assertions = true
 incremental      = false
 opt-level        = 3
 lto              = false # LTO (thin or fat) miscompiles some tests on RISC-V
+# lto = true
 overflow-checks  = true

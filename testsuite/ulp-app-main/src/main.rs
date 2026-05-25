@@ -56,7 +56,7 @@ fn main() {
                 UlpLoopCounter::increment();
                 UlpReply::write(UlpReplyType::OK);
                 // dly.delay_millis(1000);
-                delay_for_a_tenth_second();
+                // delay_for_a_tenth_second();
             },
             UlpCommandType::TIMER_COUNTER_TEST => {
                 UlpLoopCounter::increment();

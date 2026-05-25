@@ -9,8 +9,12 @@ ulp_app_crate := "../ulp-app-main/"
 bin_name := "example-esp32s3"
 bin_arch := "xtensa-esp-elf"
 
+# custom params
+test_elf_name := "integration"
+
 # Import common recipes
 set allow-duplicate-variables
+set allow-duplicate-recipes
 import "../../binutils.just"
 import "../../clippy.just"
 import "../../hp_crate.just"
@@ -34,3 +38,18 @@ prepare:
   set -eou pipefail
   # Build the ULP core application, and copy it over to here
   just build-ulp-app {{ulp_app_crate}} {{chip}}
+
+# OVERRIDES this recipe in binutils
+find-last-built-app-elf:
+  #!/usr/bin/env bash
+  just find-last-built-test-elf
+
+# Finds the last-built test suite application,
+# as would be used by probe-rs
+find-last-built-test-elf:
+    #!/usr/bin/env bash
+    set +eou pipefail
+    # This uses regex to find the app, while excluding the .d lib file :)
+    search_results=$(find ./target/ -maxdepth 5 -regextype sed -regex '.*/{{test_elf_name}}-\w*' -type f -printf "%A@ %p\n")
+    elf_path="$(echo ${search_results} | sort -r | head -n1 | cut -d' ' -f2)"
+    realpath "${elf_path}"

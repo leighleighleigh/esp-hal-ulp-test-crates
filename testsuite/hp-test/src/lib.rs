@@ -12,7 +12,6 @@ pub mod ulp_utils;
 
 #[cfg(feature = "defmt")]
 use defmt_rtt as _;
-
 use esp_hal as _;
 
 esp_bootloader_esp_idf::esp_app_desc!();

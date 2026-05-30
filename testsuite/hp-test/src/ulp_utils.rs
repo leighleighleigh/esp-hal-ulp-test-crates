@@ -6,7 +6,7 @@ pub use esp_hal::ulp_core::{
     UlpCoreWakeupSource as LpCoreWakeupSource,
 };
 use esp_hal::{delay::Delay, load_lp_code};
-use shared::{UlpCommand, UlpCommandType, UlpLoopCounter, UlpReply};
+use shared::{SharedType, UlpCommand, UlpLoopCounter, UlpReply};
 
 // Type aliasing for peripheral type
 pub type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
@@ -68,23 +68,37 @@ pub fn ulp_riscv_reset() {
     Delay::new().delay_us(20);
 }
 
-pub fn reprogram_ulp_core(
+pub fn reprogram_ulp_core_with_run_hook<F>(
     ulp_core: &mut LpCore,
     wakeup_source: LpCoreWakeupSource,
-    command: UlpCommandType,
-) {
+    pre_run_hook: F,
+) where
+    F: FnOnce(),
+{
     ulp_riscv_reset(); // this is required, to stop the ULP core from doing stuff while we program it.
     let ulp_code = load_lp_code!("lp_app");
-    UlpLoopCounter::reset();
-    UlpCommand::write(command);
-    UlpReply::write(shared::UlpReplyType::UNKNOWN);
+    pre_run_hook();
     ulp_code.run(ulp_core, wakeup_source);
 }
 
+pub fn reprogram_ulp_core(
+    ulp_core: &mut LpCore,
+    wakeup_source: LpCoreWakeupSource,
+    command: UlpCommand,
+) {
+    #[allow(static_mut_refs)]
+    reprogram_ulp_core_with_run_hook(ulp_core, wakeup_source, || {
+        command.store();
+        UlpReply::UNKNOWN.store();
+        UlpLoopCounter::reset();
+    });
+}
+
+#[allow(static_mut_refs)]
 pub fn ulp_is_running() -> bool {
-    let a = UlpLoopCounter::read();
+    let a = UlpLoopCounter::load().count();
     Delay::new().delay_ms(50);
-    let b = UlpLoopCounter::read();
+    let b = UlpLoopCounter::load().count();
     defmt::println!("");
     defmt::info!("a =  {}, b = {}", a, b);
     a != b

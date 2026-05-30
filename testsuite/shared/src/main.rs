@@ -10,12 +10,12 @@ use std::path::PathBuf;
 use clap::Parser;
 use clap_num::maybe_hex;
 use comfy_table::{Cell, Table};
-use elf::endian::AnyEndian;
 // use elf::note::Note;
 // use elf::relocation::{RelIterator, RelaIterator};
 // use elf::to_str::{e_machine_to_human_str, e_osabi_to_string, e_type_to_human_str,
 // st_symtype_to_str};
 use elf::ElfStream;
+use elf::endian::AnyEndian;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

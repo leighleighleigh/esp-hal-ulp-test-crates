@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
-#[allow(unused_imports)]
+#![allow(unused_imports)]
+#![allow(static_mut_refs)]
+
 use esp_backtrace as _;
 use esp_hal::{
     clock::CpuClock,

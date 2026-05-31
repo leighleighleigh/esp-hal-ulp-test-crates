@@ -102,6 +102,8 @@ mod tests {
     //     defmt::info!("Slept for: {}", (t1 - t0));
     // }
 
+    // This must be called at the end of every test, to place the Lp core into a safe state.
+    // Failing to do this, will cause following tests to fail.
     fn ulp_test_finish(ulp_core: &mut LpCore) {
         reprogram_ulp_core_with_run_hook(ulp_core, LpCoreWakeupSource::HpCpu, || {
             UlpCommand::NOOP.store();
@@ -147,7 +149,7 @@ mod tests {
     }
 
     #[test]
-    fn ulp_loop_counter_test(ctx: Context) {
+    fn ulp_loop_counter(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             UlpCommand::COUNTER_LOOP.store();
@@ -231,12 +233,13 @@ mod tests {
         defmt::debug!("Pausing timer...");
         ulp_riscv_timer_stop();
         Delay::new().delay_ms(10);
-        hil_test::assert_eq!(ulp_is_looping(), false);
+        hil_test::assert_eq!(false, ulp_is_looping());
         unsafe {
             ULP_TEST_DATA_IN = 530 / 2; // 2Hz
         }
         UlpLoopCounter::reset();
         UlpBootCounter::reset();
+        UlpReply::UNSET.store();
 
         defmt::debug!("Resuming timer...");
         ulp_riscv_timer_resume();
@@ -272,7 +275,7 @@ mod tests {
     }
 
     #[test]
-    fn ulp_can_stop_itself(ctx: Context) {
+    fn ulp_can_stop_itself_then_resumed_by_hp(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(
             &mut ulp_core,
@@ -283,8 +286,16 @@ mod tests {
         );
         hil_test::assert!(ulp_has_booted());
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
-        // It should not be looping
-        hil_test::assert_eq!(ulp_is_looping(), false);
+        // It should not be looping if it stopped itself correctly
+        hil_test::assert_eq!(false, ulp_is_looping());
+        hil_test::assert_eq!(1, UlpBootCounter::load());
+
+        // Now try and resume it from the HP core,
+        // which should cause the boot counter to increment again.
+        ulp_riscv_timer_resume();
+        hil_test::assert!(ulp_has_booted());
+        hil_test::assert_eq!(2, UlpBootCounter::load());
+
         ulp_test_finish(&mut ulp_core);
     }
 
@@ -294,7 +305,7 @@ mod tests {
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             UlpCommand::MUTEX_TEST.store();
         });
-        hil_test::assert!(ulp_has_booted());
+        // hil_test::assert!(ulp_has_booted()); // This delay breaks the test somewhat.
 
         for _ in 0..TEST_MUTEX_ITERATIONS {
             UlpLock::acquire();

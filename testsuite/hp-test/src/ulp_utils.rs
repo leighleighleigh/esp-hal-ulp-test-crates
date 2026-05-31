@@ -5,7 +5,7 @@ pub use esp_hal::ulp_core::{
     UlpCoreTimerCycles as LpCoreTimerCycles,
     UlpCoreWakeupSource as LpCoreWakeupSource,
 };
-use esp_hal::{delay::Delay, load_lp_code};
+use esp_hal::{delay::Delay, load_lp_code, time::Instant};
 use shared::{
     SharedType,
     UlpBootCounter,
@@ -19,6 +19,11 @@ use shared::{
 
 // Type aliasing for peripheral type
 pub type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
+
+// Minimum delay time to wait for processor to boot (tuned manually)
+const ULP_HAS_BOOTED_DELAY_MILLIS: u32 = 1;
+// Longest amount of time to wait for the loop counter to increment.
+const ULP_IS_LOOPING_TIMEOUT_MILLIS: u64 = 1000;
 
 pub fn ulp_riscv_timer_stop() {
     let rtc_cntl = esp_hal::peripherals::LPWR::regs();
@@ -100,28 +105,50 @@ pub fn reprogram_ulp_core_with_run_hook<F>(
 {
     ulp_riscv_reset(); // this is required, to stop the ULP core from doing stuff while we program it.
     let ulp_code = load_lp_code!("lp_app");
-
     // All shared variables are reset before reprogramming.
     reset_ulp_shared_variables();
     pre_run_hook();
-
     ulp_code.run(ulp_core, wakeup_source);
-
-    // Println will improve test formatting
-    defmt::debug!("");
 }
 
 #[allow(static_mut_refs)]
 pub fn ulp_has_booted() -> bool {
-    Delay::new().delay_ms(20);
+    Delay::new().delay_ms(ULP_HAS_BOOTED_DELAY_MILLIS);
     UlpBootCounter::load() != 0
 }
 
 #[allow(static_mut_refs)]
 pub fn ulp_is_looping() -> bool {
+    let t0 = Instant::now();
+    let mut t1 = t0;
     let a = UlpLoopCounter::load();
-    Delay::new().delay_ms(50);
-    let b = UlpLoopCounter::load();
-    defmt::debug!("a =  {}, b = {}", a, b);
+    let mut b = a;
+
+    loop {
+        Delay::new().delay_us(10);
+
+        t1 = Instant::now();
+        b = UlpLoopCounter::load();
+
+        if a != b {
+            break;
+        }
+        if (t1 - t0).as_millis() >= ULP_IS_LOOPING_TIMEOUT_MILLIS {
+            break;
+        }
+    }
+
+    // Calculate rate difference
+    let dt = (t1 - t0).as_micros();
+    let c = (b - a) as u64;
+
+    if c == 0 {
+        defmt::println!("\na =  {}, b = {}. Timed out.", a, b);
+        defmt::println!("\na =  {}, b = {}, rate = 0 Hz", a, b);
+    } else {
+        let count_rate = (c * 1000000) / dt;
+        defmt::println!("\na =  {}, b = {}, rate = {} Hz", a, b, count_rate);
+    }
+
     a != b
 }

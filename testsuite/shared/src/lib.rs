@@ -4,15 +4,16 @@
 #![allow(static_mut_refs)]
 
 mod locks;
-pub use locks::{ulp_riscv_lock_acquire, ulp_riscv_lock_release};
+pub use locks::{UlpLock, ULP_LOCK};
 
 pub const TEST_XOR_MASK: u32 = 0xcafe;
+pub const TEST_MUTEX_ITERATIONS: u32 = 100;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "is-lp-core")] {
         #[unsafe(no_mangle)]
         #[used]
-        pub static mut ULP_COMMAND: UlpCommand = UlpCommand::UNKNOWN;
+        pub static mut ULP_COMMAND: UlpCommand = UlpCommand::NOOP;
 
         #[unsafe(no_mangle)]
         #[used]
@@ -101,8 +102,8 @@ pub trait SharedType {
 #[repr(u32)]
 #[non_exhaustive]
 pub enum UlpCommand {
-    UNKNOWN            = 0,
-    NOOP               = 1,
+    NOOP               = 0,
+    ONESHOT            = 1,
     LOOP_COUNTER_TEST  = 2,
     TIMER_COUNTER_TEST = 3,
     XOR_TEST           = 4,
@@ -111,6 +112,7 @@ pub enum UlpCommand {
     // RISCV_LIGHT_SLEEP_WAKEUP_TEST,
     STOP_TEST          = 5,
     MUTEX_TEST         = 6,
+    TIMER_PERIOD_TEST  = 7,
 }
 
 impl SharedType for UlpCommand {
@@ -124,9 +126,10 @@ impl SharedType for UlpCommand {
 #[non_exhaustive]
 pub enum UlpReply {
     UNKNOWN       = 0,
-    OK            = 1,
-    NOK           = 2,
-    UNIMPLEMENTED = 3,
+    RUNNING       = 1,
+    OK            = 2,
+    NOK           = 3,
+    UNIMPLEMENTED = 4,
 }
 
 impl SharedType for UlpReply {

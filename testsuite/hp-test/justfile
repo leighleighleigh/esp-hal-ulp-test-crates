@@ -23,6 +23,8 @@ import "../../hp_crate.just"
 default: prepare
   #!/usr/bin/env bash
   # Run a specific test 
+  #cargo test --release --target xtensa-esp32s3-none-elf --features esp32s3 --test integration ulp_can_change_timer_period
+  # Runs all tests, even if they fail
   cargo test --release --target xtensa-esp32s3-none-elf --features esp32s3 --test integration
   # Runs all tests, even if they fail
   #cargo test --target xtensa-esp32s3-none-elf --features esp32s3 --no-fail-fast

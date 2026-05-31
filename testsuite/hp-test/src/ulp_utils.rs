@@ -95,7 +95,13 @@ pub fn reprogram_ulp_core(
 }
 
 #[allow(static_mut_refs)]
-pub fn ulp_is_running() -> bool {
+pub fn ulp_has_booted() -> bool {
+    Delay::new().delay_ms(50);
+    UlpReply::load() != UlpReply::UNKNOWN
+}
+
+#[allow(static_mut_refs)]
+pub fn ulp_is_looping() -> bool {
     let a = UlpLoopCounter::load().count();
     Delay::new().delay_ms(50);
     let b = UlpLoopCounter::load().count();

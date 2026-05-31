@@ -4,16 +4,10 @@
 #![allow(unused)]
 #![allow(static_mut_refs)]
 
-use esp_lp_hal::{delay::Delay, prelude::*};
+use esp_lp_hal::{delay::Delay, prelude::*, ulp_riscv_halt, ulp_riscv_timer_stop, ulp_timer_period};
 use panic_halt as _;
 use shared::{
-    SharedType,
-    UlpLoopCounter,
-    UlpCommand,
-    UlpReply,
-    TEST_XOR_MASK,
-    ULP_TEST_DATA_IN,
-    ULP_TEST_DATA_OUT,
+    SharedType, TEST_MUTEX_ITERATIONS, TEST_XOR_MASK, ULP_TEST_DATA_IN, ULP_TEST_DATA_OUT, UlpCommand, UlpLock, UlpLoopCounter, UlpReply 
 };
 
 // This return type is used to indicate if the command should exit the loop or not
@@ -44,38 +38,71 @@ fn delay_for_a_tenth_second() {
 
 #[entry]
 fn main() {
-    let cmd: UlpCommand = UlpCommand::load();
-    let mut has_incremented = false;
+    // The first thing to do is mark us as running
+    if UlpReply::load() == UlpReply::UNKNOWN {
+        UlpReply::RUNNING.store();
+    }
+
+    // let d = Delay {};
 
     loop {
+        // Re-reading the command allows it to be modified by ourself.
+        // E.g. MUTEX_TEST will change the command to NOOP when completed, 
+        // to prevent re-running the test.
+        let cmd: UlpCommand = UlpCommand::load();
+
         match cmd {
             UlpCommand::NOOP => {
+                // Do nothing.
+            },
+            UlpCommand::ONESHOT => {
                 // Increment counter ONCE, then stay in a loop
-                if !has_incremented {
-                    UlpLoopCounter::increment();
-                    has_incremented = true;
-                }
-                UlpReply::OK.store();
-            }
-            UlpCommand::LOOP_COUNTER_TEST => unsafe {
-                // Blocking counter in the loop
                 UlpLoopCounter::increment();
                 UlpReply::OK.store();
-                // dly.delay_millis(1000);
-                // delay_for_a_tenth_second();
+                UlpCommand::NOOP.store();
+            },
+            UlpCommand::LOOP_COUNTER_TEST => unsafe {
+                // Keep incrementing the counter in a loop
+                UlpLoopCounter::increment();
+                UlpReply::OK.store();
             },
             UlpCommand::TIMER_COUNTER_TEST => unsafe {
                 UlpLoopCounter::increment();
                 UlpReply::OK.store();
+                // Exit the loop, the ULP Timer will re-start us.
                 break;
             },
             UlpCommand::XOR_TEST => unsafe {
+                UlpLoopCounter::increment();
                 let indata = unsafe { ULP_TEST_DATA_IN.clone() };
                 unsafe { ULP_TEST_DATA_OUT = indata ^ TEST_XOR_MASK };
                 UlpReply::OK.store();
+                // Run once.
+                UlpCommand::NOOP.store();
             },
             UlpCommand::STOP_TEST => unsafe {
-                UlpReply::UNIMPLEMENTED.store();
+                UlpLoopCounter::increment();
+                UlpReply::OK.store();
+                /* SHOULD never return from here */
+                ulp_riscv_timer_stop();
+                ulp_riscv_halt();
+            },
+            UlpCommand::MUTEX_TEST => unsafe {
+                for _ in 0..TEST_MUTEX_ITERATIONS {
+                    UlpLock::acquire();
+                    UlpLoopCounter::increment();
+                    UlpLock::release();
+                }
+                UlpReply::OK.store();
+                // Run once
+                UlpCommand::NOOP.store();
+            },
+            UlpCommand::TIMER_PERIOD_TEST => unsafe {
+                UlpLoopCounter::increment();
+                let new_cycles = unsafe { ULP_TEST_DATA_IN.clone() };
+                ulp_timer_period(new_cycles);
+                UlpReply::OK.store();
+                break;
             },
             _ => unsafe {
                 // Unknown command, not okay!

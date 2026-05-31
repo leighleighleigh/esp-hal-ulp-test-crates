@@ -14,15 +14,15 @@ use esp_lp_hal::{
 use panic_halt as _;
 use shared::{
     SharedType,
-    TEST_MUTEX_ITERATIONS,
-    TEST_XOR_MASK,
-    ULP_TEST_DATA_IN,
-    ULP_TEST_DATA_OUT,
+    UlpBootCounter,
     UlpCommand,
     UlpLock,
     UlpLoopCounter,
     UlpReply,
-    UlpBootCounter,
+    TEST_MUTEX_ITERATIONS,
+    TEST_XOR_MASK,
+    ULP_TEST_DATA_IN,
+    ULP_TEST_DATA_OUT,
 };
 
 // This return type is used to indicate if the command should exit the loop or not

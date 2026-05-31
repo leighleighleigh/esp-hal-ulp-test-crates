@@ -17,11 +17,11 @@ cfg_if::cfg_if! {
     if #[cfg(feature = "is-lp-core")] {
         #[unsafe(no_mangle)]
         #[used]
-        pub static mut ULP_COMMAND: UlpCommand = UlpCommand::NOOP;
+        pub static mut ULP_COMMAND: UlpCommand = UlpCommand::UNSET;
 
         #[unsafe(no_mangle)]
         #[used]
-        pub static mut ULP_REPLY: UlpReply = UlpReply::UNKNOWN;
+        pub static mut ULP_REPLY: UlpReply = UlpReply::UNSET;
 
         #[unsafe(no_mangle)]
         #[used]
@@ -91,17 +91,18 @@ where
 #[repr(u32)]
 #[non_exhaustive]
 pub enum UlpCommand {
-    NOOP              = 0,
-    COUNTER_ONESHOT   = 1,
-    COUNTER_LOOP      = 2,
-    COUNTER_ULP_TIMER = 3,
-    XOR_TEST          = 4,
+    UNSET             = 0,
+    NOOP              = 1,
+    COUNTER_ONESHOT   = 2,
+    COUNTER_LOOP      = 3,
+    COUNTER_ULP_TIMER = 4,
+    XOR_TEST          = 5,
     // RISCV_DEEP_SLEEP_WAKEUP_SHORT_DELAY_TEST,
     // RISCV_DEEP_SLEEP_WAKEUP_LONG_DELAY_TEST,
     // RISCV_LIGHT_SLEEP_WAKEUP_TEST,
-    STOP_TEST         = 5,
-    MUTEX_TEST        = 6,
-    TIMER_PERIOD_TEST = 7,
+    STOP_TEST         = 6,
+    MUTEX_TEST        = 7,
+    TIMER_PERIOD_TEST = 8,
 }
 
 impl SharedType for UlpCommand {
@@ -115,9 +116,9 @@ impl SharedType for UlpCommand {
 #[repr(u32)]
 #[non_exhaustive]
 pub enum UlpReply {
-    UNKNOWN = 0,
-    OK      = 1,
-    NOK     = 2,
+    UNSET = 0,
+    OK    = 1,
+    NOK   = 2,
 }
 
 impl SharedType for UlpReply {

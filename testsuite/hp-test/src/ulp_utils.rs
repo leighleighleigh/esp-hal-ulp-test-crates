@@ -91,7 +91,7 @@ pub fn reprogram_ulp_core(
     #[allow(static_mut_refs)]
     reprogram_ulp_core_with_run_hook(ulp_core, wakeup_source, || {
         command.store();
-        UlpReply::UNKNOWN.store();
+        UlpReply::UNSET.store();
         UlpLoopCounter::reset();
         UlpBootCounter::reset();
     });

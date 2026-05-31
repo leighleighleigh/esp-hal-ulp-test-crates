@@ -198,7 +198,7 @@ mod tests {
                 UlpLoopCounter::reset();
                 UlpBootCounter::reset();
                 UlpCommand::TIMER_PERIOD_TEST.store();
-                UlpReply::UNKNOWN.store();
+                UlpReply::UNSET.store();
                 // But ask the ULP to configure a faster rate.
                 unsafe {
                     ULP_TEST_DATA_IN = 1; // Fast!
@@ -250,7 +250,7 @@ mod tests {
             UlpLoopCounter::reset();
             UlpBootCounter::reset();
             UlpCommand::XOR_TEST.store();
-            UlpReply::UNKNOWN.store();
+            UlpReply::UNSET.store();
             unsafe { ULP_TEST_DATA_IN = test_value };
         });
         hil_test::assert!(ulp_has_booted());
@@ -272,7 +272,7 @@ mod tests {
                 UlpLoopCounter::reset();
                 UlpBootCounter::reset();
                 UlpCommand::STOP_TEST.store();
-                UlpReply::UNKNOWN.store();
+                UlpReply::UNSET.store();
             },
         );
         hil_test::assert!(ulp_has_booted());
@@ -289,7 +289,7 @@ mod tests {
             UlpLoopCounter::reset();
             UlpBootCounter::reset();
             UlpCommand::MUTEX_TEST.store();
-            UlpReply::UNKNOWN.store();
+            UlpReply::UNSET.store();
             UlpLock::reset();
         });
         hil_test::assert!(ulp_has_booted());

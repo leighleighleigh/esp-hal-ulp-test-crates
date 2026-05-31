@@ -1,11 +1,9 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-use core::arch;
-
-use embedded_hal::delay::DelayNs;
-
-use super::SharedType;
+// use core::arch;
+// use embedded_hal::delay::DelayNs;
+// use super::SharedType;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "is-lp-core")] {
@@ -34,6 +32,7 @@ pub struct UlpLock {
 // }
 
 impl UlpLock {
+    #[allow(dead_code)]
     const fn new() -> Self {
         UlpLock {
             flag_ulp: false,
@@ -78,7 +77,7 @@ pub fn ulp_riscv_lock_acquire() {
             ULP_LOCK.is_ulp_turn = true;
 
             while ULP_LOCK.flag_ulp && ULP_LOCK.is_ulp_turn {
-                // To avoid needing to import ESP-HAL crates, 
+                // To avoid needing to import ESP-HAL crates,
                 // this function is enough to ensure the HP core doesnt hog the lock.
                 core::hint::black_box(distract_hp_core());
             }
@@ -100,7 +99,6 @@ pub fn ulp_riscv_lock_release() {
         }
     }
 }
-
 
 // pub fn ulp_riscv_lock_acquire_delayed<D>(mut wait_delay: D)
 // where

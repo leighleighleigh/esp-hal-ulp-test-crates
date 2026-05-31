@@ -4,10 +4,10 @@
 #![allow(static_mut_refs)]
 
 mod locks;
-pub use locks::{UlpLock, ULP_LOCK};
+pub use locks::{ULP_LOCK, UlpLock};
 
 pub const TEST_XOR_MASK: u32 = 0xcafe;
-pub const TEST_MUTEX_ITERATIONS: u32 = 100;
+pub const TEST_MUTEX_ITERATIONS: u32 = 1000;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "is-lp-core")] {

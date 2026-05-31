@@ -79,6 +79,8 @@ pub fn reprogram_ulp_core_with_run_hook<F>(
     let ulp_code = load_lp_code!("lp_app");
     pre_run_hook();
     ulp_code.run(ulp_core, wakeup_source);
+    // Println will improve test formatting
+    defmt::debug!("");
 }
 
 pub fn reprogram_ulp_core(
@@ -96,7 +98,7 @@ pub fn reprogram_ulp_core(
 
 #[allow(static_mut_refs)]
 pub fn ulp_has_booted() -> bool {
-    Delay::new().delay_ms(50);
+    Delay::new().delay_ms(5);
     UlpReply::load() != UlpReply::UNKNOWN
 }
 
@@ -105,7 +107,6 @@ pub fn ulp_is_looping() -> bool {
     let a = UlpLoopCounter::load().count();
     Delay::new().delay_ms(50);
     let b = UlpLoopCounter::load().count();
-    defmt::println!("");
-    defmt::info!("a =  {}, b = {}", a, b);
+    defmt::debug!("a =  {}, b = {}", a, b);
     a != b
 }

@@ -6,7 +6,16 @@ pub use esp_hal::ulp_core::{
     UlpCoreWakeupSource as LpCoreWakeupSource,
 };
 use esp_hal::{delay::Delay, load_lp_code};
-use shared::{SharedType, UlpBootCounter, UlpCommand, UlpLoopCounter, UlpReply};
+use shared::{
+    SharedType,
+    UlpBootCounter,
+    UlpCommand,
+    UlpLock,
+    UlpLoopCounter,
+    UlpReply,
+    ULP_TEST_DATA_IN,
+    ULP_TEST_DATA_OUT,
+};
 
 // Type aliasing for peripheral type
 pub type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
@@ -68,6 +77,20 @@ pub fn ulp_riscv_reset() {
     Delay::new().delay_us(20);
 }
 
+// Reset all of the shared variables to their uninitialised state.
+// This can be called within the pre_run_hook.
+fn reset_ulp_shared_variables() {
+    UlpBootCounter::reset();
+    UlpLoopCounter::reset();
+    UlpReply::UNSET.store();
+    UlpCommand::UNSET.store();
+    unsafe {
+        ULP_TEST_DATA_IN = 0;
+        ULP_TEST_DATA_OUT = 0;
+    }
+    UlpLock::reset();
+}
+
 pub fn reprogram_ulp_core_with_run_hook<F>(
     ulp_core: &mut LpCore,
     wakeup_source: LpCoreWakeupSource,
@@ -77,30 +100,20 @@ pub fn reprogram_ulp_core_with_run_hook<F>(
 {
     ulp_riscv_reset(); // this is required, to stop the ULP core from doing stuff while we program it.
     let ulp_code = load_lp_code!("lp_app");
+
+    // All shared variables are reset before reprogramming.
+    reset_ulp_shared_variables();
     pre_run_hook();
+
     ulp_code.run(ulp_core, wakeup_source);
+
     // Println will improve test formatting
     defmt::debug!("");
-}
-
-pub fn reprogram_ulp_core(
-    ulp_core: &mut LpCore,
-    wakeup_source: LpCoreWakeupSource,
-    command: UlpCommand,
-) {
-    #[allow(static_mut_refs)]
-    reprogram_ulp_core_with_run_hook(ulp_core, wakeup_source, || {
-        command.store();
-        UlpReply::UNSET.store();
-        UlpLoopCounter::reset();
-        UlpBootCounter::reset();
-    });
 }
 
 #[allow(static_mut_refs)]
 pub fn ulp_has_booted() -> bool {
     Delay::new().delay_ms(20);
-    // UlpReply::load() != UlpReply::UNKNOWN
     UlpBootCounter::load() != 0
 }
 

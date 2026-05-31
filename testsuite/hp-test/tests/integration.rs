@@ -31,7 +31,6 @@ mod tests {
         },
     };
     use shared::{
-        SharedCounter,
         SharedType,
         UlpBootCounter,
         UlpCommand,
@@ -131,7 +130,7 @@ mod tests {
         let a = UlpBootCounter::load();
         hil_test::assert_eq!(1, a);
         // Did not loop
-        let b = UlpLoopCounter::load().count();
+        let b = UlpLoopCounter::load();
         hil_test::assert_eq!(0, b);
         _ulp_reset_to_clean_firmware(&mut ulp_core);
     }
@@ -145,7 +144,7 @@ mod tests {
         let a = UlpBootCounter::load();
         hil_test::assert_eq!(1, a);
         // Looped once
-        let b = UlpLoopCounter::load().count();
+        let b = UlpLoopCounter::load();
         hil_test::assert_eq!(1, b);
         _ulp_reset_to_clean_firmware(&mut ulp_core);
     }
@@ -164,11 +163,11 @@ mod tests {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         _ulp_test_runner_with_command(&mut ulp_core, UlpCommand::COUNTER_ULP_TIMER);
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
-        defmt::debug!("count: {}", UlpLoopCounter::load().count());
+        defmt::debug!("count: {}", UlpLoopCounter::load());
         // Delay for a second
         Delay::new().delay_ms(1000);
         // Check the count is above 10
-        let count = UlpLoopCounter::load().count();
+        let count = UlpLoopCounter::load();
         defmt::debug!("count: {}", count);
         hil_test::assert!(count >= 10);
         _ulp_reset_to_clean_firmware(&mut ulp_core);
@@ -213,7 +212,7 @@ mod tests {
         // Check it is running at a fast rate
         defmt::debug!("Waiting for 1 second...");
         Delay::new().delay_ms(1000);
-        let count = UlpLoopCounter::load().count();
+        let count = UlpLoopCounter::load();
         defmt::debug!("count: {}", count);
         hil_test::assert!(count >= 10);
 
@@ -236,7 +235,7 @@ mod tests {
         // Confirm the slow rate was applied
         defmt::debug!("Waiting for 1 second...");
         Delay::new().delay_ms(1000);
-        let count = UlpLoopCounter::load().count();
+        let count = UlpLoopCounter::load();
         defmt::debug!("count: {}", count);
         hil_test::assert!(count >= 1 && count <= 3);
 
@@ -291,6 +290,7 @@ mod tests {
             UlpBootCounter::reset();
             UlpCommand::MUTEX_TEST.store();
             UlpReply::UNKNOWN.store();
+            UlpLock::reset();
         });
         hil_test::assert!(ulp_has_booted());
 
@@ -302,12 +302,12 @@ mod tests {
 
         while UlpReply::load() != UlpReply::OK {
             // Need a delay here, else CPU will block the ULP core.
-            Delay::new().delay_micros(1);
+            Delay::new().delay_micros(100);
         }
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
 
         // Assert no race conditions and we incremented 2x the number of loops
-        hil_test::assert_eq!(2 * TEST_MUTEX_ITERATIONS, UlpLoopCounter::load().count());
+        hil_test::assert_eq!(2 * TEST_MUTEX_ITERATIONS, UlpLoopCounter::load());
 
         _ulp_reset_to_clean_firmware(&mut ulp_core);
     }

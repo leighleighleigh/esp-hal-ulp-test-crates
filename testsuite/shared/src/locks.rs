@@ -49,6 +49,14 @@ impl UlpLock {
     pub fn release() {
         ulp_riscv_lock_release();
     }
+
+    pub fn reset() {
+        unsafe {
+            ULP_LOCK.flag_hp = false;
+            ULP_LOCK.flag_ulp = false;
+            ULP_LOCK.is_ulp_turn = false;
+        }
+    }
 }
 
 // Based on

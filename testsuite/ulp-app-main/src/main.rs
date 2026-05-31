@@ -14,7 +14,6 @@ use esp_lp_hal::{
 use panic_halt as _;
 use shared::{
     SharedType,
-    SharedCounter,
     TEST_MUTEX_ITERATIONS,
     TEST_XOR_MASK,
     ULP_TEST_DATA_IN,

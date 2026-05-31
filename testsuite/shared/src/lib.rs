@@ -2,10 +2,13 @@
 #![no_main]
 #![allow(non_camel_case_types)]
 #![allow(static_mut_refs)]
+// #![feature(associated_type_defaults)]
 
 mod locks;
+
+use core::ops::Add;
+
 pub use locks::{UlpLock, ULP_LOCK};
-use num_traits::{AsPrimitive, FromPrimitive, NumCast, PrimInt, ToPrimitive};
 
 pub const TEST_XOR_MASK: u32 = 0xcafe;
 pub const TEST_MUTEX_ITERATIONS: u32 = 1000;
@@ -26,7 +29,7 @@ cfg_if::cfg_if! {
 
         #[unsafe(no_mangle)]
         #[used]
-        pub static mut ULP_LOOP_COUNTER: UlpLoopCounter = UlpLoopCounter::new(0);
+        pub static mut ULP_LOOP_COUNTER: u32 = 0;
 
         #[unsafe(no_mangle)]
         #[used]
@@ -40,7 +43,7 @@ cfg_if::cfg_if! {
             pub static mut ULP_COMMAND: UlpCommand;
             pub static mut ULP_REPLY: UlpReply;
             pub static mut ULP_BOOT_COUNTER: u32;
-            pub static mut ULP_LOOP_COUNTER: UlpLoopCounter;
+            pub static mut ULP_LOOP_COUNTER: u32;
             pub static mut ULP_TEST_DATA_IN : u32;
             pub static mut ULP_TEST_DATA_OUT : u32;
         }
@@ -48,31 +51,38 @@ cfg_if::cfg_if! {
 }
 
 // Trait for these unique shared variable types
-pub trait SharedType {
-    const BACKING_VAR: *const Self;
+pub trait SharedType: Sized {
+    type VarType;
+    const VAR: *const Self::VarType;
 
     // Load a value from memory
-    fn load() -> Self
-    where
-        Self: Sized,
-    {
+    fn load() -> Self::VarType {
         unsafe {
-            let p = <Self as SharedType>::BACKING_VAR;
-            p.read_unaligned()
+            let p = <Self as SharedType>::VAR;
+            p.read_volatile()
         }
     }
 
     // Store a value to memory
-    fn store(self: Self)
+    fn store(self)
     where
-        Self: Sized,
+        Self: SharedType,
+        Self: Into<<Self as SharedType>::VarType>,
     {
         unsafe {
-            let ptr = <Self as SharedType>::BACKING_VAR;
+            let ptr = <Self as SharedType>::VAR;
             let mut_ptr = ptr.cast_mut();
-            mut_ptr.write_volatile(self);
+            mut_ptr.write_volatile(self.into());
         }
     }
+}
+
+pub trait SharedTypeConversion: SharedType
+where
+    Self: SharedType,
+    Self: Into<<Self as SharedType>::VarType>,
+    Self: From<<Self as SharedType>::VarType>,
+{
 }
 
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -95,7 +105,8 @@ pub enum UlpCommand {
 }
 
 impl SharedType for UlpCommand {
-    const BACKING_VAR: *const Self = unsafe { &ULP_COMMAND };
+    const VAR: *const Self = unsafe { &ULP_COMMAND };
+    type VarType = Self;
 }
 
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -110,22 +121,23 @@ pub enum UlpReply {
 }
 
 impl SharedType for UlpReply {
-    const BACKING_VAR: *const Self = unsafe { &ULP_REPLY };
+    const VAR: *const Self = unsafe { &ULP_REPLY };
+    type VarType = Self;
 }
+
+// Must be a struct so that we can make different trait impls for it.
 
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[cfg_attr(not(feature = "is-lp-core"), derive(Debug))]
 #[derive(Clone, Copy, PartialOrd, PartialEq)]
 #[repr(C)]
-#[non_exhaustive]
 pub struct UlpLoopCounter(u32);
 
 impl From<u32> for UlpLoopCounter {
     fn from(value: u32) -> Self {
-        Self { 0: value }
+        Self(value)
     }
 }
-
 impl Into<u32> for UlpLoopCounter {
     fn into(self) -> u32 {
         self.0
@@ -133,47 +145,54 @@ impl Into<u32> for UlpLoopCounter {
 }
 
 impl SharedType for UlpLoopCounter {
-    const BACKING_VAR: *const Self = unsafe { &ULP_LOOP_COUNTER };
+    const VAR: *const Self::VarType = unsafe { &ULP_LOOP_COUNTER };
+    type VarType = u32;
 }
 
+impl SharedTypeConversion for UlpLoopCounter {}
+
 impl UlpLoopCounter {
-    pub const fn new(value: u32) -> Self {
-        Self { 0: value }
-    }
-
-    pub fn count(&self) -> u32 {
-        self.0
-    }
-
     pub fn increment() {
-        let mut c = Self::load();
-        c.0 += 1;
-        Self::store(c);
+        let c = Self::load();
+        Self::store(UlpLoopCounter(c + 1));
     }
 
     pub fn reset() {
-        Self::store(0.into());
+        Self::store(UlpLoopCounter(0));
     }
 }
 
-pub type UlpBootCounter = u32;
+// BOOT COUNT
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[cfg_attr(not(feature = "is-lp-core"), derive(Debug))]
+#[derive(Clone, Copy, PartialOrd, PartialEq)]
+#[repr(C)]
+pub struct UlpBootCounter(u32);
+
+impl From<u32> for UlpBootCounter {
+    fn from(value: u32) -> Self {
+        Self(value)
+    }
+}
+impl Into<u32> for UlpBootCounter {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
 
 impl SharedType for UlpBootCounter {
-    const BACKING_VAR: *const Self = unsafe { &ULP_BOOT_COUNTER };
+    const VAR: *const Self::VarType = unsafe { &ULP_BOOT_COUNTER };
+    type VarType = u32;
 }
+impl SharedTypeConversion for UlpBootCounter {}
 
-pub trait SharedCounter: SharedType + Sized {
-    fn increment();
-    fn reset();
-}
-
-impl SharedCounter for UlpBootCounter {
-    fn increment() {
+impl UlpBootCounter {
+    pub fn increment() {
         let c = Self::load();
-        Self::store(c + 1);
+        Self::store(UlpBootCounter(c + 1));
     }
 
-    fn reset() {
-        Self::store(0);
+    pub fn reset() {
+        Self::store(UlpBootCounter(0));
     }
 }

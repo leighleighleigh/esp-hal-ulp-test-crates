@@ -6,7 +6,7 @@ pub use esp_hal::ulp_core::{
     UlpCoreWakeupSource as LpCoreWakeupSource,
 };
 use esp_hal::{delay::Delay, load_lp_code};
-use shared::{SharedCounter, SharedType, UlpBootCounter, UlpCommand, UlpLoopCounter, UlpReply};
+use shared::{SharedType, UlpBootCounter, UlpCommand, UlpLoopCounter, UlpReply};
 
 // Type aliasing for peripheral type
 pub type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
@@ -99,16 +99,16 @@ pub fn reprogram_ulp_core(
 
 #[allow(static_mut_refs)]
 pub fn ulp_has_booted() -> bool {
-    Delay::new().delay_ms(5);
+    Delay::new().delay_ms(20);
     // UlpReply::load() != UlpReply::UNKNOWN
     UlpBootCounter::load() != 0
 }
 
 #[allow(static_mut_refs)]
 pub fn ulp_is_looping() -> bool {
-    let a = UlpLoopCounter::load().count();
+    let a = UlpLoopCounter::load();
     Delay::new().delay_ms(50);
-    let b = UlpLoopCounter::load().count();
+    let b = UlpLoopCounter::load();
     defmt::debug!("a =  {}, b = {}", a, b);
     a != b
 }

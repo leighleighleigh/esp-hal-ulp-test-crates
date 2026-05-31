@@ -14,6 +14,7 @@ use esp_lp_hal::{
 use panic_halt as _;
 use shared::{
     SharedType,
+    SharedCounter,
     TEST_MUTEX_ITERATIONS,
     TEST_XOR_MASK,
     ULP_TEST_DATA_IN,
@@ -22,6 +23,7 @@ use shared::{
     UlpLock,
     UlpLoopCounter,
     UlpReply,
+    UlpBootCounter,
 };
 
 // This return type is used to indicate if the command should exit the loop or not
@@ -58,12 +60,7 @@ fn delay_for_a_second() {
 
 #[entry]
 fn main() {
-    // The first thing to do is mark us as running
-    if UlpReply::load() == UlpReply::UNKNOWN {
-        UlpReply::RUNNING.store();
-    }
-
-    // let d = Delay {};
+    UlpBootCounter::increment();
 
     loop {
         // Re-reading the command allows it to be modified by ourself.
@@ -73,20 +70,21 @@ fn main() {
 
         match cmd {
             UlpCommand::NOOP => {
-                // Do nothing.
+                // Do nothing
+                UlpReply::OK.store();
             }
-            UlpCommand::ONESHOT => {
+            UlpCommand::COUNTER_ONESHOT => {
                 // Increment counter ONCE, then stay in a loop
                 UlpLoopCounter::increment();
-                UlpReply::OK.store();
                 UlpCommand::NOOP.store();
+                UlpReply::OK.store();
             }
-            UlpCommand::LOOP_COUNTER_TEST => unsafe {
+            UlpCommand::COUNTER_LOOP => unsafe {
                 // Keep incrementing the counter in a loop
                 UlpLoopCounter::increment();
                 UlpReply::OK.store();
             },
-            UlpCommand::TIMER_COUNTER_TEST => unsafe {
+            UlpCommand::COUNTER_ULP_TIMER => unsafe {
                 UlpLoopCounter::increment();
                 UlpReply::OK.store();
                 // Exit the loop, the ULP Timer will re-start us.
@@ -94,22 +92,15 @@ fn main() {
             },
             UlpCommand::XOR_TEST => unsafe {
                 UlpLoopCounter::increment();
-                let indata = unsafe { ULP_TEST_DATA_IN.clone() };
-                unsafe { ULP_TEST_DATA_OUT = indata ^ TEST_XOR_MASK };
-                UlpReply::OK.store();
+                let data_in = unsafe { ULP_TEST_DATA_IN.clone() };
+                unsafe { ULP_TEST_DATA_OUT = data_in ^ TEST_XOR_MASK };
                 // Run once.
                 UlpCommand::NOOP.store();
+                UlpReply::OK.store();
             },
             UlpCommand::STOP_TEST => unsafe {
                 UlpLoopCounter::increment();
                 UlpReply::OK.store();
-                // Wait so that successful boot can be confirmed
-                delay_for_a_second();
-                // As a way to check the following functions successfuly halted,
-                // we will reset the reply to UNKNOWN state.
-                // If the chip re-starts somehow, this will change, detecting a failure to halt.
-                UlpReply::UNKNOWN.store();
-                // SHOULD never return from here
                 ulp_riscv_timer_stop();
                 ulp_riscv_halt();
             },
@@ -119,15 +110,12 @@ fn main() {
                     UlpLoopCounter::increment();
                     UlpLock::release();
                 }
-                UlpReply::OK.store();
-                // Run once
                 UlpCommand::NOOP.store();
+                UlpReply::OK.store();
             },
             UlpCommand::TIMER_PERIOD_TEST => unsafe {
                 UlpLoopCounter::increment();
-                UlpLock::acquire();
                 let new_cycles = unsafe { ULP_TEST_DATA_IN.clone() };
-                UlpLock::release();
                 ulp_timer_period(new_cycles);
                 UlpReply::OK.store();
                 break;

@@ -393,6 +393,7 @@ dependencies = [
  "defmt",
  "elf",
  "embedded-hal",
+ "num-traits",
 ]
 
 [[package]]

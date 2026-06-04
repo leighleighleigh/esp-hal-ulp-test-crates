@@ -10,6 +10,7 @@ use esp_lp_hal::{
     ulp_riscv_halt,
     ulp_riscv_timer_stop,
     ulp_timer_period,
+    wake_hp_core,
 };
 use panic_halt as _;
 use shared::{
@@ -117,6 +118,13 @@ fn main() {
                 let new_cycles = unsafe { ULP_TEST_DATA_IN.clone() };
                 ulp_timer_period(new_cycles);
                 UlpReply::OK.store();
+                break;
+            },
+            UlpCommand::LIGHT_SLEEP_TEST => unsafe {
+                UlpLoopCounter::increment();
+                UlpReply::OK.store();
+                delay_for_a_second();
+                wake_hp_core();
                 break;
             },
             _ => unsafe {

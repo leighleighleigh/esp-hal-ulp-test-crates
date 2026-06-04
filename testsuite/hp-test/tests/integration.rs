@@ -10,7 +10,15 @@
 mod tests {
     use critical_section::Mutex;
     use embedded_hal::delay::DelayNs;
-    use esp_hal::{delay::Delay, i2c::rtc, load_lp_code, peripherals::Peripherals, time::Instant};
+    use esp_hal::{
+        delay::Delay,
+        i2c::rtc,
+        load_lp_code,
+        peripherals::Peripherals,
+        rtc_cntl::sleep,
+        system::{wakeup_cause, SleepSource},
+        time::Instant,
+    };
     use hil_test::{
         self as _,
         ulp_debug::{self, FromRegister},
@@ -19,6 +27,7 @@ mod tests {
             ulp_has_booted,
             ulp_is_looping,
             ulp_riscv_halt,
+            ulp_riscv_hard_reset,
             ulp_riscv_reset,
             ulp_riscv_timer_resume,
             ulp_riscv_timer_stop,
@@ -72,46 +81,11 @@ mod tests {
 
         // let dbg = ulp_debug::CocpuDebug::read();
         // defmt::println!("\n{}", dbg);
-        // let sar_ctrl = esp_hal::peripherals::SENS::regs();
-        // sar_ctrl
-        //     .sar_peri_reset_conf()
-        //     .write(|w| w.sar_cocpu_reset().set_bit());
-        // Delay::new().delay_ms(1);
-        // // ulp_timer_period(200);
-        // // ulp_riscv_timer_resume();
-        // // Delay::new().delay_ms(1);
-        // sar_ctrl
-        //     .sar_peri_reset_conf()
-        //     .write(|w| w.sar_cocpu_reset().clear_bit());
-        // Delay::new().delay_ms(1);
-        // let dbg = ulp_debug::CocpuDebug::read();
-        // defmt::println!("\n{}", dbg);
+
+        // Rescue the ULP core from a stuck state
+        ulp_riscv_hard_reset();
 
         Context { p: peripherals }
-    }
-
-    // fn do_mini_sleep(lpwr: esp_hal::peripherals::LPWR) {
-    //     let mut rtc = esp_hal::rtc_cntl::Rtc::new(lpwr);
-    //     let timer = esp_hal::rtc_cntl::sleep::TimerWakeupSource::new(
-    //         core::time::Duration::from_micros(1).into(),
-    //     );
-    //     defmt::info!("Entering light sleep.");
-    //     let t0 = Instant::now();
-    //     rtc.sleep_light(&[&timer]);
-    //     let t1 = Instant::now();
-    //     defmt::info!("Slept for: {}", (t1 - t0));
-    // }
-
-    // This must be called at the end of every test, to place the Lp core into a safe state.
-    // Failing to do this, will cause following tests to fail.
-    fn ulp_test_finish(ulp_core: &mut LpCore) {
-        reprogram_ulp_core_with_run_hook(ulp_core, LpCoreWakeupSource::HpCpu, || {
-            UlpCommand::NOOP.store();
-        });
-        hil_test::assert_eq!(ulp_has_booted(), true);
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
-        let a = UlpBootCounter::load();
-        hil_test::assert_eq!(1, a);
     }
 
     #[test]
@@ -128,7 +102,6 @@ mod tests {
         // Did not loop
         let b = UlpLoopCounter::load();
         hil_test::assert_eq!(0, b);
-        ulp_test_finish(&mut ulp_core);
     }
 
     #[test]
@@ -145,7 +118,6 @@ mod tests {
         // Looped once
         let b = UlpLoopCounter::load();
         hil_test::assert_eq!(1, b);
-        ulp_test_finish(&mut ulp_core);
     }
 
     #[test]
@@ -157,7 +129,6 @@ mod tests {
         hil_test::assert_eq!(ulp_has_booted(), true);
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
         hil_test::assert_eq!(true, ulp_is_looping());
-        ulp_test_finish(&mut ulp_core);
     }
 
     #[test]
@@ -179,7 +150,6 @@ mod tests {
         let count = UlpLoopCounter::load();
         defmt::debug!("count: {}", count);
         hil_test::assert!(count >= 10);
-        ulp_test_finish(&mut ulp_core);
     }
 
     #[test]
@@ -200,7 +170,6 @@ mod tests {
         hil_test::assert!(!ulp_is_looping());
         ulp_riscv_timer_resume();
         hil_test::assert!(ulp_is_looping());
-        ulp_test_finish(&mut ulp_core);
     }
 
     #[test]
@@ -252,8 +221,6 @@ mod tests {
         let count = UlpLoopCounter::load();
         defmt::debug!("count: {}", count);
         hil_test::assert!(count >= 1 && count <= 3);
-
-        ulp_test_finish(&mut ulp_core);
     }
 
     #[test]
@@ -271,7 +238,6 @@ mod tests {
         // Check the data
         let result = unsafe { ULP_TEST_DATA_OUT.clone() };
         hil_test::assert_eq!(test_value ^ shared::TEST_XOR_MASK, result);
-        ulp_test_finish(&mut ulp_core);
     }
 
     #[test]
@@ -295,8 +261,6 @@ mod tests {
         ulp_riscv_timer_resume();
         hil_test::assert!(ulp_has_booted());
         hil_test::assert_eq!(2, UlpBootCounter::load());
-
-        ulp_test_finish(&mut ulp_core);
     }
 
     #[test]
@@ -305,7 +269,6 @@ mod tests {
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             UlpCommand::MUTEX_TEST.store();
         });
-        // hil_test::assert!(ulp_has_booted()); // This delay breaks the test somewhat.
 
         for _ in 0..TEST_MUTEX_ITERATIONS {
             UlpLock::acquire();
@@ -321,8 +284,36 @@ mod tests {
 
         // Assert no race conditions and we incremented 2x the number of loops
         hil_test::assert_eq!(2 * TEST_MUTEX_ITERATIONS, UlpLoopCounter::load());
+    }
 
-        ulp_test_finish(&mut ulp_core);
+    #[test]
+    fn ulp_light_sleep_wakeup(ctx: Context) {
+        let mut rtc = esp_hal::rtc_cntl::Rtc::new(ctx.p.LPWR);
+        let wakeup_timer = sleep::TimerWakeupSource::new(core::time::Duration::from_secs(3).into());
+        let wakeup_ulp = sleep::WakeFromUlpCoreWakeupSource::new();
+        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
+        reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
+            UlpCommand::LIGHT_SLEEP_TEST.store();
+        });
+        // Check it booted
+        hil_test::assert!(ulp_has_booted());
+        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        // We now have 1 second to enter light sleep, until the ULP core will try to wake us up
+        defmt::info!("Entering light sleep.");
+        let t0 = Instant::now();
+        rtc.sleep_light(&[&wakeup_timer, &wakeup_ulp]);
+        let t1 = Instant::now();
+        defmt::info!("Slept for: {}", (t1 - t0));
+        let cause = wakeup_cause();
+        defmt::info!("Wakeup cause was: {}", cause);
+        match cause {
+            SleepSource::Ulp => {
+                hil_test::assert!(true);
+            }
+            _ => {
+                hil_test::assert!(false);
+            }
+        }
     }
 
     #[test]

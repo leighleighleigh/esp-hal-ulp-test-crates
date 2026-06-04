@@ -82,6 +82,26 @@ pub fn ulp_riscv_reset() {
     Delay::new().delay_us(20);
 }
 
+/// UNDOCUMENTED ULP HARD-RESET PROCEDURE
+/// Will recue the ULP core no matter how stuck it is,
+/// and erase any previous firmware.
+pub fn ulp_riscv_hard_reset() {
+    let sar_ctrl = esp_hal::peripherals::SENS::regs();
+
+    // Hard reset the coprocessor
+    sar_ctrl
+        .sar_peri_reset_conf()
+        .write(|w| w.sar_cocpu_reset().set_bit());
+
+    sar_ctrl
+        .sar_peri_reset_conf()
+        .write(|w| w.sar_cocpu_reset().clear_bit());
+
+    // Erase ULP core region
+    let lp_ram = unsafe { core::slice::from_raw_parts_mut(0x5000_0000 as *mut u32, 8 * 1024 / 4) };
+    lp_ram.fill(0u32);
+}
+
 // Reset all of the shared variables to their uninitialised state.
 // This can be called within the pre_run_hook.
 fn reset_ulp_shared_variables() {
@@ -103,7 +123,9 @@ pub fn reprogram_ulp_core_with_run_hook<F>(
 ) where
     F: FnOnce(),
 {
-    ulp_riscv_reset(); // this is required, to stop the ULP core from doing stuff while we program it.
+    // this is required, to stop the ULP core from doing stuff while we program it.
+    ulp_riscv_reset();
+
     let ulp_code = load_lp_code!("lp_app");
     // All shared variables are reset before reprogramming.
     reset_ulp_shared_variables();
@@ -120,9 +142,9 @@ pub fn ulp_has_booted() -> bool {
 #[allow(static_mut_refs)]
 pub fn ulp_is_looping() -> bool {
     let t0 = Instant::now();
-    let mut t1 = t0;
+    let mut t1;
     let a = UlpLoopCounter::load();
-    let mut b = a;
+    let mut b;
 
     loop {
         Delay::new().delay_us(10);

@@ -6,8 +6,6 @@
 
 mod locks;
 
-use core::ops::Add;
-
 pub use locks::{UlpLock, ULP_LOCK};
 
 pub const TEST_XOR_MASK: u32 = 0xcafe;
@@ -97,12 +95,13 @@ pub enum UlpCommand {
     COUNTER_LOOP      = 3,
     COUNTER_ULP_TIMER = 4,
     XOR_TEST          = 5,
-    // RISCV_DEEP_SLEEP_WAKEUP_SHORT_DELAY_TEST,
-    // RISCV_DEEP_SLEEP_WAKEUP_LONG_DELAY_TEST,
-    // RISCV_LIGHT_SLEEP_WAKEUP_TEST,
     STOP_TEST         = 6,
     MUTEX_TEST        = 7,
     TIMER_PERIOD_TEST = 8,
+    LIGHT_SLEEP_TEST  = 9,
+    // RISCV_DEEP_SLEEP_WAKEUP_SHORT_DELAY_TEST,
+    // RISCV_DEEP_SLEEP_WAKEUP_LONG_DELAY_TEST,
+    // RISCV_LIGHT_SLEEP_WAKEUP_TEST,
 }
 
 impl SharedType for UlpCommand {

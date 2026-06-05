@@ -22,20 +22,10 @@ use hil_test::{
     ulp_debug::{CocpuDebug, FromRegister},
     ulp_utils::{self, ulp_riscv_timer_resume},
 };
-use shared::{UlpCommandType, UlpLoopCounter};
+use shared::{SharedType, UlpCommand, UlpLoopCounter};
 
 // Type aliasing for peripheral type
 type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
-
-// Setup the ULP core
-fn setup_ulp_core(core: LpCorePeripheral) {
-    ulp_utils::reprogram_ulp_core(
-        core,
-        // LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(530)),
-        LpCoreWakeupSource::HpCpu,
-        UlpCommandType::NOOP,
-    );
-}
 
 #[main]
 fn main() -> ! {
@@ -66,7 +56,13 @@ fn main() -> ! {
     log::info!("HP core started! Counter: {}", UlpLoopCounter::read());
 
     // re-program the ULP everytime HP core boots
-    setup_ulp_core(peripherals.ULP_RISCV_CORE);
+    ulp_utils::reprogram_ulp_core(
+        peripherals.ULP_RISCV_CORE,
+        LpCoreWakeupSource::HpCpu,
+        || {
+            UlpCommand::NOOP.store();
+        },
+    );
     dly.delay_millis(500);
 
     log::info!("LP core started! Counter: {}", UlpLoopCounter::read());

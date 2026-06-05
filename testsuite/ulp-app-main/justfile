@@ -43,12 +43,12 @@ build-linker-script ELF BASE_ADDRESS:
   # navigate to teh shared crate
   mydir="{{justfile_directory()}}"
   shared_crate="${mydir}/../shared/"
-  pushd "${shared_crate}"
+  pushd "${shared_crate}" >/dev/null
   # Extract the symbols, adding base address
-  just cli -f "${app_file}" -l -b {{BASE_ADDRESS}} | tee "${out_file}"
+  just cli -f "${app_file}" -l -b {{BASE_ADDRESS}} > "${out_file}"
   ecode="$?"
   # Exit directory
-  popd
+  popd >/dev/null
   # Return result
   exit "${ecode}"
 

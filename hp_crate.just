@@ -52,8 +52,8 @@ build-ulp-app APPCRATE CHIP:
   popd >/dev/null
   # Copy the built application to lp_app
   outfile="$(realpath ./)/lp_app"
-  cp -v "${appfile}" "${outfile}"
-  test -f "${appfile%.*}.x" && cp -v "${appfile%.*}.x" "${outfile}.x"
+  cp "${appfile}" "${outfile}"
+  test -f "${appfile%.*}.x" && cp "${appfile%.*}.x" "${outfile}.x"
   exit $ecode
 
 # Repeatedly attempts to flash until successful

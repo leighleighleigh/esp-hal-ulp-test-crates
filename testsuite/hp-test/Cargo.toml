@@ -85,13 +85,10 @@ esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
 esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
 esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
 esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
-#esp-hal = { path = "/home/leigh/Git/esp-hal-mainline/esp-hal" }
-#esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal-mainline/esp-bootloader-esp-idf" }
-#esp-backtrace = { path = "/home/leigh/Git/esp-hal-mainline/esp-backtrace" }
-#esp-println = { path = "/home/leigh/Git/esp-hal-mainline/esp-println" }
 
 # Fork with branch to show the test buttons inside of VSCode
 # embedded-test = { git = "https://github.com/leighleighleigh/embedded-test.git", branch = "rust-analyzer" }
+# embedded-test = { path = "/home/leigh/Git/embedded-test" }
 
 # https://doc.rust-lang.org/cargo/reference/profiles.html#test
 # Test and bench profiles inherit from dev and release respectively.

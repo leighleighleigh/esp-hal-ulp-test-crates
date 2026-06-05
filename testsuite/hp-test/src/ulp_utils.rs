@@ -165,11 +165,11 @@ pub fn ulp_is_looping() -> bool {
     let c = (b - a) as u64;
 
     if c == 0 {
-        defmt::println!("\na =  {}, b = {}. Timed out.", a, b);
-        defmt::println!("\na =  {}, b = {}, rate = 0 Hz", a, b);
+        defmt::debug!("a =  {}, b = {}. Timed out.", a, b);
+        defmt::debug!("a =  {}, b = {}, rate = 0 Hz", a, b);
     } else {
         let count_rate = (c * 1000000) / dt;
-        defmt::println!("\na =  {}, b = {}, rate = {} Hz", a, b, count_rate);
+        defmt::debug!("a =  {}, b = {}, rate = {} Hz", a, b, count_rate);
     }
 
     a != b

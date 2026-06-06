@@ -27,6 +27,10 @@ cfg_if::cfg_if! {
 
         #[unsafe(no_mangle)]
         #[used]
+        pub static mut ULP_HALT_COUNTER: u32 = 0;
+
+        #[unsafe(no_mangle)]
+        #[used]
         pub static mut ULP_LOOP_COUNTER: u32 = 0;
 
         #[unsafe(no_mangle)]
@@ -36,14 +40,26 @@ cfg_if::cfg_if! {
         #[unsafe(no_mangle)]
         #[used]
         pub static mut ULP_TEST_DATA_OUT : u32 = 0;
+
+        // This is actually a HP core variable,
+        // although it's persistence is maintained using ULP-core memory.
+        #[unsafe(no_mangle)]
+        #[used]
+        pub static mut HP_SLEEP_WAKEUP_COUNTER: u32 = 0;
+        #[unsafe(no_mangle)]
+        #[used]
+        pub static mut HP_SLEEP_WAKEUP_CAUSE: u32 = 0;
     } else {
         unsafe extern "Rust" {
             pub static mut ULP_COMMAND: UlpCommand;
             pub static mut ULP_REPLY: UlpReply;
             pub static mut ULP_BOOT_COUNTER: u32;
+            pub static mut ULP_HALT_COUNTER: u32;
             pub static mut ULP_LOOP_COUNTER: u32;
             pub static mut ULP_TEST_DATA_IN : u32;
             pub static mut ULP_TEST_DATA_OUT : u32;
+            pub static mut HP_SLEEP_WAKEUP_COUNTER : u32;
+            pub static mut HP_SLEEP_WAKEUP_CAUSE: u32;
         }
     }
 }
@@ -196,3 +212,94 @@ impl UlpBootCounter {
         Self::store(UlpBootCounter(0));
     }
 }
+
+// HALT COUNT (number of times the ULP's main function has returned.)
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[cfg_attr(not(feature = "is-lp-core"), derive(Debug))]
+#[derive(Clone, Copy, PartialOrd, PartialEq)]
+#[repr(C)]
+pub struct UlpHaltCounter(u32);
+
+impl From<u32> for UlpHaltCounter {
+    fn from(value: u32) -> Self {
+        Self(value)
+    }
+}
+impl Into<u32> for UlpHaltCounter {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
+impl SharedType for UlpHaltCounter {
+    const VAR: *const Self::VarType = unsafe { &ULP_HALT_COUNTER };
+    type VarType = u32;
+}
+impl SharedTypeConversion for UlpHaltCounter {}
+impl UlpHaltCounter {
+    pub fn increment() {
+        let c = Self::load();
+        Self::store(UlpHaltCounter(c + 1));
+    }
+    pub fn reset() {
+        Self::store(UlpHaltCounter(0));
+    }
+}
+
+// SLEEP WAKEUP COUNTER
+// Incremented when the HP core wakes from a sleeping state,
+// e.g. due to RTC timer, or LP-core interrupt.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[cfg_attr(not(feature = "is-lp-core"), derive(Debug))]
+#[derive(Clone, Copy, PartialOrd, PartialEq)]
+#[repr(C)]
+pub struct HpSleepWakeCounter(u32);
+
+impl From<u32> for HpSleepWakeCounter {
+    fn from(value: u32) -> Self {
+        Self(value)
+    }
+}
+impl Into<u32> for HpSleepWakeCounter {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
+impl SharedType for HpSleepWakeCounter {
+    const VAR: *const Self::VarType = unsafe { &HP_SLEEP_WAKEUP_COUNTER };
+    type VarType = u32;
+}
+impl SharedTypeConversion for HpSleepWakeCounter {}
+
+impl HpSleepWakeCounter {
+    pub fn increment() {
+        let c = Self::load();
+        Self::store(HpSleepWakeCounter(c + 1));
+    }
+    pub fn reset() {
+        Self::store(HpSleepWakeCounter(0));
+    }
+}
+
+// HP core wakeup cause variable.
+// To store the result of esp_hal::system::wakeup_cause(),
+// between test executions. This is needed, because sleeping will break the test probe.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[cfg_attr(not(feature = "is-lp-core"), derive(Debug))]
+#[derive(Clone, Copy, PartialOrd, PartialEq)]
+#[repr(C)]
+pub struct HpSleepWakeupCause(u32);
+impl From<u32> for HpSleepWakeupCause {
+    fn from(value: u32) -> Self {
+        Self(value)
+    }
+}
+impl Into<u32> for HpSleepWakeupCause {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
+impl SharedType for HpSleepWakeupCause {
+    type VarType = u32;
+    const VAR: *const Self::VarType = unsafe { &HP_SLEEP_WAKEUP_CAUSE };
+}
+impl SharedTypeConversion for HpSleepWakeupCause {}

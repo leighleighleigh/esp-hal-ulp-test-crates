@@ -19,12 +19,18 @@ import "../../binutils.just"
 import "../../clippy.just"
 import "../../hp_crate.just"
 
+# Build the test binary, to run manually with probe-rs.
+# Symlink the test binary to hp_test.elf
+build *ARGS="": prepare
+  #!/usr/bin/env bash
+  set -eou pipefail
+  cargo build --target xtensa-esp32s3-none-elf --features esp32s3 --test integration
+  elf_path="$(just find-last-built-test-elf)"
+  ln -srf "${elf_path}" ./hp_test.elf
 
 test *ARGS="": prepare
   #!/usr/bin/env bash
   cargo test --target xtensa-esp32s3-none-elf --features esp32s3 --test integration {{ARGS}}
-  # Runs all tests, even if they fail
-  #cargo test --target xtensa-esp32s3-none-elf --features esp32s3 --no-fail-fast
 
 example: prepare
   #!/usr/bin/env bash

@@ -96,8 +96,11 @@ pub fn ulp_riscv_hard_reset() {
     sar_ctrl
         .sar_peri_reset_conf()
         .write(|w| w.sar_cocpu_reset().clear_bit());
+}
 
-    // Erase ULP core region
+/// Erase the entire ULP core region
+pub fn ulp_erase() {
+    // TODO! Implement for other chips.
     let lp_ram = unsafe { core::slice::from_raw_parts_mut(0x5000_0000 as *mut u32, 8 * 1024 / 4) };
     lp_ram.fill(0u32);
 }

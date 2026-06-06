@@ -903,8 +903,12 @@ dependencies = [
  "esp-hal",
  "esp-metadata-generated 0.3.0",
  "esp-println",
+ "esp32c6",
+ "esp32s2 0.31.2 (git+https://github.com/esp-rs/esp-pacs?rev=0f4c316adbdbddb2479f50a5b931776b9655b23f)",
+ "esp32s3 0.35.2 (git+https://github.com/esp-rs/esp-pacs?rev=0f4c316adbdbddb2479f50a5b931776b9655b23f)",
  "log",
  "riscv-decode",
+ "semihosting",
  "shared",
 ]
 

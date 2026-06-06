@@ -17,6 +17,7 @@ use shared::{
     SharedType,
     UlpBootCounter,
     UlpCommand,
+    UlpHaltCounter,
     UlpLock,
     UlpLoopCounter,
     UlpReply,
@@ -74,7 +75,7 @@ fn main() {
                 UlpReply::OK.store();
             }
             UlpCommand::COUNTER_ONESHOT => {
-                // Increment counter ONCE, then stay in a loop
+                // Increment counter ONCE, then stay loop-ing on NOOP.
                 UlpLoopCounter::increment();
                 UlpCommand::NOOP.store();
                 UlpReply::OK.store();
@@ -102,7 +103,8 @@ fn main() {
                 UlpLoopCounter::increment();
                 UlpReply::OK.store();
                 ulp_riscv_timer_stop();
-                ulp_riscv_halt();
+                // ulp_riscv_halt(); // This is called on exit
+                break;
             },
             UlpCommand::MUTEX_TEST => unsafe {
                 for _ in 0..TEST_MUTEX_ITERATIONS {
@@ -123,8 +125,14 @@ fn main() {
             UlpCommand::LIGHT_SLEEP_TEST => unsafe {
                 UlpLoopCounter::increment();
                 UlpReply::OK.store();
+                // Give the HP core 3 seconds to enter sleep,
+                // then wake it up.
+                delay_for_a_second();
+                delay_for_a_second();
                 delay_for_a_second();
                 wake_hp_core();
+                // Disable the timer, so the LP-core will remain halted on exit.
+                ulp_riscv_timer_stop();
                 break;
             },
             _ => unsafe {
@@ -133,4 +141,6 @@ fn main() {
             },
         };
     }
+
+    UlpHaltCounter::increment();
 }

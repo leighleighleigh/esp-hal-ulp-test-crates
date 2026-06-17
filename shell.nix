@@ -11,7 +11,7 @@ let
     # This will build esp-rs-src, chosen above
     esp-rs = pkgs.callPackage "${esp-rs-src}/esp-rs/default.nix" {
         pkgs = pkgs;
-        version = "1.90.0.0"; # Rust version
+        version = "1.92.0.0"; # Rust version
         crosstool-version = "15.2.0_20251204"; # Cross-compiler toolchain version (GCC)
         binutils-version = "16.3_20250913"; # Binutils version (GDB)
     };
@@ -32,11 +32,14 @@ pkgs.mkShell rec {
         #pkgs.rustup 
         pkgs.stdenv.cc 
         pkgs.just 
+        pkgs.just-lsp
         pkgs.inotify-tools
         pkgs.picocom
         pkgs.libusb1
         # for libudev
         pkgs.systemdMinimal
+        # for documents built by rust
+        pkgs.ncurses
     ];
 
     LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";

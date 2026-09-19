@@ -166,7 +166,7 @@ mod tests {
     }
 
     #[test]
-    fn ulp_timer_stop_and_resume(ctx: Context) {
+    fn hp_can_pause_ulp_timer(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(
             &mut ulp_core,
@@ -186,7 +186,41 @@ mod tests {
     }
 
     #[test]
-    fn ulp_can_change_its_timer_period(ctx: Context) {
+    fn hp_can_change_ulp_timer_period(ctx: Context) {
+        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
+        reprogram_ulp_core_with_run_hook(
+            &mut ulp_core,
+            LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(530)), // Approx 1Hz
+            || {
+                UlpCommand::COUNTER_ULP_TIMER.store();
+            },
+        );
+        hil_test::assert_eq!(ulp_has_booted(), true);
+        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert!(ulp_is_looping());
+        // Confirm the slow rate is being used
+        let count = UlpLoopCounter::load();
+        hil_test::assert!(count <= 10);
+
+        // Change speed to a fast one
+        ulp_timer_period(0);
+        UlpLoopCounter::reset();
+        Delay::new().delay_ms(100);
+        let count = UlpLoopCounter::load();
+        defmt::debug!("count: {}", count);
+        hil_test::assert!(count >= 100);
+
+        // Change speed to a slow one
+        ulp_timer_period(1000);
+        UlpLoopCounter::reset();
+        Delay::new().delay_ms(1000);
+        let count = UlpLoopCounter::load();
+        defmt::debug!("count: {}", count);
+        hil_test::assert!(count <= 2);
+    }
+
+    #[test]
+    fn ulp_can_change_timer_period(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(
             &mut ulp_core,
@@ -237,7 +271,7 @@ mod tests {
     }
 
     #[test]
-    fn ulp_xor_test(ctx: Context) {
+    fn ipc_xor_test(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         let test_value = 0xff;
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
@@ -280,7 +314,7 @@ mod tests {
     }
 
     #[test]
-    fn ulp_mutex_lock_test(ctx: Context) {
+    fn ipc_mutex_lock_test(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             UlpCommand::MUTEX_TEST.store();
@@ -302,12 +336,13 @@ mod tests {
         hil_test::assert_eq!(2 * TEST_MUTEX_ITERATIONS, UlpLoopCounter::load());
     }
 
-    fn _run_light_sleep_iteration(
-        lpwr: &mut LowPower,
-        ulp_core: &mut LpCore,
-    ) -> esp_hal::time::Duration {
+    #[test]
+    fn hp_light_sleep_wakeup_by_ulp(ctx: Context) {
+        let mut lpwr = LowPower::new(ctx.p.LPWR);
+        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
+
         // Program and start the ULP core, which will wake us up after 3 seconds.
-        reprogram_ulp_core_with_run_hook(ulp_core, LpCoreWakeupSource::HpCpu, || {
+        reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             UlpCommand::LIGHT_SLEEP_TEST.store();
             UlpHaltCounter::store(0.into());
         });
@@ -315,22 +350,22 @@ mod tests {
         // Immediately acquire the lock, before the ULP core does,
         // and release it when we want to be woken up.
         UlpLock::acquire();
-        // defmt::debug!("UlpLock acquired.");
-        Delay::new().delay_ms(1);
+        defmt::debug!("UlpLock acquired.");
 
         hil_test::assert!(ulp_has_booted());
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
-        // defmt::debug!("ULP booted.");
+        defmt::debug!("ULP booted.");
 
         // Wait 0.1 seconds (maximum time) for ULP to be ready to handle the lock
         Delay::new().delay_ms(100);
-        // defmt::debug!("Entering light sleep...");
 
         // The core is allowed to wake us up
         ulp_core.enable_wakeup(LpWakeupConfig::default());
         // If we aren't woken within 3 seconds, the timer will wake us up.
         let wakeup_deadline = esp_hal::time::Duration::from_millis(3000);
         lpwr.set_wakeup_deadline(Instant::now() + wakeup_deadline);
+        defmt::debug!("Entering light sleep...");
+
         // Enter light sleep, recording the time of entry.
         let sleep_cfg = RtcSleepConfig::default();
         let sleep_start_timestamp = Instant::now();
@@ -350,27 +385,7 @@ mod tests {
         hil_test::assert!(sleep_duration < wakeup_deadline);
 
         // Check that the ULP core only ran once
-        Delay::new().delay_ms(10);
         hil_test::assert_eq!(UlpHaltCounter::load(), 1);
-
-        // Return the slept duration
-        sleep_duration
-    }
-
-    #[test]
-    fn ulp_light_sleep_wakeup(ctx: Context) {
-        let mut lpwr = LowPower::new(ctx.p.LPWR);
-        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
-        const N: usize = 20;
-        // This test will run for multiple iterations, with different sleep times for each.
-        // We SHOULD be able to sleep for up to a millisecond before the USB stack complains :P
-        let mut total = esp_hal::time::Duration::from_millis(0);
-        for _ in 0..N {
-            let dt = _run_light_sleep_iteration(&mut lpwr, &mut ulp_core);
-            total += dt;
-        }
-        let avg_t = esp_hal::time::Duration::from_micros(total.as_micros() / N as u64);
-        defmt::debug!("avg. sleep duration: {}", avg_t);
     }
 
     #[test]

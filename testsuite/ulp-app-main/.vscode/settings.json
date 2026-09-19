@@ -1,6 +1,4 @@
 {
-  "rust-analyzer.server.path": "/nix/store/chn7qx7q1kj8xb2gn3g9a6wvmv1syl4d-rust-analyzer-2025-10-28/bin/rust-analyzer",
-
   "rust-analyzer.cargo.autoreload": true,
   "rust-analyzer.cargo.allTargets": false,
   // For ESP32-S3
@@ -13,17 +11,8 @@
   // For ESP32-C6
   // "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf",
   // "rust-analyzer.cargo.features": ["esp32c6"],
-  "rust-analyzer.server.extraEnv": {
-    "RUSTUP_TOOLCHAIN": "stable"
-  },
-  "rust-analyzer.check.extraEnv": {
-    "RUSTUP_TOOLCHAIN": "esp"
-  },
-  "rust-analyzer.cargo.extraEnv": {
-    "RUSTUP_TOOLCHAIN": "esp"
-  },
   "[rust]": {
-    "editor.defaultFormatter": "statiolake.vscode-rustfmt",
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
     "editor.formatOnSave": true
   }
 }

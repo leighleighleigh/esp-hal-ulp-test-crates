@@ -1,8 +1,8 @@
 [package]
 name = "ulp-baremetal"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
-rust-version = "1.88.0"
+rust-version = "1.95.0"
 
 [[bin]]
 path = "src/main.rs"
@@ -18,7 +18,7 @@ esp-lp-hal = "0.3.0"
 critical-section = "1.2.0"
 
 [build-dependencies]
-esp-metadata-generated = { version = "0.4.0", features = ["build-script"] }
+esp-metadata-generated = { version = "0.5.1", features = ["build-script"] }
 
 [features]
 default = [ 'gpio-interrupt' ] # Setting this may cause build issues, when using the justfile. For VSCode usage, set this in settings.json.
@@ -43,5 +43,4 @@ codegen-units = 1 # LLVM can perform better optimizations using a single thread
 lto = true
 
 [patch.crates-io]
-#esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal.git", rev = "d2343bf152397a0171fa95223251e69a74b89119" }
 esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }

@@ -38,7 +38,7 @@ cfg_if::cfg_if! {
 }
 
 #[inline]
-fn reg_read(addr : u32) -> u32 {
+fn reg_read(addr: u32) -> u32 {
     unsafe {
         let counter = addr as *mut u32;
         counter.read_volatile()
@@ -46,7 +46,7 @@ fn reg_read(addr : u32) -> u32 {
 }
 
 #[inline]
-fn reg_write(addr : u32, val: u32) {
+fn reg_write(addr: u32, val: u32) {
     unsafe {
         let counter = addr as *mut u32;
         counter.write_volatile(val);
@@ -80,7 +80,10 @@ fn main(mut button: Input<5>) {
         });
 
         io.set_interrupt_handler(gpio_interrupt_handler);
-        interrupt::bind_handler(interrupt::Interrupt::RISCV_START_INT, startup_interrupt_handler);
+        interrupt::bind_handler(
+            interrupt::Interrupt::RISCV_START_INT,
+            startup_interrupt_handler,
+        );
 
         dly.delay_millis(1);
     }
@@ -126,7 +129,7 @@ fn main(mut button: Input<5>) {
 fn startup_interrupt_handler() {
     let c = reg_read(DEBUG_ADDRESS);
     reg_write(DEBUG_ADDRESS, c + 1);
-    
+
     // must disable it to trigger only once
     interrupt::set_enabled(interrupt::Interrupt::RISCV_START_INT, false);
 }
@@ -156,4 +159,3 @@ fn gpio_interrupt_handler() {
             .clear_interrupt()
     });
 }
-

@@ -4,39 +4,20 @@ let
         url = "https://github.com/leighleighleigh/esp-rs-nix";
         rev = "b159fc2e7e70854d2c8ccfd48d07564df59681f6";
     };
-
-    # This will build esp-rs-src, chosen above
     esp-rs = pkgs.callPackage "${esp-rs-src}/package.nix" { };
-
-    # OpenOCD fork
-    #esp-openocd = pkgs.callPackage "${esp-rs-src}/esp-rs/esp-openocd.nix" {};
 in
 pkgs.mkShell rec {
     name = "esp-rs-nix";
-  
-
-    nativeBuildInputs = [ pkgs.pkg-config ];
+    
     buildInputs = [
-        #esp-openocd
-        #pkgs.espflash
         esp-rs 
-      
-        # Note: You will probably have to tell VSCode where this is located!
+        pkgs.espflash
         pkgs.rust-analyzer
-
-        pkgs.stdenv.cc 
-        pkgs.just 
-        pkgs.just-lsp
-        pkgs.inotify-tools
-        pkgs.picocom
-        pkgs.libusb1
-        # for libudev
-        pkgs.systemdMinimal
-        # for documents built by rust
-        pkgs.ncurses
+        pkgs.cargo-generate
     ];
-
-    LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";
+  
+    # No longer used
+    #LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";
 
     shellHook = ''
     # set the shell logline or whatever it's called

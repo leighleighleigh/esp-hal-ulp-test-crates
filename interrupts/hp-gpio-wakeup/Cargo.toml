@@ -1,8 +1,8 @@
 [package]
 edition      = "2024"
 name         = "hp-gpio-wakeup"
-rust-version = "1.88"
-version      = "0.1.0"
+version      = "0.2.0"
+rust-version = "1.95"
 
 [[bin]]
 name = "app"
@@ -20,9 +20,10 @@ esp32c6 = ["esp-metadata-generated/esp32c6", "esp-hal/esp32c6", "esp-bootloader-
 [dependencies]
 log = "0.4.27"
 critical-section = "1.2.0"
-esp-backtrace = { version = "0.19.0", features = ["panic-handler", "println"]}
-esp-println = { version = "0.17.0", features = ["log-04"]}
-esp-bootloader-esp-idf = { version = "0.5.0", features = ["log-04"]}
+esp-bootloader-esp-idf = { version = "0.6.0" }
+esp-hal = { version = "1.2.0", features = [ "unstable" ] }
+esp-backtrace = { version = "0.20.0", features = [ "panic-handler", "defmt" ]}
+esp-println = { version = "0.18.0", features = [ "log-04" ], optional = true }
 riscv-decode = "0.2.3"
 
 [dependencies.esp-hal]
@@ -30,7 +31,7 @@ version = "1.1.0-rc.0"
 features = ["unstable", "log-04"]
 
 [build-dependencies]
-esp-metadata-generated = { version = "0.3.0", features = ["build-script"] }
+esp-metadata-generated = { version = "0.5.1", features = ["build-script"] }
 
 [profile.dev]
 # Rust debug is too slow.

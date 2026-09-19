@@ -1,10 +1,7 @@
 {
-  "rust-analyzer.server.path": "/var/run/current-system/sw/bin/rust-analyzer",
   "rust-analyzer.cargo.autoreload": true,
-
-  // "rust-analyzer.cargo.features": ["esp32c6"],
-  // "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf",
-
+  
+  // For ESP32-S3
   "rust-analyzer.cargo.features": ["esp32s3"],
   "rust-analyzer.cargo.target": "riscv32imc-unknown-none-elf",
 
@@ -14,14 +11,4 @@
   // For ESP32-C6
   // "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf",
   // "rust-analyzer.cargo.features": ["esp32c6"],
-
-  "rust-analyzer.server.extraEnv": {
-    "RUSTUP_TOOLCHAIN": "stable"
-  },
-  "rust-analyzer.check.extraEnv": {
-    "RUSTUP_TOOLCHAIN": "esp"
-  },
-  "rust-analyzer.cargo.extraEnv": {
-    "RUSTUP_TOOLCHAIN": "esp"
-  },
 }

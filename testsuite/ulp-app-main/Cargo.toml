@@ -20,6 +20,7 @@ panic-halt = "1.0.0"
 # in order to provide the right linker script.
 shared = { path = "../shared", features = ["is-lp-core"] }
 esp-lp-hal = { version = "0.3.0" }
+riscv-rt = { version = "0.18.0", default-features = false }
 
 [build-dependencies]
 esp-metadata-generated = { version = "0.5.1", features = ["build-script"] }

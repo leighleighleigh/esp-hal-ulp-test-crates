@@ -6,7 +6,10 @@
 
 use core::iter;
 
-use esp_lp_hal::{delay::Delay, prelude::*, ulp_riscv_timer_stop, ulp_timer_period, wake_hp_core};
+use esp_lp_hal::{delay::Delay, prelude::*, ulp_riscv_timer_stop, ulp_timer_period, wake_hp_core,
+    interrupt::{Exception, ExternalInterrupt, exception, external_interrupt, TrapFrame},
+};
+
 use panic_halt as _;
 use shared::{
     SharedType,
@@ -146,6 +149,17 @@ fn main() {
                 ulp_riscv_timer_stop();
                 break;
             },
+            UlpCommand::EXCEPTION_TEST => unsafe {
+                // Should trigger an illegal instruction
+                UlpLoopCounter::increment();
+                UlpReply::OK.store();
+                unsafe{
+                    core::arch::asm!(
+                        "csrrs a1, mcause, zero"
+                    );
+                }
+                break;
+            }
             _ => unsafe {
                 // Unknown command, not okay!
                 UlpReply::NOK.store();
@@ -154,4 +168,11 @@ fn main() {
     }
 
     UlpHaltCounter::increment();
+}
+
+// Used for EXCEPTION_TEST
+#[exception(Exception::IllegalInstruction)]
+unsafe fn illegal_instruction(_trap: &TrapFrame) -> ! {
+    unsafe { ULP_TEST_DATA_OUT = 0xdeadbeef };
+    loop {}
 }

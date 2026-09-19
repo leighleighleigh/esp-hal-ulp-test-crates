@@ -288,6 +288,25 @@ mod tests {
     }
 
     #[test]
+    fn ulp_exception_test(ctx: Context) {
+        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
+        reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
+            UlpCommand::EXCEPTION_TEST.store();
+            unsafe { ULP_TEST_DATA_OUT = 0x0 };
+        });
+        hil_test::assert!(ulp_has_booted());
+        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+
+        // Check the exception write 0xdeadbeef to the data out variable
+        let result = unsafe { ULP_TEST_DATA_OUT.clone() };
+        defmt::debug!("exception code: 0x{:08x}", result);
+        hil_test::assert_eq!(0xdeadbeef, result);
+
+        // Check that the exception has caused the ULP to halt
+        hil_test::assert_eq!(false, ulp_is_looping());
+    }
+
+    #[test]
     fn ulp_can_stop_itself_then_resumed_by_hp(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(

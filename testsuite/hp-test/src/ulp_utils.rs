@@ -4,6 +4,7 @@ pub use esp_hal::lp_core::{
     UlpCore as LpCore,
     UlpCoreTimerCycles as LpCoreTimerCycles,
     UlpCoreWakeupSource as LpCoreWakeupSource,
+    WakeupConfig as LpWakeupConfig,
 };
 use esp_hal::{delay::Delay, load_lp_code, time::Instant};
 use shared::{

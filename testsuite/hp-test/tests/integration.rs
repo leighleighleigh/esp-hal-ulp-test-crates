@@ -22,9 +22,10 @@ mod tests {
         load_lp_code,
         peripherals::{self, Peripherals},
         rtc_cntl::{
-            sleep::{self, RtcSleepConfig},
-            WakeupReason,
-            WakeupSource,
+            reset_reason,
+            sleep::{LowPower, RtcSleepConfig},
+            wakeup_cause,
+            SocResetReason,
         },
         time::Instant,
     };
@@ -45,12 +46,11 @@ mod tests {
             LpCorePeripheral,
             LpCoreTimerCycles,
             LpCoreWakeupSource,
+            LpWakeupConfig,
         },
     };
     use semihosting::sys::arm_compat::syscall::{self, ParamRegR, ParamRegW};
     use shared::{
-        HpSleepWakeCounter,
-        HpSleepWakeupCause,
         SharedType,
         UlpBootCounter,
         UlpCommand,
@@ -302,108 +302,76 @@ mod tests {
         hil_test::assert_eq!(2 * TEST_MUTEX_ITERATIONS, UlpLoopCounter::load());
     }
 
-    // // Convert a u32 value to a WakeupReason enum
-    // fn convert_wakeup_cause(value: u32) -> WakeupReason {
-    //     match value {
-    //         1 => WakeupReason::All,
-    //         2 => WakeupReason::Ext0,
-    //         3 => WakeupReason::Ext1,
-    //         4 => WakeupReason::Timer,
-    //         5 => WakeupReason::TouchPad,
-    //         6 => WakeupReason::Ulp,
-    //         7 => WakeupReason::Gpio,
-    //         8 => WakeupReason::Uart,
-    //         9 => WakeupReason::Wifi,
-    //         10 => WakeupReason::Cocpu,
-    //         11 => WakeupReason::CocpuTrapTrig,
-    //         12 => WakeupReason::BT,
-    //         _ => WakeupReason::Undefined,
-    //     }
-    // }
-    // // ulp_light_sleep_wakeup test will be run multiple times,
-    // // and its behaviour is dependent on the value of HpSleepWakeCounter.
-    // // It is assumed that OTHER test cases will re-set the valueof HpSleepWakeCounter to zero.
-    // #[test]
-    // fn ulp_light_sleep_wakeup(ctx: Context) {
-    //     // Need to save and restore the sleep counter,
-    //     // as starting the ULP will erase the chip.
-    //     let wakeup_count = HpSleepWakeCounter::load();
-    //     let wakeup_cause = convert_wakeup_cause(HpSleepWakeupCause::load());
-    //     defmt::debug!(
-    //         "wakeup_count: {}, wakeup_cause: {}",
-    //         wakeup_count,
-    //         wakeup_cause
-    //     );
-    //     // If wakeup count is zero, we will:
-    //     // 1. Program the ULP core to run the light sleep test
-    //     // 2. Enter light sleep
-    //     // 3. On wake, increment the wakeup count, and store the wakeup cause.
-    //     if wakeup_count == 0 {
-    //         // Program and start the ULP core.
-    //         // For the LIGHT_SLEEP_TEST command, the UlpCore will
-    //         // 1. Increment the loop counter
-    //         // 2. Reply OK to the command
-    //         // 3. Blocking delay for 3 seconds
-    //         // 4. Trigger the 'wake_hp_core' function.
-    //         // 5. Exit and halt.
-    //         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
-    //         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
-    //             UlpCommand::LIGHT_SLEEP_TEST.store();
-    //             HpSleepWakeCounter::store(wakeup_count.into());
-    //             HpSleepWakeupCause::store((wakeup_cause as u32).into());
-    //         });
-    //         hil_test::assert!(ulp_has_booted());
-    //         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
-    //         defmt::debug!("ULP booted.");
-    //         // We now have 3 seconds to enter light sleep,
-    //         // until the ULP core will try to wake us up.
-    //         let wakeup_timer_duration_millis = 5000; // ULP should wake us up before this.
-    //         let mut rtc = esp_hal::rtc_cntl::Rtc::new(ctx.p.LPWR);
-    //         let wakeup_timer = sleep::TimerWakeupSource::new(core::time::Duration::from_millis(
-    //             wakeup_timer_duration_millis,
-    //         ));
-    //         let wakeup_ulp = sleep::WakeFromUlpCoreWakeupSource::new();
-    //         let sleep_config = RtcSleepConfig::default();
-    //         defmt::debug!("Entering light sleep. Probe will disconnect.");
-    //         Delay::new().delay_ms(250);
-    //         // TODO: Tell probe-rs to disconnect cleanly,
-    //         // and to re-start the test again.
-    //         // Enter light sleep, recording the time of entry.
-    //         let sleep_start_timestamp = Instant::now();
-    //         rtc.sleep(&sleep_config, &[&wakeup_timer, &wakeup_ulp]);
-    //         core::mem::drop(rtc);
-    //         // Light sleep will resume here!
-    //         let sleep_duration = sleep_start_timestamp.elapsed().as_millis();
-    //         // Increment the persistent variables in memory, on waking.
-    //         HpSleepWakeCounter::increment();
-    //         // let wake_reason = esp_hal::system::wakeup_cause();
-    //         // HpSleepWakeupCause::store((wake_reason as u32).into());
-    //         // ESP32S3 cannot use wakeup_cause() to detect light-sleep wake-ups.
-    //         // Instead, I'll use the elapsed sleep time to determine the cause.
-    //         // If sleep_duration >= sleep_timer_wakeup_duration, then the ULP failed to wake up
-    // the         // HP core, and our wake_reason is 'Timer'.
-    //         // Else, our wake_reason is 'Ulp'.
-    //         if sleep_duration >= wakeup_timer_duration_millis {
-    //             HpSleepWakeupCause::store((SleepSource::Timer as u32).into());
-    //         } else {
-    //             HpSleepWakeupCause::store((SleepSource::Ulp as u32).into());
-    //         }
-    //     } else {
-    //         // If the wakeup count is non-zero, it means the HP core did wake-up from the light
-    //         // sleep.
-    //         // Check that the ULP core only ran once
-    //         hil_test::assert_eq!(1, UlpHaltCounter::load());
-    //         // Assert that the wakeup cause was due to ULP interrupt.
-    //         match wakeup_cause {
-    //             SleepSource::Ulp => {
-    //                 hil_test::assert!(true);
-    //             }
-    //             _ => {
-    //                 hil_test::assert!(false);
-    //             }
-    //         }
-    //     }
-    // }
+    fn _run_light_sleep_iteration(
+        lpwr: &mut LowPower,
+        ulp_core: &mut LpCore,
+    ) -> esp_hal::time::Duration {
+        // Program and start the ULP core, which will wake us up after 3 seconds.
+        reprogram_ulp_core_with_run_hook(ulp_core, LpCoreWakeupSource::HpCpu, || {
+            UlpCommand::LIGHT_SLEEP_TEST.store();
+            UlpHaltCounter::store(0.into());
+        });
+
+        // Immediately acquire the lock, before the ULP core does,
+        // and release it when we want to be woken up.
+        UlpLock::acquire();
+        // defmt::debug!("UlpLock acquired.");
+        Delay::new().delay_ms(1);
+
+        hil_test::assert!(ulp_has_booted());
+        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        // defmt::debug!("ULP booted.");
+
+        // Wait 0.1 seconds (maximum time) for ULP to be ready to handle the lock
+        Delay::new().delay_ms(100);
+        // defmt::debug!("Entering light sleep...");
+
+        // The core is allowed to wake us up
+        ulp_core.enable_wakeup(LpWakeupConfig::default());
+        // If we aren't woken within 3 seconds, the timer will wake us up.
+        let wakeup_deadline = esp_hal::time::Duration::from_millis(3000);
+        lpwr.set_wakeup_deadline(Instant::now() + wakeup_deadline);
+        // Enter light sleep, recording the time of entry.
+        let sleep_cfg = RtcSleepConfig::default();
+        let sleep_start_timestamp = Instant::now();
+        UlpLock::release();
+        lpwr.sleep_light(sleep_cfg);
+
+        /////////////////////////////////////////////////////////////////////////////////
+
+        // Light sleep will resume here!
+        let sleep_duration = sleep_start_timestamp.elapsed();
+        defmt::debug!("slept for {}", sleep_duration);
+
+        // Use the elapsed sleep time to determine PASS/FAIL
+
+        // If sleep_duration >= sleep_timer_wakeup_duration,
+        // then the ULP failed to wake us up, before the timer did.
+        hil_test::assert!(sleep_duration < wakeup_deadline);
+
+        // Check that the ULP core only ran once
+        Delay::new().delay_ms(10);
+        hil_test::assert_eq!(UlpHaltCounter::load(), 1);
+
+        // Return the slept duration
+        sleep_duration
+    }
+
+    #[test]
+    fn ulp_light_sleep_wakeup(ctx: Context) {
+        let mut lpwr = LowPower::new(ctx.p.LPWR);
+        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
+        const N: usize = 20;
+        // This test will run for multiple iterations, with different sleep times for each.
+        // We SHOULD be able to sleep for up to a millisecond before the USB stack complains :P
+        let mut total = esp_hal::time::Duration::from_millis(0);
+        for _ in 0..N {
+            let dt = _run_light_sleep_iteration(&mut lpwr, &mut ulp_core);
+            total += dt;
+        }
+        let avg_t = esp_hal::time::Duration::from_micros(total.as_micros() / N as u64);
+        defmt::debug!("avg. sleep duration: {}", avg_t);
+    }
 
     #[test]
     fn creating_peripheral_does_not_break_debug_connection(ctx: Context) {

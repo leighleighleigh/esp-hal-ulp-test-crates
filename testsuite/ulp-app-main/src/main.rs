@@ -4,6 +4,8 @@
 #![allow(unused)]
 #![allow(static_mut_refs)]
 
+use core::iter;
+
 use esp_lp_hal::{delay::Delay, prelude::*, ulp_riscv_timer_stop, ulp_timer_period, wake_hp_core};
 use panic_halt as _;
 use shared::{
@@ -38,6 +40,21 @@ fn cycles() -> u64 {
     }
 
     cycles as u64
+}
+
+#[inline]
+fn delay_using_loop(iterations: u32) {
+    for i in 0..iterations {
+        unsafe {
+            core::arch::asm!("nop");
+        }
+    }
+}
+
+fn delay_for_a_hundred_microseconds() {
+    const DELAYYY: u64 = 1750;
+    let t0 = cycles();
+    while cycles().wrapping_sub(t0) <= DELAYYY {}
 }
 
 fn delay_for_a_tenth_second() {
@@ -117,11 +134,13 @@ fn main() {
             UlpCommand::LIGHT_SLEEP_TEST => unsafe {
                 UlpLoopCounter::increment();
                 UlpReply::OK.store();
-                // Give the HP core 3 seconds to enter sleep,
-                // then wake it up.
-                delay_for_a_second();
-                delay_for_a_second();
-                delay_for_a_second();
+
+                // NEW approach - wait for HP core to release the lock.
+                // HP core has 0.1 seconds to acquire before we do.
+                delay_for_a_tenth_second();
+                // BLOCK HERE UNTIL HP CORE RELEASES
+                UlpLock::acquire();
+                // Wake up the core
                 wake_hp_core();
                 // Disable the timer, so the LP-core will remain halted on exit.
                 ulp_riscv_timer_stop();

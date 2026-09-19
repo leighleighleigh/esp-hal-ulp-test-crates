@@ -1,6 +1,6 @@
 /// Test utils for ULP stuff
 use embedded_hal::delay::DelayNs;
-pub use esp_hal::ulp_core::{
+pub use esp_hal::lp_core::{
     UlpCore as LpCore,
     UlpCoreTimerCycles as LpCoreTimerCycles,
     UlpCoreWakeupSource as LpCoreWakeupSource,

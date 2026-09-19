@@ -4,14 +4,7 @@
 #![allow(unused)]
 #![allow(static_mut_refs)]
 
-use esp_lp_hal::{
-    delay::Delay,
-    prelude::*,
-    ulp_riscv_halt,
-    ulp_riscv_timer_stop,
-    ulp_timer_period,
-    wake_hp_core,
-};
+use esp_lp_hal::{delay::Delay, prelude::*, ulp_riscv_timer_stop, ulp_timer_period, wake_hp_core};
 use panic_halt as _;
 use shared::{
     SharedType,
@@ -103,7 +96,6 @@ fn main() {
                 UlpLoopCounter::increment();
                 UlpReply::OK.store();
                 ulp_riscv_timer_stop();
-                // ulp_riscv_halt(); // This is called on exit
                 break;
             },
             UlpCommand::MUTEX_TEST => unsafe {

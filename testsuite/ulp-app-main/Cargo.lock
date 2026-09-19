@@ -53,7 +53,7 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "esp-hal-procmacros"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "document-features",
  "proc-macro-crate",
@@ -67,35 +67,32 @@ dependencies = [
 name = "esp-lp-hal"
 version = "0.3.0"
 dependencies = [
- "cfg-if",
- "critical-section",
  "document-features",
  "embedded-hal",
  "embedded-hal-nb",
  "esp-hal-procmacros",
- "esp-metadata-generated 0.4.0",
+ "esp-metadata-generated 0.5.1",
  "esp32c6-lp",
  "esp32s2-ulp",
  "esp32s3-ulp",
  "nb",
- "portable-atomic",
  "riscv",
 ]
 
 [[package]]
 name = "esp-metadata-generated"
-version = "0.4.0"
+version = "0.5.1"
 
 [[package]]
 name = "esp-metadata-generated"
-version = "0.4.0"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42c2ee95b945a4780796e4359e72c033aed3b45073880e8029458f538532db8a"
+checksum = "911aadae41ec99104efa865bd0b6e486b4b735999f9b571963748a46d16495ab"
 
 [[package]]
 name = "esp32c6-lp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=46b575d9#46b575d94ec3620d78fa116bc7815e1b1d0e2a45"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=fc3e6d4#fc3e6d4b34cfc885f750641d27e6fe3e63bad5d2"
 dependencies = [
  "critical-section",
  "vcell",
@@ -104,7 +101,7 @@ dependencies = [
 [[package]]
 name = "esp32s2-ulp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=c6f21b60#c6f21b60a573ea79d83b0025cedfcf154666418a"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=fc3e6d4#fc3e6d4b34cfc885f750641d27e6fe3e63bad5d2"
 dependencies = [
  "critical-section",
  "vcell",
@@ -113,7 +110,7 @@ dependencies = [
 [[package]]
 name = "esp32s3-ulp"
 version = "0.3.0"
-source = "git+https://github.com/esp-rs/esp-pacs?rev=c6f21b60#c6f21b60a573ea79d83b0025cedfcf154666418a"
+source = "git+https://github.com/esp-rs/esp-pacs?rev=fc3e6d4#fc3e6d4b34cfc885f750641d27e6fe3e63bad5d2"
 dependencies = [
  "critical-section",
  "vcell",
@@ -175,12 +172,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
-name = "portable-atomic"
-version = "1.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c33a9471896f1c69cecef8d20cbe2f7accd12527ce60845ff44c153bb2a21b49"
-
-[[package]]
 name = "proc-macro-crate"
 version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -216,7 +207,19 @@ dependencies = [
  "critical-section",
  "embedded-hal",
  "paste",
+ "riscv-macros",
  "riscv-pac",
+]
+
+[[package]]
+name = "riscv-macros"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d323d13972c1b104aa036bc692cd08b822c8bbf23d79a27c526095856499799"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -247,7 +250,7 @@ dependencies = [
 
 [[package]]
 name = "shared"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -307,12 +310,12 @@ dependencies = [
 
 [[package]]
 name = "ulp-app-main"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cfg-if",
  "embedded-hal",
  "esp-lp-hal",
- "esp-metadata-generated 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "esp-metadata-generated 0.5.3",
  "panic-halt",
  "shared",
 ]

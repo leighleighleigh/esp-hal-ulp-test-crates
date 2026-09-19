@@ -2,19 +2,11 @@
 let 
     esp-rs-src = builtins.fetchGit {
         url = "https://github.com/leighleighleigh/esp-rs-nix";
-        # mainline
-        rev = "8baa40f096e7f52a10e8438b0bd55ef5dc280164";
-        # openocd but with tweaks
-        #rev = "ffe1451dcbda038ff117e7b85ac11608406f795e";
+        rev = "b159fc2e7e70854d2c8ccfd48d07564df59681f6";
     };
 
     # This will build esp-rs-src, chosen above
-    esp-rs = pkgs.callPackage "${esp-rs-src}/esp-rs/default.nix" {
-        pkgs = pkgs;
-        version = "1.92.0.0"; # Rust version
-        crosstool-version = "15.2.0_20251204"; # Cross-compiler toolchain version (GCC)
-        binutils-version = "16.3_20250913"; # Binutils version (GDB)
-    };
+    esp-rs = pkgs.callPackage "${esp-rs-src}/package.nix" { };
 
     # OpenOCD fork
     #esp-openocd = pkgs.callPackage "${esp-rs-src}/esp-rs/esp-openocd.nix" {};
@@ -25,11 +17,11 @@ pkgs.mkShell rec {
 
     nativeBuildInputs = [ pkgs.pkg-config ];
     buildInputs = [
-        esp-rs 
         #esp-openocd
         #pkgs.espflash
-        pkgs.rust-analyzer
         #pkgs.rustup 
+        esp-rs 
+        pkgs.rust-analyzer
         pkgs.stdenv.cc 
         pkgs.just 
         pkgs.just-lsp

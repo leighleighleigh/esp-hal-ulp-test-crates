@@ -1,8 +1,8 @@
 [package]
 name = "ulp-app-main"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
-rust-version = "1.88.0"
+rust-version = "1.95.0"
 
 [[bin]]
 path = "src/main.rs"
@@ -18,11 +18,11 @@ panic-halt = "1.0.0"
 # LP HAL from esp-hal
 # which will need a chip feature-flag specified,
 # in order to provide the right linker script.
-shared = { version = "0.2.0", path = "../shared", features = ["is-lp-core"] }
+shared = { path = "../shared", features = ["is-lp-core"] }
 esp-lp-hal = { version = "0.3.0" }
 
 [build-dependencies]
-esp-metadata-generated = { version = "0.4.0", features = ["build-script"] }
+esp-metadata-generated = { version = "0.5.1", features = ["build-script"] }
 
 [features]
 default = [] 
@@ -40,5 +40,4 @@ lto = false
 
 [patch.crates-io]
 esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
-#esp-lp-hal = { path = "/home/leigh/Git/esp-hal-mainline/esp-lp-hal" }
 

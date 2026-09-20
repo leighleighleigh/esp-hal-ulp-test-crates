@@ -12,7 +12,6 @@
   // "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf",
   // "rust-analyzer.cargo.features": ["esp32c6"],
   "[rust]": {
-    "editor.defaultFormatter": "rust-lang.rust-analyzer",
     "editor.formatOnSave": true
   }
 }

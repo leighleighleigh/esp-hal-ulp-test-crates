@@ -53,9 +53,14 @@ find-last-built-app-elf:
 # Finds the last-built test suite application,
 # as would be used by probe-rs
 find-last-built-test-elf:
-    #!/usr/bin/env bash
-    set -eou pipefail
-    # This uses regex to find the app, while excluding the .d lib file :)
-    search_results=$(find ./target/ -maxdepth 5 -regextype sed -regex '.*/{{test_elf_name}}-\w*' -type f -printf "%A@ %p\n")
-    elf_path="$(echo ${search_results} | sort -r | head -n1 | cut -d' ' -f2)"
-    realpath "${elf_path}"
+  #!/usr/bin/env bash
+  set -eou pipefail
+  # This uses regex to find the app, while excluding the .d lib file :)
+  search_results=$(find ./target/ -maxdepth 5 -regextype sed -regex '.*/{{test_elf_name}}-\w*' -type f -printf "%A@ %p\n")
+  elf_path="$(echo ${search_results} | sort -r | head -n1 | cut -d' ' -f2)"
+  realpath "${elf_path}"
+
+### MISC
+objdump-lp-app *ARGS="-D":
+  #!/usr/bin/env bash
+  riscv32-esp-elf-objdump -w --demangle=rust --disassembler-color=on --visualize-jumps=color {{ARGS}} lp_app

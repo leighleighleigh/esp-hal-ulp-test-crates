@@ -60,6 +60,8 @@ mod tests {
         UlpReply,
         HP_SLEEP_WAKEUP_COUNTER,
         TEST_MUTEX_ITERATIONS,
+        ULP_DEBUG_ISR_DATA,
+        ULP_DEBUG_TRAP_DATA,
         ULP_TEST_DATA_IN,
         ULP_TEST_DATA_OUT,
     };
@@ -293,17 +295,53 @@ mod tests {
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             UlpCommand::EXCEPTION_TEST.store();
             unsafe { ULP_TEST_DATA_OUT = 0x0 };
+            unsafe { ULP_DEBUG_TRAP_DATA = 0x0 };
+            unsafe { ULP_DEBUG_ISR_DATA = 0x0 };
         });
         hil_test::assert!(ulp_has_booted());
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
 
-        // Check the exception write 0xdeadbeef to the data out variable
-        let result = unsafe { ULP_TEST_DATA_OUT.clone() };
-        defmt::debug!("exception code: 0x{:08x}", result);
+        // Read the debug trap data
+        let trap_dbg = unsafe { ULP_DEBUG_TRAP_DATA.clone() };
+        defmt::debug!("ULP_DEBUG_TRAP_DATA0 = 0x{:08x}", trap_dbg);
+
+        // Check the exception write 0xdeadbeef to the DATA1 variable
+        let result = unsafe { ULP_DEBUG_ISR_DATA.clone() };
+        defmt::debug!("ULP_DEBUG_TRAP_DATA1: 0x{:08x}", result);
         hil_test::assert_eq!(0xdeadbeef, result);
 
         // Check that the exception has caused the ULP to halt
         hil_test::assert_eq!(false, ulp_is_looping());
+    }
+
+    #[test]
+    fn ulp_interrupt_test(ctx: Context) {
+        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
+        reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
+            UlpCommand::START_INT_TEST.store();
+            unsafe { ULP_TEST_DATA_OUT = 0x0 };
+            unsafe { ULP_DEBUG_TRAP_DATA = 0x0 };
+            unsafe { ULP_DEBUG_ISR_DATA = 0x0 };
+        });
+
+        hil_test::assert!(ulp_has_booted());
+        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(true, ulp_is_looping());
+
+        // Print debug registers
+        let trap_dbg = unsafe { ULP_DEBUG_TRAP_DATA.clone() };
+        defmt::debug!("ULP_DEBUG_TRAP_DATA = 0x{:08x}", trap_dbg);
+        let isr_dbg = unsafe { ULP_DEBUG_ISR_DATA.clone() };
+        defmt::debug!("ULP_DEBUG_ISR_DATA = 0x{:08x}", isr_dbg);
+
+        // Should have first the MachineExternal interrupt handler,
+        // which writes 0xcafebabe
+        let result = unsafe { ULP_DEBUG_ISR_DATA.clone() };
+        defmt::debug!("interrupt wrote: 0x{:08x}", result);
+        hil_test::assert_eq!(0xcafebabe, result);
+
+        // The interrupt should not cause the ULP to lock up or halt
+        hil_test::assert_eq!(true, ulp_is_looping());
     }
 
     #[test]

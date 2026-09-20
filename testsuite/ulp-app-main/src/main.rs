@@ -6,11 +6,23 @@
 
 use core::iter;
 
-use esp_lp_hal::{delay::Delay, prelude::*, ulp_riscv_timer_stop, ulp_timer_period, wake_hp_core,
-    interrupt::{Exception, ExternalInterrupt, exception, external_interrupt, TrapFrame},
+use esp_lp_hal::{
+    delay::Delay,
+    interrupt::{
+        exception,
+        external_interrupt,
+        Exception,
+        ExternalInterrupt,
+        Interrupt,
+        TrapFrame,
+    },
+    prelude::*,
+    ulp_riscv_timer_stop,
+    ulp_timer_period,
+    wake_hp_core,
 };
-
 use panic_halt as _;
+use riscv_rt::core_interrupt;
 use shared::{
     SharedType,
     UlpBootCounter,
@@ -21,16 +33,11 @@ use shared::{
     UlpReply,
     TEST_MUTEX_ITERATIONS,
     TEST_XOR_MASK,
+    ULP_DEBUG_ISR_DATA,
+    ULP_DEBUG_TRAP_DATA,
     ULP_TEST_DATA_IN,
     ULP_TEST_DATA_OUT,
 };
-
-// This return type is used to indicate if the command should exit the loop or not
-#[derive(Clone, Copy, Eq, PartialEq)]
-enum CmdResult {
-    Continue,
-    Break,
-}
 
 #[inline(always)]
 fn cycles() -> u64 {
@@ -153,13 +160,26 @@ fn main() {
                 // Should trigger an illegal instruction
                 UlpLoopCounter::increment();
                 UlpReply::OK.store();
-                unsafe{
-                    core::arch::asm!(
-                        "csrrs a1, mcause, zero"
-                    );
+                unsafe {
+                    core::arch::asm!("csrrs a1, mcause, zero");
                 }
-                break;
-            }
+            },
+            UlpCommand::START_INT_TEST => unsafe {
+                match UlpLoopCounter::load() {
+                    0 => {
+                        UlpReply::OK.store();
+                        // Enable the COCPU start interrupt
+                        let reg = unsafe { &*esp_lp_hal::pac::SENS::PTR };
+                        reg.sar_cocpu_int_ena()
+                            .write(|w| w.sar_cocpu_start_int_ena().set_bit());
+                    }
+                    _ => {}
+                }
+                // Increment the loop counter
+                UlpLoopCounter::increment();
+                // Add a delay to make the counter chill out
+                delay_for_a_tenth_second();
+            },
             _ => unsafe {
                 // Unknown command, not okay!
                 UlpReply::NOK.store();
@@ -173,6 +193,60 @@ fn main() {
 // Used for EXCEPTION_TEST
 #[exception(Exception::IllegalInstruction)]
 unsafe fn illegal_instruction(_trap: &TrapFrame) -> ! {
-    unsafe { ULP_TEST_DATA_OUT = 0xdeadbeef };
+    unsafe { ULP_DEBUG_ISR_DATA = 0xdeadbeef };
     loop {}
+}
+
+#[exception(Exception::LoadMisaligned)]
+unsafe fn misaligned_load(_trap: &TrapFrame) -> ! {
+    unsafe { ULP_DEBUG_ISR_DATA = 0x0000beef };
+    loop {}
+}
+
+// Used for SW_INTERRUPT_TEST
+#[core_interrupt(Interrupt::MachineExternal)]
+unsafe fn external_interrupt() {
+    // RTC Peripheral interrupts
+    let sens_int = unsafe { &*esp_lp_hal::pac::SENS::PTR }
+        .sar_cocpu_int_st()
+        .read();
+    let cocpu_int_st: u32 = sens_int.bits();
+
+    // Got an SAR interrupt, check the type
+    if cocpu_int_st > 0 {
+        if sens_int.sar_cocpu_start_int_st().bit_is_set() {
+            unsafe { ULP_DEBUG_ISR_DATA = 0xcafebabe };
+        } else {
+            unsafe { ULP_DEBUG_ISR_DATA = cocpu_int_st };
+        }
+
+        // Clear the interrupt
+        unsafe { &*esp_lp_hal::pac::SENS::PTR }
+            .sar_cocpu_int_clr()
+            .write(|w| unsafe { w.bits(cocpu_int_st) });
+    }
+
+    // RTC IO interrupts
+    let rtcio_int_st: u32 = unsafe { &*esp_lp_hal::pac::RTC_IO::PTR }
+        .status()
+        .read()
+        .bits();
+    if rtcio_int_st > 0 {
+        // Check bit 5 (lshift by 10) is set
+        // if rtcio_int_st & (1 << 15) > 0 {
+        //     // GPIO5 interrupt happened!!! Do something!!!!!!
+        // }
+
+        // Clear the interrupt
+        unsafe { &*esp_lp_hal::pac::RTC_IO::PTR }
+            .status_w1tc()
+            .write(|w| unsafe { w.bits(rtcio_int_st) });
+    }
+}
+
+// DEBUG START TRAP HANDLER
+#[doc(hidden)]
+#[unsafe(export_name = "debug_start_trap")]
+unsafe extern "C" fn my_debug_start_trap(_trap_frame: *const TrapFrame, _irqs: u32) {
+    unsafe { ULP_DEBUG_TRAP_DATA = _irqs };
 }

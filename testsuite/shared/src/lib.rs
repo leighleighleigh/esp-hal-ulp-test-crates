@@ -41,6 +41,14 @@ cfg_if::cfg_if! {
         #[used]
         pub static mut ULP_TEST_DATA_OUT : u32 = 0;
 
+        #[unsafe(no_mangle)]
+        #[used]
+        pub static mut ULP_DEBUG_TRAP_DATA : u32 = 0;
+
+        #[unsafe(no_mangle)]
+        #[used]
+        pub static mut ULP_DEBUG_ISR_DATA : u32 = 0;
+
         // This is actually a HP core variable,
         // although it's persistence is maintained using ULP-core memory.
         #[unsafe(no_mangle)]
@@ -58,6 +66,8 @@ cfg_if::cfg_if! {
             pub static mut ULP_LOOP_COUNTER: u32;
             pub static mut ULP_TEST_DATA_IN : u32;
             pub static mut ULP_TEST_DATA_OUT : u32;
+            pub static mut ULP_DEBUG_TRAP_DATA : u32;
+            pub static mut ULP_DEBUG_ISR_DATA : u32;
             pub static mut HP_SLEEP_WAKEUP_COUNTER : u32;
             pub static mut HP_SLEEP_WAKEUP_CAUSE: u32;
         }
@@ -115,7 +125,8 @@ pub enum UlpCommand {
     MUTEX_TEST        = 7,
     TIMER_PERIOD_TEST = 8,
     LIGHT_SLEEP_TEST  = 9,
-    EXCEPTION_TEST = 10,
+    EXCEPTION_TEST    = 10,
+    START_INT_TEST    = 11,
     // RISCV_DEEP_SLEEP_WAKEUP_SHORT_DELAY_TEST,
     // RISCV_DEEP_SLEEP_WAKEUP_LONG_DELAY_TEST,
     // RISCV_LIGHT_SLEEP_WAKEUP_TEST,

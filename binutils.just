@@ -3,7 +3,7 @@
 # bin_arch := "riscv32-esp-elf"
 
 # Default arguments to make the outputs nicer for certain tools
-objdump_defaults := "--demangle=rust --visualize-jumps=extended-color --disassembler-color=extended"
+objdump_defaults := "--demangle=rust --visualize-jumps=color --disassembler-color=on"
 readelf_defaults := "--demangle=rust -W"
 size_defaults := ""
 nm_defaults := "--demangle=rust"

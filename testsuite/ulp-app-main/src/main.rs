@@ -9,11 +9,12 @@ use core::iter;
 use esp_lp_hal::{
     delay::Delay,
     interrupt::{
+        core_interrupt,
         exception,
         external_interrupt,
+        CoreInterrupt,
         Exception,
         ExternalInterrupt,
-        Interrupt,
         TrapFrame,
     },
     prelude::*,
@@ -22,7 +23,7 @@ use esp_lp_hal::{
     wake_hp_core,
 };
 use panic_halt as _;
-use riscv_rt::core_interrupt;
+use riscv_rt::InterruptNumber;
 use shared::{
     SharedType,
     UlpBootCounter,
@@ -203,45 +204,33 @@ unsafe fn misaligned_load(_trap: &TrapFrame) -> ! {
     loop {}
 }
 
-// Used for SW_INTERRUPT_TEST
-#[core_interrupt(Interrupt::MachineExternal)]
-unsafe fn external_interrupt() {
-    // RTC Peripheral interrupts
+// Used for START_INT_TEST
+#[external_interrupt(ExternalInterrupt::SensInterrupt)]
+unsafe fn sens_interrupt() {
     let sens_int = unsafe { &*esp_lp_hal::pac::SENS::PTR }
         .sar_cocpu_int_st()
         .read();
-    let cocpu_int_st: u32 = sens_int.bits();
 
-    // Got an SAR interrupt, check the type
-    if cocpu_int_st > 0 {
-        if sens_int.sar_cocpu_start_int_st().bit_is_set() {
-            unsafe { ULP_DEBUG_ISR_DATA = 0xcafebabe };
-        } else {
-            unsafe { ULP_DEBUG_ISR_DATA = cocpu_int_st };
-        }
-
-        // Clear the interrupt
-        unsafe { &*esp_lp_hal::pac::SENS::PTR }
-            .sar_cocpu_int_clr()
-            .write(|w| unsafe { w.bits(cocpu_int_st) });
+    if sens_int.sar_cocpu_start_int_st().bit_is_set() {
+        unsafe { ULP_DEBUG_ISR_DATA = 0xcafebabe };
     }
+}
 
-    // RTC IO interrupts
-    let rtcio_int_st: u32 = unsafe { &*esp_lp_hal::pac::RTC_IO::PTR }
-        .status()
-        .read()
-        .bits();
-    if rtcio_int_st > 0 {
-        // Check bit 5 (lshift by 10) is set
-        // if rtcio_int_st & (1 << 15) > 0 {
-        //     // GPIO5 interrupt happened!!! Do something!!!!!!
-        // }
+// Used for GPIO_INT_TEST
+#[external_interrupt(ExternalInterrupt::GpioInterrupt)]
+unsafe fn gpio_interrupt() {
+    let rtcio_int_st = unsafe { &*esp_lp_hal::pac::RTC_IO::PTR }.status().read();
 
-        // Clear the interrupt
-        unsafe { &*esp_lp_hal::pac::RTC_IO::PTR }
-            .status_w1tc()
-            .write(|w| unsafe { w.bits(rtcio_int_st) });
-    }
+    // GPIO interrupts must be right shifted by 10,
+    // so that Bit 0 == GPIO 0.
+    unsafe {
+        ULP_DEBUG_ISR_DATA = (rtcio_int_st.bits() >> 10);
+    };
+
+    // Clear the RTC IO interrupt
+    unsafe { &*esp_lp_hal::pac::RTC_IO::PTR }
+        .status_w1tc()
+        .write(|w| unsafe { w.bits(rtcio_int_st.bits()) });
 }
 
 // DEBUG START TRAP HANDLER

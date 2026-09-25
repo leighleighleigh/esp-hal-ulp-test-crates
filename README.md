@@ -20,7 +20,11 @@ while I work on adding new features to `esp-lp-hal`.
 
 > NOTE: The terms 'ULP core' and 'LP core' are used interchangeably throughout this project.
 
-- [x] Firmware loading
+- [x] ULP firmware loading
+  - [x] Run once and halt
+  - [x] Run on a loop
+  - [x] Run from ULP Timer wake-up
+  - [ ] Run from GPIO wake-up
 - [x] Shared memory IPC between HP and LP 
   - [x] Locking (Mutex) of shared variables 
 - [x] ULP Timer peripheral

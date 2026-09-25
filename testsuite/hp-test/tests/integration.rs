@@ -19,6 +19,7 @@ mod tests {
     use esp_hal::{
         delay::Delay,
         gpio::lp_io::LowPowerPin,
+        interrupt,
         load_lp_code,
         peripherals::{self, Peripherals},
         rtc_cntl::{
@@ -342,10 +343,15 @@ mod tests {
 
     #[test]
     fn ulp_gpio_interrupt_test(ctx: Context) {
+        // Configure GPIO5 for RTC to use!
+        const TOGGLECOUNT: usize = 16;
+        const TOGGLEINTERVAL: u32 = 5; // millis
+        const RTCPIN: usize = 8;
+        const INTTYPE: u8 = 3; // 1 = rising, 2 = falling, 3 = any, 4 = low, 5 = high
+
         {
-            // Configure GPIO5 for RTC to use!
             let btn_reg = unsafe { &*pac::RTC_IO::PTR };
-            btn_reg.touch_pad(5).write(|w| unsafe {
+            btn_reg.touch_pad(RTCPIN).write(|w| unsafe {
                 w.mux_sel()
                     .set_bit()
                     .fun_ie()
@@ -357,12 +363,10 @@ mod tests {
                     .fun_sel()
                     .bits(0)
             });
-            // Enable pin 5 rising edge interrupt (WORKING)
-            // btn_reg.pin(5).write(|w| unsafe { w.int_type().bits(1) });
-            // Enable pin 5 falling edge interrupt (WORKING)
-            // btn_reg.pin(5).write(|w| unsafe { w.int_type().bits(2) });
-            // Enable pin 5 any edge interrupt (WORKING)
-            btn_reg.pin(5).write(|w| unsafe { w.int_type().bits(3) });
+            // Enable the pin interrupt
+            btn_reg
+                .pin(RTCPIN)
+                .write(|w| unsafe { w.int_type().bits(INTTYPE) });
         }
 
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
@@ -377,20 +381,71 @@ mod tests {
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
         hil_test::assert_eq!(true, ulp_is_looping());
 
-        // Read the debug registers for 3 seconds on a loop, printing when they change.
-        // The user should press the button during this time, to see that it works.
-        let mut trap_dbg = 0;
-        let mut isr_dbg = 0;
-        for i in 0..50 {
-            let new_trap_dbg = unsafe { ULP_DEBUG_TRAP_DATA.clone() };
-            let new_isr_dbg = unsafe { ULP_DEBUG_ISR_DATA.clone() };
-            if (i == 0) || (new_trap_dbg != trap_dbg) || (new_isr_dbg != isr_dbg) {
-                defmt::debug!("ULP_DEBUG_TRAP_DATA = 0x{:08x}", new_trap_dbg);
-                defmt::debug!("ULP_DEBUG_ISR_DATA = 0x{:08x}", new_isr_dbg);
+        // The HP core will toggle the pin, and check that the LP core interrupt was fired.
+        for i in 0..TOGGLECOUNT {
+            let hp_output_lvl = i % 2 == 0;
+            let hp_reg = unsafe { &*pac::RTC_IO::PTR };
+
+            // Pin must be set as an output, before we can control it.
+            hp_reg
+                .rtc_gpio_enable()
+                .write(|w| unsafe { w.rtc_gpio_enable().bits(1 << RTCPIN) });
+
+            // toggle the pin output level, using manual register writes.
+            if hp_output_lvl {
+                hp_reg
+                    .rtc_gpio_out_w1ts()
+                    .write(|w| unsafe { w.rtc_gpio_out_data_w1ts().bits(1 << RTCPIN) });
+            } else {
+                hp_reg
+                    .rtc_gpio_out_w1tc()
+                    .write(|w| unsafe { w.rtc_gpio_out_data_w1tc().bits(1 << RTCPIN) });
             }
-            trap_dbg = new_trap_dbg;
-            isr_dbg = new_isr_dbg;
-            Delay::new().delay_millis(100);
+
+            // Tweak this for fun to see how fast it can go
+            Delay::new().delay_millis(TOGGLEINTERVAL);
+
+            // Evaluate the result, which depends on INTTYPE
+            let lp_trap_data = unsafe { ULP_DEBUG_TRAP_DATA.clone() };
+            let lp_isr_data = unsafe { ULP_DEBUG_ISR_DATA.clone() };
+            // Now need to clear the interrupt data, for the next iteration.
+            unsafe {
+                ULP_DEBUG_TRAP_DATA = 0;
+                ULP_DEBUG_ISR_DATA = 0;
+            }
+
+            let lp_did_interrupt = ((lp_trap_data >> 10) & (1 << RTCPIN)) != 0;
+            let lp_input_lvl = ((lp_isr_data >> 10) & (1 << RTCPIN)) != 0;
+
+            defmt::debug!(
+                "HP output: {}, LP interrupted: {}, LP input: {}",
+                hp_output_lvl,
+                lp_did_interrupt,
+                lp_input_lvl
+            );
+
+            match INTTYPE {
+                1 => {
+                    // 1 == rising edge, so only check when hp_output_lvl is True
+                    if hp_output_lvl {
+                        hil_test::assert_eq!(true, lp_did_interrupt);
+                        hil_test::assert_eq!(hp_output_lvl, lp_input_lvl);
+                    }
+                }
+                2 => {
+                    // 2 == falling edge, so only check when hp_output_lvl is False
+                    if !hp_output_lvl {
+                        hil_test::assert_eq!(true, lp_did_interrupt);
+                        hil_test::assert_eq!(hp_output_lvl, lp_input_lvl);
+                    }
+                }
+                3 => {
+                    // 3 == any edge, so we check for every edge!
+                    hil_test::assert_eq!(true, lp_did_interrupt);
+                    hil_test::assert_eq!(hp_output_lvl, lp_input_lvl);
+                }
+                _ => {}
+            }
         }
 
         // The interrupt should not cause the ULP to lock up or halt

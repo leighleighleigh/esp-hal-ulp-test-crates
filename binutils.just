@@ -3,7 +3,7 @@
 # bin_arch := "riscv32-esp-elf"
 
 # Default arguments to make the outputs nicer for certain tools
-objdump_defaults := "--demangle=rust --visualize-jumps=extended-color --disassembler-color=extended"
+objdump_defaults := "--demangle=rust --visualize-jumps=color --disassembler-color=on"
 readelf_defaults := "--demangle=rust -W"
 size_defaults := ""
 nm_defaults := "--demangle=rust"
@@ -20,12 +20,16 @@ find-last-built-app-elf:
 [private]
 binutil TOOL_NAME *ARGS="":
   #!/usr/bin/env bash
-  elffile="$(just find-last-built-app-elf)"
+  elffile="$(just find-last-built-app-elf || echo '')"
   {{bin_arch}}-{{TOOL_NAME}} "${elffile}" {{ARGS}}
 
 objdump *ARGS="-d":
   #!/usr/bin/env bash
   just binutil objdump {{objdump_defaults}} {{ARGS}}
+
+objcopy *ARGS="":
+  #!/usr/bin/env bash
+  just binutil objcopy {{ARGS}}
 
 readelf *ARGS="":
   #!/usr/bin/env bash

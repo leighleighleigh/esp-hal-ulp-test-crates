@@ -181,6 +181,38 @@ fn main() {
                 // Add a delay to make the counter chill out
                 delay_for_a_tenth_second();
             },
+            UlpCommand::GPIO_INT_TEST => unsafe {
+                match UlpLoopCounter::load() {
+                    0 => {
+                        UlpReply::OK.store();
+                        // Technically either of the HP or LP cores may configure the RTC Pin,
+                        // but I've opted to let the HP core do it, as it's more 'in charge'.
+
+                        // // Enable GPIO interrupt for the pushbutton
+                        // let reg = unsafe { &*esp_lp_hal::pac::RTC_IO::PTR };
+                        // // Configure RTC Pin5.
+                        // reg.touch_pad5().write(|w| {
+                        //     w.mux_sel()
+                        //         .set_bit()
+                        //         .fun_ie()
+                        //         .set_bit()
+                        //         .rue()
+                        //         .clear_bit()
+                        //         .rde()
+                        //         .clear_bit()
+                        //         .fun_sel()
+                        //         .bits(0)
+                        // });
+                        // // Enable rising edge interrupt on pin5
+                        // reg.pin5().write(|w| w.int_type().bits(1));
+                    }
+                    _ => {}
+                }
+                // Increment the loop counter
+                UlpLoopCounter::increment();
+                // Add a delay to make the counter chill out
+                delay_for_a_tenth_second();
+            },
             _ => unsafe {
                 // Unknown command, not okay!
                 UlpReply::NOK.store();
@@ -210,32 +242,25 @@ unsafe fn sens_interrupt() {
     let sens_int = unsafe { &*esp_lp_hal::pac::SENS::PTR }
         .sar_cocpu_int_st()
         .read();
-
     if sens_int.sar_cocpu_start_int_st().bit_is_set() {
         unsafe { ULP_DEBUG_ISR_DATA = 0xcafebabe };
+        // Disable the COCPU start interrupt,
+        // to prevent it happening again.
+        let reg = unsafe { &*esp_lp_hal::pac::SENS::PTR };
+        reg.sar_cocpu_int_ena()
+            .write(|w| w.sar_cocpu_start_int_ena().clear_bit());
     }
 }
 
 // Used for GPIO_INT_TEST
 #[external_interrupt(ExternalInterrupt::GpioInterrupt)]
 unsafe fn gpio_interrupt() {
+    let rtcio_level_status = unsafe { &*esp_lp_hal::pac::RTC_IO::PTR }.in_().read();
     let rtcio_int_st = unsafe { &*esp_lp_hal::pac::RTC_IO::PTR }.status().read();
-
     // GPIO interrupts must be right shifted by 10,
     // so that Bit 0 == GPIO 0.
     unsafe {
-        ULP_DEBUG_ISR_DATA = (rtcio_int_st.bits() >> 10);
+        ULP_DEBUG_TRAP_DATA = rtcio_int_st.bits(); // Trap data holds the ISR status bits
+        ULP_DEBUG_ISR_DATA = rtcio_level_status.bits(); // ISR data holds the pin level bits
     };
-
-    // Clear the RTC IO interrupt
-    unsafe { &*esp_lp_hal::pac::RTC_IO::PTR }
-        .status_w1tc()
-        .write(|w| unsafe { w.bits(rtcio_int_st.bits()) });
-}
-
-// DEBUG START TRAP HANDLER
-#[doc(hidden)]
-#[unsafe(export_name = "debug_start_trap")]
-unsafe extern "C" fn my_debug_start_trap(_trap_frame: *const TrapFrame, _irqs: u32) {
-    unsafe { ULP_DEBUG_TRAP_DATA = _irqs };
 }

@@ -88,7 +88,6 @@ mod tests {
             );
             reg_enable.set_high();
             reg_enable.set_pad_hold(true);
-            // reg_enable.pullup_enable(true); // Should be enabled by with_pull !
         }
 
         // Do a newline in debug mode, so logs are readable
@@ -327,18 +326,72 @@ mod tests {
         hil_test::assert!(ulp_has_booted());
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
         hil_test::assert_eq!(true, ulp_is_looping());
-
         // Print debug registers
         let trap_dbg = unsafe { ULP_DEBUG_TRAP_DATA.clone() };
         defmt::debug!("ULP_DEBUG_TRAP_DATA = 0x{:08x}", trap_dbg);
         let isr_dbg = unsafe { ULP_DEBUG_ISR_DATA.clone() };
         defmt::debug!("ULP_DEBUG_ISR_DATA = 0x{:08x}", isr_dbg);
-
         // Should have first the MachineExternal interrupt handler,
         // which writes 0xcafebabe
         let result = unsafe { ULP_DEBUG_ISR_DATA.clone() };
         defmt::debug!("interrupt wrote: 0x{:08x}", result);
         hil_test::assert_eq!(0xcafebabe, result);
+        // The interrupt should not cause the ULP to lock up or halt
+        hil_test::assert_eq!(true, ulp_is_looping());
+    }
+
+    #[test]
+    fn ulp_gpio_interrupt_test(ctx: Context) {
+        {
+            // Configure GPIO5 for RTC to use!
+            let btn_reg = unsafe { &*pac::RTC_IO::PTR };
+            btn_reg.touch_pad(5).write(|w| unsafe {
+                w.mux_sel()
+                    .set_bit()
+                    .fun_ie()
+                    .set_bit()
+                    .rue()
+                    .clear_bit()
+                    .rde()
+                    .clear_bit()
+                    .fun_sel()
+                    .bits(0)
+            });
+            // Enable pin 5 rising edge interrupt (WORKING)
+            // btn_reg.pin(5).write(|w| unsafe { w.int_type().bits(1) });
+            // Enable pin 5 falling edge interrupt (WORKING)
+            // btn_reg.pin(5).write(|w| unsafe { w.int_type().bits(2) });
+            // Enable pin 5 any edge interrupt (WORKING)
+            btn_reg.pin(5).write(|w| unsafe { w.int_type().bits(3) });
+        }
+
+        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
+        reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
+            UlpCommand::GPIO_INT_TEST.store();
+            unsafe { ULP_TEST_DATA_OUT = 0x0 };
+            unsafe { ULP_DEBUG_TRAP_DATA = 0x0 };
+            unsafe { ULP_DEBUG_ISR_DATA = 0x0 };
+        });
+
+        hil_test::assert!(ulp_has_booted());
+        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(true, ulp_is_looping());
+
+        // Read the debug registers for 3 seconds on a loop, printing when they change.
+        // The user should press the button during this time, to see that it works.
+        let mut trap_dbg = 0;
+        let mut isr_dbg = 0;
+        for i in 0..50 {
+            let new_trap_dbg = unsafe { ULP_DEBUG_TRAP_DATA.clone() };
+            let new_isr_dbg = unsafe { ULP_DEBUG_ISR_DATA.clone() };
+            if (i == 0) || (new_trap_dbg != trap_dbg) || (new_isr_dbg != isr_dbg) {
+                defmt::debug!("ULP_DEBUG_TRAP_DATA = 0x{:08x}", new_trap_dbg);
+                defmt::debug!("ULP_DEBUG_ISR_DATA = 0x{:08x}", new_isr_dbg);
+            }
+            trap_dbg = new_trap_dbg;
+            isr_dbg = new_isr_dbg;
+            Delay::new().delay_millis(100);
+        }
 
         // The interrupt should not cause the ULP to lock up or halt
         hil_test::assert_eq!(true, ulp_is_looping());

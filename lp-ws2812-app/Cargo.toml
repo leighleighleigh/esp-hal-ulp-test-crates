@@ -22,6 +22,7 @@ esp-lp-hal = { version = "0.3.0" }
 riscv-rt = { version = "0.18.0", default-features = false }
 ws2812-esp32s3-ulp = { git = "https://github.com/leighleighleigh/ws2812-esp32s3-ulp-rs.git", version = "0.1.0" }
 smart-leds = { version = "0.4.0" }
+critical-section = "1.2.0"
 
 [build-dependencies]
 esp-metadata-generated = { version = "0.5.1", features = ["build-script"] }

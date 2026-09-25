@@ -2,6 +2,7 @@
 #![no_main]
 #![allow(static_mut_refs)]
 
+use critical_section;
 use esp_lp_hal::{
     delay::Delay,
     interrupt::{external_interrupt, ExternalInterrupt},
@@ -28,14 +29,14 @@ fn cycles() -> u64 {
     cycles as u64
 }
 
-// fn delay_for_a_tenth_second() {
-//     const DELAYYY: u64 = 17_500_000 / 10;
-//     let t0 = cycles();
-//     while cycles().wrapping_sub(t0) <= DELAYYY {}
-// }
+#[unsafe(no_mangle)]
+#[used]
+pub static mut RAINBOW_COUNTER: u32 = 0;
 
-static mut RAINBOW_COUNTER: u32 = 0;
-static mut RAINBOW_PAUSE: bool = false;
+// Rainbow pause will be toggled when the HP core is awake.
+#[unsafe(no_mangle)]
+#[used]
+pub static mut RAINBOW_PAUSE: bool = false;
 
 fn enable_button_interrupts() {
     let btn_reg = unsafe { &*esp_lp_hal::pac::RTC_IO::PTR };
@@ -59,11 +60,13 @@ fn enable_button_interrupts() {
 
 #[entry]
 fn main(gpio18_led: esp_lp_hal::gpio::Output<18>) {
+    let count = unsafe { RAINBOW_COUNTER };
+    let is_paused = unsafe { RAINBOW_PAUSE };
+
     enable_button_interrupts();
 
     let ws_clk = Delay {};
     let mut ws = Ws2812::new(gpio18_led, ws_clk);
-    let count = unsafe { RAINBOW_COUNTER };
 
     let hsv = Hsv {
         hue: (count & 0xFF) as u8,
@@ -71,14 +74,18 @@ fn main(gpio18_led: esp_lp_hal::gpio::Output<18>) {
         val: 64,
     };
 
-    if unsafe { !RAINBOW_PAUSE } {
+    let rgb = apply_brightness(hsv2rgb(hsv), 16);
+
+    // Only apply the colour to the LED if we are not paused, or the counter is 0
+    if !is_paused || count == 0 {
+        // Prevent the GPIO interrupt from getting in the way of our LED write!
+        // Without this, you can spam the GPIO button, and the LED will glitch
+        let _ = critical_section::with(|_cs| ws.write([rgb]));
+        // increment counter
         unsafe {
             RAINBOW_COUNTER = count + 1;
         }
     }
-
-    let rgb = apply_brightness(hsv2rgb(hsv), 16);
-    let _ = ws.write([rgb]);
 }
 
 #[external_interrupt(ExternalInterrupt::GpioInterrupt)]
@@ -113,8 +120,6 @@ unsafe fn gpio_int() {
     }
 
     if press_votes >= VOTE_THRESH {
-        unsafe {
-            RAINBOW_PAUSE = !RAINBOW_PAUSE;
-        }
+        esp_lp_hal::wake_hp_core();
     }
 }

@@ -170,6 +170,7 @@ mod tests {
 
     #[test]
     fn ulp_can_load_alternate_firmware(ctx: Context) {
+        let mut lpwr = LowPower::new(ctx.p.LPWR);
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_rainbow_firmware(
             &mut ulp_core,
@@ -177,6 +178,16 @@ mod tests {
             ctx.p.GPIO18,
         );
         Delay::new().delay_ms(1000);
+
+        // The core is allowed to wake us up
+        ulp_core.enable_wakeup(LpWakeupConfig::default());
+        let wakeup_deadline = esp_hal::time::Duration::from_millis(10000);
+        lpwr.set_wakeup_deadline(Instant::now() + wakeup_deadline);
+
+        // Enter deep sleep
+        let mut sleep_cfg = RtcSleepConfig::default();
+        sleep_cfg.set_rtc_peri_pd_en(false);
+        lpwr.sleep_deep(sleep_cfg);
     }
 
     #[test]

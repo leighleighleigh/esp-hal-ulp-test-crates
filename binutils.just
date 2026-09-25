@@ -14,37 +14,42 @@ crate-binary-name:
   cargo metadata --no-deps --format-version=1 | jq '.packages[0].targets | .[] | select(.kind[0] == "bin") | .name' -r
 
 # Finds the last-built application file
-find-last-built-app-elf:
+find-last-built-app-elf NAME="":
   #!/usr/bin/env bash
   set +eou pipefail
-  elf_path="$(find ./target/ -maxdepth 3 -name "$(just crate-binary-name)" -type f -printf "%A@ %p\n" | sort -r | head -n1 | cut -d' ' -f2)"
+  # If a name was not provided, run
+  # 'just crate-binary-name' to figure it out.
+  appname="{{NAME}}"
+  if ! [ -n "${appname}" ]; then
+    appname="$(just crate-binary-name)"
+  fi
+  elf_path="$(find ./target/ -maxdepth 5 -name "${appname}" -type f -printf "%A@ %p\n" | sort -r | head -n1 | cut -d' ' -f2)"
   realpath "${elf_path}"
 
 # General-purpose GNU Binutils recipe,
 # to run programs on the latest ELF
 [private]
-binutil TOOL_NAME *ARGS="":
+binutil TOOL_NAME FILE *ARGS="":
   #!/usr/bin/env bash
-  elffile="$(just find-last-built-app-elf || echo '')"
-  {{bin_arch}}-{{TOOL_NAME}} "${elffile}" {{ARGS}}
+  {{bin_arch}}-{{TOOL_NAME}} {{ARGS}} {{FILE}}
 
-objdump *ARGS="-d":
+objdump FILE *ARGS="-d":
   #!/usr/bin/env bash
-  just binutil objdump {{objdump_defaults}} {{ARGS}}
+  just binutil objdump {{FILE}} {{objdump_defaults}} {{ARGS}}
 
-objcopy *ARGS="":
+objcopy FILE *ARGS="":
   #!/usr/bin/env bash
-  just binutil objcopy {{ARGS}}
+  just binutil objcopy {{FILE}} {{ARGS}}
 
-readelf *ARGS="":
+readelf FILE *ARGS="":
   #!/usr/bin/env bash
-  just binutil readelf {{readelf_defaults}} {{ARGS}}
+  just binutil readelf {{FILE}} {{readelf_defaults}} {{ARGS}}
 
-size *ARGS="-A":
+size FILE *ARGS="-A":
   #!/usr/bin/env bash
-  just binutil size {{size_defaults}} {{ARGS}}
+  just binutil size {{FILE}} {{size_defaults}} {{ARGS}}
 
-nm *ARGS="-An":
+nm FILE *ARGS="-An":
   #!/usr/bin/env bash
-  just binutil nm {{nm_defaults}} {{ARGS}}
+  just binutil nm {{FILE}} {{nm_defaults}} {{ARGS}}
 

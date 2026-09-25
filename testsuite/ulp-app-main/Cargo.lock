@@ -54,6 +54,7 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 [[package]]
 name = "esp-hal-procmacros"
 version = "0.23.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-riscv-interrupts#06f95af606aafa2704d398863e784ea46a076902"
 dependencies = [
  "document-features",
  "proc-macro-crate",
@@ -66,6 +67,7 @@ dependencies = [
 [[package]]
 name = "esp-lp-hal"
 version = "0.3.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-riscv-interrupts#06f95af606aafa2704d398863e784ea46a076902"
 dependencies = [
  "critical-section",
  "document-features",
@@ -84,6 +86,7 @@ dependencies = [
 [[package]]
 name = "esp-metadata-generated"
 version = "0.5.1"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-riscv-interrupts#06f95af606aafa2704d398863e784ea46a076902"
 
 [[package]]
 name = "esp-metadata-generated"

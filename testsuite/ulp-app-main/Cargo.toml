@@ -40,5 +40,5 @@ codegen-units = 1 # LLVM can perform better optimizations using a single thread
 lto = false
 
 [patch.crates-io]
-esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
-
+esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-riscv-interrupts" }
+#esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }

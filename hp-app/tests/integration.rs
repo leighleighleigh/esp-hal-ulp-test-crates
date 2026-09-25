@@ -10,6 +10,12 @@
 mod tests {
     use critical_section::Mutex;
     use embedded_hal::delay::DelayNs;
+    #[cfg(esp32c6)]
+    use esp32c6 as pac;
+    #[cfg(esp32s2)]
+    use esp32s2 as pac;
+    #[cfg(esp32s3)]
+    use esp32s3 as pac;
     use esp_hal::{
         delay::Delay,
         gpio::lp_io::LowPowerPin,
@@ -17,28 +23,18 @@ mod tests {
         load_lp_code,
         peripherals::{self, Peripherals},
         rtc_cntl::{
-            SocResetReason,
             reset_reason,
             sleep::{LowPower, RtcSleepConfig},
             wakeup_cause,
+            SocResetReason,
         },
         time::Instant,
     };
-    #[cfg(esp32c6)]
-    use esp32c6 as pac;
-    #[cfg(esp32s2)]
-    use esp32s2 as pac;
-    #[cfg(esp32s3)]
-    use esp32s3 as pac;
     use hil_test::{
         self as _,
         ulp_debug::{self, FromRegister},
         ulp_utils::{
-            LpCore,
-            LpCorePeripheral,
-            LpCoreTimerCycles,
-            LpCoreWakeupSource,
-            LpWakeupConfig,
+            reprogram_ulp_core_with_rainbow_firmware,
             reprogram_ulp_core_with_run_hook,
             ulp_has_booted,
             ulp_is_looping,
@@ -48,23 +44,28 @@ mod tests {
             ulp_riscv_timer_resume,
             ulp_riscv_timer_stop,
             ulp_timer_period,
+            LpCore,
+            LpCorePeripheral,
+            LpCoreTimerCycles,
+            LpCoreWakeupSource,
+            LpWakeupConfig,
         },
     };
     use semihosting::sys::arm_compat::syscall::{self, ParamRegR, ParamRegW};
     use shared::{
-        HP_SLEEP_WAKEUP_COUNTER,
         SharedType,
-        TEST_MUTEX_ITERATIONS,
-        ULP_DEBUG_ISR_DATA,
-        ULP_DEBUG_TRAP_DATA,
-        ULP_TEST_DATA_IN,
-        ULP_TEST_DATA_OUT,
         UlpBootCounter,
         UlpCommand,
         UlpHaltCounter,
         UlpLock,
         UlpLoopCounter,
         UlpReply,
+        HP_SLEEP_WAKEUP_COUNTER,
+        TEST_MUTEX_ITERATIONS,
+        ULP_DEBUG_ISR_DATA,
+        ULP_DEBUG_TRAP_DATA,
+        ULP_TEST_DATA_IN,
+        ULP_TEST_DATA_OUT,
     };
 
     struct Context {
@@ -165,6 +166,17 @@ mod tests {
         let count = UlpLoopCounter::load();
         defmt::debug!("count: {}", count);
         hil_test::assert!(count >= 10);
+    }
+
+    #[test]
+    fn ulp_can_load_alternate_firmware(ctx: Context) {
+        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
+        reprogram_ulp_core_with_rainbow_firmware(
+            &mut ulp_core,
+            LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(1)),
+            ctx.p.GPIO18,
+        );
+        Delay::new().delay_ms(1000);
     }
 
     #[test]

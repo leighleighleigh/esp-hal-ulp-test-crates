@@ -9,13 +9,13 @@ use core::iter;
 use esp_lp_hal::{
     delay::Delay,
     interrupt::{
+        core_interrupt,
+        exception,
+        external_interrupt,
         CoreInterrupt,
         Exception,
         ExternalInterrupt,
         TrapFrame,
-        core_interrupt,
-        exception,
-        external_interrupt,
     },
     prelude::*,
     ulp_riscv_timer_stop,
@@ -26,18 +26,18 @@ use panic_halt as _;
 use riscv_rt::InterruptNumber;
 use shared::{
     SharedType,
-    TEST_MUTEX_ITERATIONS,
-    TEST_XOR_MASK,
-    ULP_DEBUG_ISR_DATA,
-    ULP_DEBUG_TRAP_DATA,
-    ULP_TEST_DATA_IN,
-    ULP_TEST_DATA_OUT,
     UlpBootCounter,
     UlpCommand,
     UlpHaltCounter,
     UlpLock,
     UlpLoopCounter,
     UlpReply,
+    TEST_MUTEX_ITERATIONS,
+    TEST_XOR_MASK,
+    ULP_DEBUG_ISR_DATA,
+    ULP_DEBUG_TRAP_DATA,
+    ULP_TEST_DATA_IN,
+    ULP_TEST_DATA_OUT,
 };
 
 #[inline(always)]

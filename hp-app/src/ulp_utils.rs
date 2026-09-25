@@ -9,13 +9,13 @@ pub use esp_hal::lp_core::{
 use esp_hal::{delay::Delay, load_lp_code, time::Instant};
 use shared::{
     SharedType,
-    ULP_TEST_DATA_IN,
-    ULP_TEST_DATA_OUT,
     UlpBootCounter,
     UlpCommand,
     UlpLock,
     UlpLoopCounter,
     UlpReply,
+    ULP_TEST_DATA_IN,
+    ULP_TEST_DATA_OUT,
 };
 
 // Type aliasing for peripheral type
@@ -120,8 +120,8 @@ fn reset_ulp_shared_variables() {
     UlpLock::reset();
 }
 
-pub fn reprogram_ulp_core_with_run_hook<F>(
-    ulp_core: &mut LpCore,
+pub fn reprogram_ulp_core_with_run_hook<'a, F>(
+    ulp_core: &'a mut LpCore,
     wakeup_source: LpCoreWakeupSource,
     pre_run_hook: F,
 ) where
@@ -129,12 +129,35 @@ pub fn reprogram_ulp_core_with_run_hook<F>(
 {
     // this is required, to stop the ULP core from doing stuff while we program it.
     ulp_riscv_reset();
-
     let ulp_code = load_lp_code!("lp_app");
     // All shared variables are reset before reprogramming.
     reset_ulp_shared_variables();
     pre_run_hook();
     ulp_code.run(ulp_core, wakeup_source);
+}
+
+pub fn reprogram_ulp_core_with_rainbow_firmware(
+    ulp_core: &mut LpCore,
+    wakeup_source: LpCoreWakeupSource,
+    ws2812_pin: esp_hal::peripherals::GPIO18,
+) {
+    // this is required, to stop the ULP core from doing stuff while we program it.
+    ulp_riscv_reset();
+
+    let ulp_code = load_lp_code!("lp_rainbow");
+
+    // configure GPIO 1 as LP output pin
+    let lp_pin = esp_hal::gpio::Output::new(
+        ws2812_pin,
+        esp_hal::gpio::Level::Low,
+        esp_hal::gpio::OutputConfig::default()
+            .with_drive_mode(esp_hal::gpio::DriveMode::PushPull)
+            .with_pull(esp_hal::gpio::Pull::Down),
+    )
+    .into_lp::<18>()
+    .unwrap();
+
+    ulp_code.run(ulp_core, wakeup_source, lp_pin);
 }
 
 #[allow(static_mut_refs)]

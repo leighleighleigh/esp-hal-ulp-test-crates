@@ -1,12 +1,12 @@
 [package]
-name = "lp-app"
+name = "lp-ws2812-app"
 version = "0.2.0"
 edition = "2024"
 rust-version = "1.95.0"
 
 [[bin]]
 path = "src/main.rs"
-name = "lp_app"
+name = "lp_rainbow"
 test = false
 bench = false
 
@@ -18,9 +18,10 @@ panic-halt = "1.0.0"
 # LP HAL from esp-hal
 # which will need a chip feature-flag specified,
 # in order to provide the right linker script.
-shared = { path = "../shared", features = ["is-lp-core"] }
 esp-lp-hal = { version = "0.3.0" }
 riscv-rt = { version = "0.18.0", default-features = false }
+ws2812-esp32s3-ulp = { git = "https://github.com/leighleighleigh/ws2812-esp32s3-ulp-rs.git", version = "0.1.0" }
+smart-leds = { version = "0.4.0" }
 
 [build-dependencies]
 esp-metadata-generated = { version = "0.5.1", features = ["build-script"] }

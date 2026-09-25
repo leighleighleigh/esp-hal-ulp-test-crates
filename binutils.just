@@ -1,5 +1,4 @@
 # Override these variables in the crate-level justfile.
-# bin_name := "app"
 # bin_arch := "riscv32-esp-elf"
 
 # Default arguments to make the outputs nicer for certain tools
@@ -8,11 +7,17 @@ readelf_defaults := "--demangle=rust -W"
 size_defaults := ""
 nm_defaults := "--demangle=rust"
 
+# Get the binary name for the current crate
+crate-binary-name:
+  #!/usr/bin/env bash
+  set +eou pipefail
+  cargo metadata --no-deps --format-version=1 | jq '.packages[0].targets | .[] | select(.kind[0] == "bin") | .name' -r
+
 # Finds the last-built application file
 find-last-built-app-elf:
   #!/usr/bin/env bash
   set +eou pipefail
-  elf_path="$(find ./target/ -maxdepth 3 -name "{{bin_name}}" -type f -printf "%A@ %p\n" | sort -r | head -n1 | cut -d' ' -f2)"
+  elf_path="$(find ./target/ -maxdepth 3 -name "$(just crate-binary-name)" -type f -printf "%A@ %p\n" | sort -r | head -n1 | cut -d' ' -f2)"
   realpath "${elf_path}"
 
 # General-purpose GNU Binutils recipe,

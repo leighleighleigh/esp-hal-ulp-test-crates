@@ -72,6 +72,7 @@ fn get_global_symbols(
                 name: name.into(),
             }
         })
+        .filter(|gos| !gos.name.starts_with("_") && (gos.name != "DEVICE_PERIPHERALS"))
         .collect()
 }
 

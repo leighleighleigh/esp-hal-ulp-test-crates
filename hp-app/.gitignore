@@ -2,6 +2,9 @@
 debug/
 target/
 lp_app
+lp_rainbow
+*.x
+*.elf
 
 # Editor configuration
 .vscode/

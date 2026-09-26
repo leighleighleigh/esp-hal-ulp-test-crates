@@ -9,6 +9,7 @@ bin_arch := "xtensa-esp-elf"
 
 # custom params
 test_elf_name := "integration"
+example_name := "hp_deepsleep_wakeup"
 
 # Import common recipes
 set allow-duplicate-variables
@@ -16,18 +17,30 @@ set allow-duplicate-recipes
 import "../binutils.just"
 import "../clippy.just"
 
+# Run HP-LP integration tests with probe-rs
 test *ARGS="": prepare
   #!/usr/bin/env bash
   cargo test --target xtensa-esp32s3-none-elf --features esp32s3 --test integration {{ARGS}}
 
 # Build the test binary, to run manually with probe-rs.
-# Symlink the test binary to hp_test.elf
+# Symlinks the test binary to hp_test.elf
 build *ARGS="": prepare
   #!/usr/bin/env bash
   set -eou pipefail
   cargo build --target xtensa-esp32s3-none-elf --features esp32s3 --test integration
-  elf_path="$(just find-last-built-app-elf)"
+  elf_path="$(just find-last-built-test-elf)"
   ln -srf "${elf_path}" ./hp_test.elf
+
+# Program the hp_deepsleep_wakeup example to a device
+example *ARGS="": prepare
+  #!/usr/bin/env bash
+  # For some reason the .cargo link flags aren't passing through to the crate binaries reliably.
+  #export RUSTFLAGS="--cfg embedded_test -Clink-arg=-nostartfiles -Clink-arg=-Tembedded-test.x -Clink-arg=-Tdefmt.x -Clink-arg=-Wl,-Tlinkall.x -Clink-arg=-Wl,-Tlp_rainbow.x"
+  export RUSTFLAGS="-Clink-arg=-nostartfiles -Clink-arg=-Tdefmt.x -Clink-arg=-Wl,-Tlinkall.x -Clink-arg=-Wl,-Tlp_rainbow.x"
+  cargo build --release --target xtensa-esp32s3-none-elf --features esp32s3,println,unstable,defmt --example {{example_name}} {{ARGS}}
+  elf_path="$(just find-last-built-app-elf {{example_name}})"
+  ln -srf "${elf_path}" ./{{example_name}}.elf
+  cargo run --release --target xtensa-esp32s3-none-elf --features esp32s3,println,unstable,defmt --example hp_deepsleep_wakeup {{ARGS}}
 
 [private]
 prepare:
@@ -63,8 +76,7 @@ build-ulp-app APPCRATE CHIP:
   test -f "${appfile%.*}.x" && cp "${appfile%.*}.x" "${outfile}.x"
   exit $ecode
 
-[private]
-find-last-built-app-elf:
+find-last-built-test-elf:
   #!/usr/bin/env bash
   set -eou pipefail
   # This uses regex to find the app, while excluding the .d lib file :)

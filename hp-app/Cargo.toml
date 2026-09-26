@@ -14,6 +14,14 @@ test = false # No tests within lib itself, allows cargo test to work.
 name              = "integration"
 harness           = false
 
+[[example]]
+name = "hp_deepsleep_wakeup"
+path = "examples/hp_deepsleep_wakeup.rs"
+test = false        # To make plain `cargo test` work: Disable tests for the bin, because we are only using the intergration tests
+bench = false       # To make `cargo check --all-targets` work.
+harness = false
+required-features = [ "unstable", "esp32s3", "println", "defmt" ]
+
 [features]
 default = ["unstable","defmt"]
 unstable = ["esp-hal/unstable"]
@@ -73,13 +81,6 @@ semihosting = { version = "0.1.25", features = ["openocd-semihosting"] }
 [build-dependencies]
 esp-metadata-generated = { version = "0.5.1", features = ["build-script"] }
 
-# Local development patches
-#[patch.crates-io]
-#esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
-#esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
-#esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
-#esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
-
 # https://doc.rust-lang.org/cargo/reference/profiles.html#test
 # Test and bench profiles inherit from dev and release respectively.
 [profile.dev]
@@ -100,3 +101,25 @@ opt-level        = 3
 lto              = false # LTO (thin or fat) miscompiles some tests on RISC-V
 # lto = true
 overflow-checks  = true
+
+# git development patches
+[patch.crates-io]
+esp-backtrace = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-riscv-interrupts" }
+esp-bootloader-esp-idf = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-riscv-interrupts" }
+esp-hal = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-riscv-interrupts" }
+esp-metadata-generated = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-riscv-interrupts" }
+esp-println = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-riscv-interrupts" }
+esp-riscv-rt = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-riscv-interrupts" }
+esp-rom-sys = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-riscv-interrupts" }
+esp-storage = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-riscv-interrupts" }
+
+## local development patches
+#[patch.crates-io]
+#esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
+#esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
+#esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
+#esp-metadata-generated = { path = "/home/leigh/Git/esp-hal/esp-metadata-generated" }
+#esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
+#esp-riscv-rt = { path = "/home/leigh/Git/esp-hal/esp-riscv-rt" }
+#esp-rom-sys = { path = "/home/leigh/Git/esp-hal/esp-rom-sys" }
+#esp-storage = { path = "/home/leigh/Git/esp-hal/esp-storage" }

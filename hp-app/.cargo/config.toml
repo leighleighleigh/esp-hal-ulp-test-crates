@@ -42,8 +42,8 @@ rustflags = [
 
 [env]
 # CHANGE THE TEST LOGGING LEVEL HERE!!!
-DEFMT_LOG = "info,embedded_test=off,esp_hal=off"
-#DEFMT_LOG = "debug,integration=debug,embedded_test=off,esp_hal=off"
+#DEFMT_LOG = "info,embedded_test=off,esp_hal=off"
+DEFMT_LOG = "debug,integration=debug,embedded_test=off,esp_hal=off"
 
 # For esp_println
 ESP_LOG = "info"

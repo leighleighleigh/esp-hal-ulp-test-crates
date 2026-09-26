@@ -6,7 +6,7 @@
 
 mod locks;
 
-pub use locks::{ULP_LOCK, UlpLock};
+pub use locks::{UlpLock, ULP_LOCK};
 
 pub const TEST_XOR_MASK: u32 = 0xcafe;
 pub const TEST_MUTEX_ITERATIONS: u32 = 1000;
@@ -43,11 +43,15 @@ cfg_if::cfg_if! {
 
         #[unsafe(no_mangle)]
         #[used]
-        pub static mut ULP_DEBUG_TRAP_DATA : u32 = 0;
+        pub static mut ULP_DEBUG_GPIO_ISR_COUNT: u32 = 0;
 
         #[unsafe(no_mangle)]
         #[used]
-        pub static mut ULP_DEBUG_ISR_DATA : u32 = 0;
+        pub static mut ULP_DEBUG_GPIO_ISR_STATUS : u32 = 0;
+
+        #[unsafe(no_mangle)]
+        #[used]
+        pub static mut ULP_DEBUG_LAST_ISR_DATA : u32 = 0;
 
         // This is actually a HP core variable,
         // although it's persistence is maintained using ULP-core memory.
@@ -66,8 +70,9 @@ cfg_if::cfg_if! {
             pub static mut ULP_LOOP_COUNTER: u32;
             pub static mut ULP_TEST_DATA_IN : u32;
             pub static mut ULP_TEST_DATA_OUT : u32;
-            pub static mut ULP_DEBUG_TRAP_DATA : u32;
-            pub static mut ULP_DEBUG_ISR_DATA : u32;
+            pub static mut ULP_DEBUG_GPIO_ISR_COUNT: u32;
+            pub static mut ULP_DEBUG_GPIO_ISR_STATUS: u32;
+            pub static mut ULP_DEBUG_LAST_ISR_DATA : u32;
             pub static mut HP_SLEEP_WAKEUP_COUNTER : u32;
             pub static mut HP_SLEEP_WAKEUP_CAUSE: u32;
         }
@@ -128,6 +133,7 @@ pub enum UlpCommand {
     EXCEPTION_TEST    = 10,
     START_INT_TEST    = 11,
     GPIO_INT_TEST     = 12,
+    GPIO_WAKEUP_TEST  = 13,
     // RISCV_DEEP_SLEEP_WAKEUP_SHORT_DELAY_TEST,
     // RISCV_DEEP_SLEEP_WAKEUP_LONG_DELAY_TEST,
     // RISCV_LIGHT_SLEEP_WAKEUP_TEST,

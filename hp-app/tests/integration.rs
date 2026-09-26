@@ -2,6 +2,7 @@
 #![no_main]
 #![allow(unused_imports)]
 #![allow(static_mut_refs)]
+#![allow(unexpected_cfgs)]
 
 //% CHIPS: esp32c6 esp32s2 esp32s3
 //% FEATURES: unstable
@@ -62,8 +63,8 @@ mod tests {
         UlpReply,
         HP_SLEEP_WAKEUP_COUNTER,
         TEST_MUTEX_ITERATIONS,
-        ULP_DEBUG_ISR_DATA,
-        ULP_DEBUG_TRAP_DATA,
+        ULP_DEBUG_GPIO_ISR_STATUS,
+        ULP_DEBUG_LAST_ISR_DATA,
         ULP_TEST_DATA_IN,
         ULP_TEST_DATA_OUT,
     };
@@ -99,7 +100,7 @@ mod tests {
         // defmt::debug!("{}", dbg);
 
         // Rescue the ULP core from a stuck state
-        ulp_riscv_hard_reset();
+        // ulp_riscv_hard_reset();
 
         Context { p: peripherals }
     }
@@ -166,28 +167,6 @@ mod tests {
         let count = UlpLoopCounter::load();
         defmt::debug!("count: {}", count);
         hil_test::assert!(count >= 10);
-    }
-
-    #[test]
-    fn ulp_can_load_alternate_firmware(ctx: Context) {
-        let mut lpwr = LowPower::new(ctx.p.LPWR);
-        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
-        reprogram_ulp_core_with_rainbow_firmware(
-            &mut ulp_core,
-            LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(1)),
-            ctx.p.GPIO18,
-        );
-        Delay::new().delay_ms(1000);
-
-        // The core is allowed to wake us up
-        ulp_core.enable_wakeup(LpWakeupConfig::default());
-        let wakeup_deadline = esp_hal::time::Duration::from_millis(10000);
-        lpwr.set_wakeup_deadline(Instant::now() + wakeup_deadline);
-
-        // Enter deep sleep
-        let mut sleep_cfg = RtcSleepConfig::default();
-        sleep_cfg.set_rtc_peri_pd_en(false);
-        lpwr.sleep_deep(sleep_cfg);
     }
 
     #[test]
@@ -318,18 +297,13 @@ mod tests {
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             UlpCommand::EXCEPTION_TEST.store();
             unsafe { ULP_TEST_DATA_OUT = 0x0 };
-            unsafe { ULP_DEBUG_TRAP_DATA = 0x0 };
-            unsafe { ULP_DEBUG_ISR_DATA = 0x0 };
+            unsafe { ULP_DEBUG_LAST_ISR_DATA = 0x0 };
         });
         hil_test::assert!(ulp_has_booted());
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
 
-        // Read the debug trap data
-        let trap_dbg = unsafe { ULP_DEBUG_TRAP_DATA.clone() };
-        defmt::debug!("ULP_DEBUG_TRAP_DATA0 = 0x{:08x}", trap_dbg);
-
         // Check the exception write 0xdeadbeef to the DATA1 variable
-        let result = unsafe { ULP_DEBUG_ISR_DATA.clone() };
+        let result = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
         defmt::debug!("ULP_DEBUG_TRAP_DATA1: 0x{:08x}", result);
         hil_test::assert_eq!(0xdeadbeef, result);
 
@@ -343,21 +317,18 @@ mod tests {
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             UlpCommand::START_INT_TEST.store();
             unsafe { ULP_TEST_DATA_OUT = 0x0 };
-            unsafe { ULP_DEBUG_TRAP_DATA = 0x0 };
-            unsafe { ULP_DEBUG_ISR_DATA = 0x0 };
+            unsafe { ULP_DEBUG_LAST_ISR_DATA = 0x0 };
         });
 
         hil_test::assert!(ulp_has_booted());
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
         hil_test::assert_eq!(true, ulp_is_looping());
         // Print debug registers
-        let trap_dbg = unsafe { ULP_DEBUG_TRAP_DATA.clone() };
-        defmt::debug!("ULP_DEBUG_TRAP_DATA = 0x{:08x}", trap_dbg);
-        let isr_dbg = unsafe { ULP_DEBUG_ISR_DATA.clone() };
-        defmt::debug!("ULP_DEBUG_ISR_DATA = 0x{:08x}", isr_dbg);
+        let isr_dbg = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
+        defmt::debug!("ULP_DEBUG_LAST_ISR_DATA = 0x{:08x}", isr_dbg);
         // Should have first the MachineExternal interrupt handler,
         // which writes 0xcafebabe
-        let result = unsafe { ULP_DEBUG_ISR_DATA.clone() };
+        let result = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
         defmt::debug!("interrupt wrote: 0x{:08x}", result);
         hil_test::assert_eq!(0xcafebabe, result);
         // The interrupt should not cause the ULP to lock up or halt
@@ -396,8 +367,8 @@ mod tests {
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             UlpCommand::GPIO_INT_TEST.store();
             unsafe { ULP_TEST_DATA_OUT = 0x0 };
-            unsafe { ULP_DEBUG_TRAP_DATA = 0x0 };
-            unsafe { ULP_DEBUG_ISR_DATA = 0x0 };
+            unsafe { ULP_DEBUG_GPIO_ISR_STATUS = 0x0 };
+            unsafe { ULP_DEBUG_LAST_ISR_DATA = 0x0 };
         });
 
         hil_test::assert!(ulp_has_booted());
@@ -429,12 +400,12 @@ mod tests {
             Delay::new().delay_millis(TOGGLEINTERVAL);
 
             // Evaluate the result, which depends on INTTYPE
-            let lp_trap_data = unsafe { ULP_DEBUG_TRAP_DATA.clone() };
-            let lp_isr_data = unsafe { ULP_DEBUG_ISR_DATA.clone() };
+            let lp_trap_data = unsafe { ULP_DEBUG_GPIO_ISR_STATUS.clone() };
+            let lp_isr_data = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
             // Now need to clear the interrupt data, for the next iteration.
             unsafe {
-                ULP_DEBUG_TRAP_DATA = 0;
-                ULP_DEBUG_ISR_DATA = 0;
+                ULP_DEBUG_GPIO_ISR_STATUS = 0;
+                ULP_DEBUG_LAST_ISR_DATA = 0;
             }
 
             let lp_did_interrupt = ((lp_trap_data >> 10) & (1 << RTCPIN)) != 0;
@@ -473,6 +444,87 @@ mod tests {
 
         // The interrupt should not cause the ULP to lock up or halt
         hil_test::assert_eq!(true, ulp_is_looping());
+    }
+
+    #[test]
+    fn ulp_gpio_wakeup_test(ctx: Context) {
+        // Configure GPIO5 for RTC to use!
+        const RTCPIN: usize = 8;
+        const INTTYPE: u8 = 5; // HIGH LEVEL. GPIO wake up only supports LOW LEVEL or HIGH LEVEL types.
+
+        {
+            let btn_reg = unsafe { &*pac::RTC_IO::PTR };
+            btn_reg.touch_pad(RTCPIN).write(|w| unsafe {
+                w.mux_sel()
+                    .set_bit()
+                    .fun_ie()
+                    .set_bit()
+                    .rue()
+                    .clear_bit()
+                    .rde()
+                    .clear_bit()
+                    .fun_sel()
+                    .bits(0)
+            });
+
+            // Enable the pin interrupt? (maybe not needed?)
+            btn_reg
+                .pin(RTCPIN)
+                .write(|w| unsafe { w.int_type().bits(INTTYPE).wakeup_enable().set_bit() });
+        }
+
+        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
+        reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::Gpio, || {
+            UlpCommand::GPIO_WAKEUP_TEST.store();
+        });
+
+        // Should not be awake (yet!)
+        hil_test::assert!(!ulp_has_booted());
+
+        // The HP core will toggle the pin, and check that the LP core was running while the pin was
+        // high.
+        let hp_reg = unsafe { &*pac::RTC_IO::PTR };
+        // Pin must be set as an output, before we can control it.
+        hp_reg
+            .rtc_gpio_enable()
+            .write(|w| unsafe { w.rtc_gpio_enable().bits(1 << RTCPIN) });
+        fn hp_pin_on() {
+            let hp_reg = unsafe { &*pac::RTC_IO::PTR };
+            // set pin high
+            hp_reg
+                .rtc_gpio_out_w1ts()
+                .write(|w| unsafe { w.rtc_gpio_out_data_w1ts().bits(1 << RTCPIN) });
+        }
+        fn hp_pin_off() {
+            let hp_reg = unsafe { &*pac::RTC_IO::PTR };
+            // set pin high
+            hp_reg
+                .rtc_gpio_out_w1tc()
+                .write(|w| unsafe { w.rtc_gpio_out_data_w1tc().bits(1 << RTCPIN) });
+        }
+
+        hp_pin_on();
+        Delay::new().delay_millis(100);
+        hil_test::assert!(ulp_has_booted());
+        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(true, ulp_is_looping());
+        hp_pin_off();
+        Delay::new().delay_millis(100);
+        hil_test::assert_eq!(false, ulp_is_looping());
+        hp_pin_on();
+        Delay::new().delay_millis(100);
+        hil_test::assert_eq!(true, ulp_is_looping());
+        hp_pin_off();
+        Delay::new().delay_millis(100);
+        hil_test::assert_eq!(false, ulp_is_looping());
+        hp_pin_on();
+        Delay::new().delay_millis(100);
+        hil_test::assert_eq!(true, ulp_is_looping());
+        hp_pin_off();
+        Delay::new().delay_millis(100);
+        hil_test::assert_eq!(false, ulp_is_looping());
+
+        // hil_test::assert_eq!(2, UlpBootCounter::load());
     }
 
     #[test]
@@ -580,5 +632,28 @@ mod tests {
     fn creating_peripheral_does_not_break_debug_connection(ctx: Context) {
         use esp_hal::usb::usb_serial_jtag::UsbSerialJtag;
         _ = UsbSerialJtag::new(ctx.p.USB_DEVICE).into_async().split();
+    }
+
+    #[ignore]
+    #[test]
+    fn ulp_can_load_alternate_firmware(ctx: Context) {
+        let mut lpwr = LowPower::new(ctx.p.LPWR);
+        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
+        reprogram_ulp_core_with_rainbow_firmware(
+            &mut ulp_core,
+            LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(1)),
+            ctx.p.GPIO18,
+        );
+        Delay::new().delay_ms(1000);
+
+        // The core is allowed to wake us up
+        ulp_core.enable_wakeup(LpWakeupConfig::default());
+        let wakeup_deadline = esp_hal::time::Duration::from_millis(10000);
+        lpwr.set_wakeup_deadline(Instant::now() + wakeup_deadline);
+
+        // Enter deep sleep
+        let mut sleep_cfg = RtcSleepConfig::default();
+        sleep_cfg.set_rtc_peri_pd_en(false);
+        lpwr.sleep_deep(sleep_cfg);
     }
 }

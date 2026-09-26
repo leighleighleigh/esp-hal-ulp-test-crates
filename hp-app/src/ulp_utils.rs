@@ -127,8 +127,7 @@ pub fn reprogram_ulp_core_with_run_hook<'a, F>(
 ) where
     F: FnOnce(),
 {
-    // this is required, to stop the ULP core from doing stuff while we program it.
-    ulp_riscv_reset();
+    ulp_core.erase();
     let ulp_code = load_lp_code!("lp_app");
     // All shared variables are reset before reprogramming.
     reset_ulp_shared_variables();
@@ -141,9 +140,7 @@ pub fn reprogram_ulp_core_with_rainbow_firmware(
     wakeup_source: LpCoreWakeupSource,
     ws2812_pin: esp_hal::peripherals::GPIO18,
 ) {
-    // this is required, to stop the ULP core from doing stuff while we program it.
-    ulp_riscv_reset();
-
+    ulp_core.erase();
     let ulp_code = load_lp_code!("lp_rainbow");
 
     // configure GPIO 1 as LP output pin

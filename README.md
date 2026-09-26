@@ -24,7 +24,7 @@ while I work on adding new features to `esp-lp-hal`.
   - [x] Run once and halt
   - [x] Run on a loop
   - [x] Run from ULP Timer wake-up
-  - [ ] Run from GPIO wake-up
+  - [x] Run from GPIO wake-up
 - [x] Shared memory IPC between HP and LP 
   - [x] Locking (Mutex) of shared variables 
 - [x] ULP Timer peripheral

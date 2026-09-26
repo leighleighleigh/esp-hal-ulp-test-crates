@@ -34,8 +34,9 @@ use shared::{
     UlpReply,
     TEST_MUTEX_ITERATIONS,
     TEST_XOR_MASK,
-    ULP_DEBUG_ISR_DATA,
-    ULP_DEBUG_TRAP_DATA,
+    ULP_DEBUG_GPIO_ISR_COUNT,
+    ULP_DEBUG_GPIO_ISR_STATUS,
+    ULP_DEBUG_LAST_ISR_DATA,
     ULP_TEST_DATA_IN,
     ULP_TEST_DATA_OUT,
 };
@@ -78,6 +79,20 @@ fn delay_for_a_second() {
     const DELAYYY: u64 = 17_500_000;
     let t0 = cycles();
     while cycles().wrapping_sub(t0) <= DELAYYY {}
+}
+
+// Enable or disable GPIO wakeup
+fn setup_gpio_wakeup(enabled: bool) {
+    let reg = unsafe { &*esp_lp_hal::pac::RTC_CNTL::PTR };
+    // Clear outstanding wakeup events
+    reg.rtc_ulp_cp_timer()
+        .write(|w| w.ulp_cp_gpio_wakeup_clr().set_bit());
+
+    // Re-enable if desired
+    if enabled {
+        reg.rtc_ulp_cp_timer()
+            .write(|w| w.ulp_cp_gpio_wakeup_ena().set_bit());
+    }
 }
 
 #[entry]
@@ -181,31 +196,19 @@ fn main() {
             UlpCommand::GPIO_INT_TEST => unsafe {
                 if UlpLoopCounter::load() == 0 {
                     UlpReply::OK.store();
-                    // Technically either of the HP or LP cores may configure the RTC Pin,
-                    // but I've opted to let the HP core do it, as it's more 'in charge'.
-
-                    // // Enable GPIO interrupt for the pushbutton
-                    // let reg = unsafe { &*esp_lp_hal::pac::RTC_IO::PTR };
-                    // // Configure RTC Pin5.
-                    // reg.touch_pad5().write(|w| {
-                    //     w.mux_sel()
-                    //         .set_bit()
-                    //         .fun_ie()
-                    //         .set_bit()
-                    //         .rue()
-                    //         .clear_bit()
-                    //         .rde()
-                    //         .clear_bit()
-                    //         .fun_sel()
-                    //         .bits(0)
-                    // });
-                    // // Enable rising edge interrupt on pin5
-                    // reg.pin5().write(|w| w.int_type().bits(1));
                 }
                 // Increment the loop counter
                 UlpLoopCounter::increment();
                 // Add a delay to make the counter chill out
                 delay_for_a_tenth_second();
+            },
+            UlpCommand::GPIO_WAKEUP_TEST => unsafe {
+                UlpLoopCounter::increment();
+                UlpReply::OK.store();
+                // ULP will keep booting while the GPIO wake-up event is true,
+                // and the gpio wakeup event hasn't been cleared.
+                setup_gpio_wakeup(true);
+                break;
             },
             _ => unsafe {
                 // Unknown command, not okay!
@@ -220,14 +223,14 @@ fn main() {
 // Used for EXCEPTION_TEST
 #[exception(Exception::IllegalInstruction)]
 unsafe fn illegal_instruction(_trap: &TrapFrame) -> ! {
-    unsafe { ULP_DEBUG_ISR_DATA = 0xdeadbeef };
+    unsafe { ULP_DEBUG_LAST_ISR_DATA = 0xdeadbeef };
     #[allow(clippy::empty_loop)]
     loop {}
 }
 
 #[exception(Exception::LoadMisaligned)]
 unsafe fn misaligned_load(_trap: &TrapFrame) -> ! {
-    unsafe { ULP_DEBUG_ISR_DATA = 0x0000beef };
+    unsafe { ULP_DEBUG_LAST_ISR_DATA = 0x0000beef };
     #[allow(clippy::empty_loop)]
     loop {}
 }
@@ -239,7 +242,7 @@ unsafe fn sens_interrupt() {
         .sar_cocpu_int_st()
         .read();
     if sens_int.sar_cocpu_start_int_st().bit_is_set() {
-        unsafe { ULP_DEBUG_ISR_DATA = 0xcafebabe };
+        unsafe { ULP_DEBUG_LAST_ISR_DATA = 0xcafebabe };
         // Disable the COCPU start interrupt,
         // to prevent it happening again.
         let reg = unsafe { &*esp_lp_hal::pac::SENS::PTR };
@@ -256,7 +259,8 @@ unsafe fn gpio_interrupt() {
     // GPIO interrupts must be right shifted by 10,
     // so that Bit 0 == GPIO 0.
     unsafe {
-        ULP_DEBUG_TRAP_DATA = rtcio_int_st.bits(); // Trap data holds the ISR status bits
-        ULP_DEBUG_ISR_DATA = rtcio_level_status.bits(); // ISR data holds the pin level bits
+        ULP_DEBUG_GPIO_ISR_COUNT += 1;
+        ULP_DEBUG_GPIO_ISR_STATUS = rtcio_int_st.bits(); // Trap data holds the ISR status bits
+        ULP_DEBUG_LAST_ISR_DATA = rtcio_level_status.bits(); // ISR data holds the pin level bits
     };
 }

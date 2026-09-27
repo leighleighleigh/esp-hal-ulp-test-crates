@@ -7,6 +7,7 @@
 // development, and when a test fails. In these cases, you can enable
 // the `defmt` feature to get the output.
 
+pub mod hp_utils;
 pub mod ulp_debug;
 pub mod ulp_utils;
 

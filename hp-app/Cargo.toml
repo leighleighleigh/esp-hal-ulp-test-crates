@@ -24,6 +24,11 @@ name = "hp_print_rtcio_interrupts"
 path = "examples/hp_print_rtcio_interrupts.rs"
 required-features = [ "unstable", "esp32s3", "println", "defmt" ]
 
+[[example]]
+name = "hp_gpio_wakeup"
+path = "examples/hp_gpio_wakeup.rs"
+required-features = [ "unstable", "esp32s3", "println", "defmt" ]
+
 [features]
 default = ["unstable","defmt"]
 unstable = ["esp-hal/unstable"]

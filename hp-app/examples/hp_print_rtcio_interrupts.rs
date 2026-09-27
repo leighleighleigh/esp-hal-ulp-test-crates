@@ -14,7 +14,7 @@ use esp_hal::{
     main,
 };
 use esp_println as _;
-use hil_test::ulp_utils::reprogram_ulp_core_with_run_hook;
+use hil_test::{hp_utils::configure_rtc_pin, ulp_utils::reprogram_ulp_core_with_run_hook};
 use shared::{
     SharedType,
     UlpBootCounter,
@@ -24,73 +24,6 @@ use shared::{
     ULP_DEBUG_GPIO_ISR_STATUS,
     ULP_DEBUG_LAST_ISR_DATA,
 };
-
-/// Configures the RTC GPIO pins so they can be used by the LP core,
-/// and enables interrupts for them.
-/// int_type: 1 = rising, 2 = falling, 3 = any, 4 = low, 5 = high
-fn configure_rtc_pin(pin: usize, int_type: u8, wakeup: bool) {
-    let btn_reg = unsafe { &*pac::RTC_IO::PTR };
-
-    match pin {
-        n if n <= 14 => {
-            btn_reg.touch_pad(n).write(|w| unsafe {
-                w.mux_sel()
-                    .set_bit()
-                    .fun_ie()
-                    .set_bit()
-                    .rue()
-                    .clear_bit()
-                    .rde()
-                    .clear_bit()
-                    .fun_sel()
-                    .bits(0)
-                // .slp_ie()
-                // .set_bit()
-                // .slp_sel()
-                // .set_bit()
-            });
-            // Enable the pin interrupt
-            btn_reg
-                .pin(n)
-                .write(|w| unsafe { w.int_type().bits(int_type).wakeup_enable().variant(wakeup) });
-        }
-        19 => {
-            btn_reg.rtc_pad19().write(|w| unsafe {
-                w.mux_sel()
-                    .set_bit()
-                    .fun_ie()
-                    .set_bit()
-                    .rue()
-                    .clear_bit()
-                    .rde()
-                    .clear_bit()
-                    .fun_sel()
-                    .bits(0)
-            });
-            btn_reg
-                .pin(19)
-                .write(|w| unsafe { w.int_type().bits(int_type) });
-        }
-        20 => {
-            btn_reg.rtc_pad20().write(|w| unsafe {
-                w.mux_sel()
-                    .set_bit()
-                    .fun_ie()
-                    .set_bit()
-                    .rue()
-                    .clear_bit()
-                    .rde()
-                    .clear_bit()
-                    .fun_sel()
-                    .bits(0)
-            });
-            btn_reg
-                .pin(20)
-                .write(|w| unsafe { w.int_type().bits(int_type) });
-        }
-        _ => {}
-    }
-}
 
 #[main]
 fn main() -> ! {
@@ -114,14 +47,9 @@ fn main() -> ! {
     // CONFIGURE PIN INTERRUPTS AND GPIO WAKEUP SOURCE
     {
         for pin in 0..=14 {
-            // disable interrupts, wakeup , on all pins
-            configure_rtc_pin(pin, 0, false);
+            // enable all interrupts, no wakeup
+            configure_rtc_pin(pin, 3, false);
         }
-
-        // Configure pin 5 as a high-level wakeup (interrupt 5).
-        // GPIO wakeup can use high or low level signals.
-        // Its assumes there is a button or something attached to pin5.
-        configure_rtc_pin(5, 5, true);
     }
 
     let mut ulp_core = LpCore::new(peripherals.ULP_RISCV_CORE);
@@ -129,10 +57,11 @@ fn main() -> ! {
 
     // Run with sleeping, to find out: Do GPIO interrupts fire while asleep?
     // let lp_wake_src = LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(530));
-    let lp_wake_src = LpCoreWakeupSource::Gpio;
+    // let lp_wake_src = LpCoreWakeupSource::Gpio;
+    let lp_wake_src = LpCoreWakeupSource::HpCpu;
 
     reprogram_ulp_core_with_run_hook(&mut ulp_core, lp_wake_src, || {
-        UlpCommand::GPIO_WAKEUP_TEST.store();
+        UlpCommand::COUNTER_LOOP.store();
         unsafe { ULP_DEBUG_GPIO_ISR_STATUS = 0x0 };
         unsafe { ULP_DEBUG_LAST_ISR_DATA = 0x0 };
     });

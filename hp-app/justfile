@@ -76,6 +76,7 @@ build-ulp-app APPCRATE CHIP:
   test -f "${appfile%.*}.x" && cp "${appfile%.*}.x" "${outfile}.x"
   exit $ecode
 
+[private]
 find-last-built-test-elf:
   #!/usr/bin/env bash
   set -eou pipefail
@@ -83,3 +84,32 @@ find-last-built-test-elf:
   search_results=$(find ./target/ -maxdepth 5 -regextype sed -regex '.*/{{test_elf_name}}-\w*' -type f -printf "%A@ %p\n")
   elf_path="$(echo ${search_results} | sort -r | head -n1 | cut -d' ' -f2)"
   realpath "${elf_path}"
+
+# Stream the serial port to stdout, and
+# auto-reconnect if the port disappears.
+monitor PORT="/dev/ttySTOMP*":
+  #!/usr/bin/env bash
+  while [ true ]; do
+    test -c {{PORT}} && just try-stream {{PORT}}
+    # if exit with Ctrl-C, return code will be 130.
+    # this should cause a break in the loop
+    if [ "$?" -eq 130 ];
+    then
+      break
+    fi
+  done
+
+[private]
+try-stream PORT:
+  #!/usr/bin/env bash
+  echo "# [$(date +%s)] Connected to {{PORT}}"
+  while [ true ]; do
+    stty -F {{PORT}} speed 115200 cs8 -cstopb -parenb -echo time 3 min 0 >/dev/null 2>&1 && break
+    sleep 0.01
+  done
+
+  while [ true ]; do
+    cat {{PORT}} 2>/dev/null || break
+  done
+  echo "# [$(date +%s)] Disconnected from {{PORT}}"
+

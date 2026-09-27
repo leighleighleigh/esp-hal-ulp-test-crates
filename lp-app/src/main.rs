@@ -205,6 +205,8 @@ fn main() {
             UlpCommand::GPIO_WAKEUP_TEST => unsafe {
                 UlpLoopCounter::increment();
                 UlpReply::OK.store();
+                // Wake the HP core too (not used in the test suite, but useful in other examples)
+                esp_lp_hal::wake_hp_core();
                 // ULP will keep booting while the GPIO wake-up event is true,
                 // and the gpio wakeup event hasn't been cleared.
                 setup_gpio_wakeup(true);

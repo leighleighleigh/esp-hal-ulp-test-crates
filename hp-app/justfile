@@ -31,16 +31,28 @@ build *ARGS="": prepare
   elf_path="$(just find-last-built-test-elf)"
   ln -srf "${elf_path}" ./hp_test.elf
 
-# Program the hp_deepsleep_wakeup example to a device
+[private]
+be EXAMPLE *ARGS="":
+  #!/usr/bin/env bash
+  cargo build --target xtensa-esp32s3-none-elf --features esp32s3,println,unstable,defmt --example {{EXAMPLE}} {{ARGS}}
+  # Symlink the compiled ELF for easier debugging
+  elf_path="$(just find-last-built-app-elf {{EXAMPLE}})"
+  ln -srf "${elf_path}" ./{{EXAMPLE}}.elf
+
+# Build all examples and symlink them into the root
+build-examples: prepare
+  #!/usr/bin/env bash
+  just be hp_deepsleep_wakeup
+  just be hp_gpio_wakeup
+  just be hp_print_rtcio_interrupts
+  just be hp_ipc_locks
+
+# Build and run an example
 example EXAMPLE=example_name: prepare
   #!/usr/bin/env bash
   # For some reason the .cargo link flags aren't passing through to the crate binaries reliably.
-  export RUSTFLAGS="-Clink-arg=-nostartfiles -Clink-arg=-Tdefmt.x -Clink-arg=-Wl,-Tlinkall.x -Clink-arg=-Wl,-Tlp_rainbow.x"
-  cargo build --release --target xtensa-esp32s3-none-elf --features esp32s3,println,unstable,defmt --example {{EXAMPLE}}
-  # Symlink for analysis
-  elf_path="$(just find-last-built-app-elf {{EXAMPLE}})"
-  ln -srf "${elf_path}" ./{{EXAMPLE}}.elf
-  cargo run --release --target xtensa-esp32s3-none-elf --features esp32s3,println,unstable,defmt --example {{EXAMPLE}}
+  #export RUSTFLAGS="-Clink-arg=-nostartfiles -Clink-arg=-Tdefmt.x -Clink-arg=-Wl,-Tlinkall.x -Clink-arg=-Wl,-Tlp_rainbow.x"
+  cargo run --target xtensa-esp32s3-none-elf --features esp32s3,println,unstable,defmt --example {{EXAMPLE}}
 
 [private]
 prepare:
@@ -76,7 +88,6 @@ build-ulp-app APPCRATE CHIP:
   test -f "${appfile%.*}.x" && cp "${appfile%.*}.x" "${outfile}.x"
   exit $ecode
 
-[private]
 find-last-built-test-elf:
   #!/usr/bin/env bash
   set -eou pipefail

@@ -16,13 +16,13 @@ use esp_println as _;
 use esp32s3 as pac;
 use hil_test::{hp_utils::configure_rtc_pin, ulp_utils::reprogram_ulp_core_with_run_hook};
 use shared::{
-    SharedType,
     ULP_DEBUG_GPIO_ISR_COUNT,
     ULP_DEBUG_GPIO_ISR_STATUS,
     ULP_DEBUG_LAST_ISR_DATA,
     UlpBootCounter,
     UlpCommand,
     UlpHaltCounter,
+    traits::*,
 };
 
 #[main]

@@ -5,13 +5,13 @@
 use critical_section;
 use esp_lp_hal::{
     delay::Delay,
-    interrupt::{external_interrupt, ExternalInterrupt},
+    interrupt::{ExternalInterrupt, external_interrupt},
     prelude::*,
 };
 use panic_halt as _;
 use smart_leds::{
-    hsv::{hsv2rgb, Hsv},
     SmartLedsWrite,
+    hsv::{Hsv, hsv2rgb},
 };
 use ws2812_esp32s3_ulp::Ws2812;
 mod colours;

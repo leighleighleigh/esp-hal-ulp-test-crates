@@ -1,17 +1,23 @@
 {
   "rust-analyzer.cargo.autoreload": true,
   "rust-analyzer.cargo.allTargets": false,
+
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true
+  },
+
+  // Needed to add this to make rust formatting work for some reason!
+  "rust-analyzer.rustfmt.extraArgs": [],
+  
   // For ESP32-S3
   "rust-analyzer.cargo.target": "riscv32imc-unknown-none-elf",
-  "rust-analyzer.cargo.features": [
-    "esp32s3"
-  ],
+  "rust-analyzer.cargo.features": ["esp32s3"],
+
   // For ESP32-S2
   // "rust-analyzer.cargo.features": ["esp32s2"],
+
   // For ESP32-C6
   // "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf",
   // "rust-analyzer.cargo.features": ["esp32c6"],
-  "[rust]": {
-    "editor.formatOnSave": true
-  }
 }

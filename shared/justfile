@@ -1,5 +1,9 @@
 #!/usr/bin/env just
 
+# Import common recipes
+set allow-duplicate-variables
+import "../clippy.just"
+
 # Prevent argument splitting
 set positional-arguments
 

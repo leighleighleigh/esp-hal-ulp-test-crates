@@ -14,6 +14,8 @@ bench = false
 cfg-if = "1"
 embedded-hal = "1.0.0"
 panic-halt = "1.0.0"
+delegate = "0.13.4"
+fugit = "0.3.7"
 
 # LP HAL from esp-hal
 # which will need a chip feature-flag specified,
@@ -21,6 +23,9 @@ panic-halt = "1.0.0"
 shared = { path = "../shared", features = ["is-lp-core"] }
 esp-lp-hal = { version = "0.3.0" }
 riscv-rt = { version = "0.18.0", default-features = false }
+smart-leds = { version = "0.4.0" }
+ws2812-esp32s3-ulp = { git = "https://github.com/leighleighleigh/ws2812-esp32s3-ulp-rs.git", version = "0.1.0" }
+max170xx = { git = "https://github.com/leighleighleigh/max170xx-rs.git", version = "1.0.0", features = ["avoid-floats"] }
 
 [build-dependencies]
 esp-metadata-generated = { version = "0.5.1", features = ["build-script"] }
@@ -40,5 +45,5 @@ codegen-units = 1 # LLVM can perform better optimizations using a single thread
 lto = false
 
 [patch.crates-io]
-esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-riscv-interrupts" }
-#esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
+# esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-riscv-interrupts" }
+esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }

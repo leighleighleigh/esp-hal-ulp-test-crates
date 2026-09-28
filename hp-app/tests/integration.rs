@@ -31,8 +31,10 @@ mod tests {
     use esp32s2 as pac;
     #[cfg(esp32s3)]
     use esp32s3 as pac;
+    use esp32s3::rtc_cntl::ulp_cp_timer_1::ULP_CP_TIMER_SLP_CYCLE_R;
     use hil_test::{
         self as _,
+        hp_utils::configure_rtc_pin,
         ulp_debug::{self, FromRegister},
         ulp_utils::{
             LpCore,
@@ -54,8 +56,9 @@ mod tests {
     };
     use semihosting::sys::arm_compat::syscall::{self, ParamRegR, ParamRegW};
     use shared::{
-        SharedType,
         TEST_MUTEX_ITERATIONS,
+        ULP_DEBUG_GLOBAL_TRAP_CAUSE,
+        ULP_DEBUG_GLOBAL_TRAP_COUNT,
         ULP_DEBUG_GPIO_ISR_STATUS,
         ULP_DEBUG_LAST_ISR_DATA,
         ULP_TEST_DATA_IN,
@@ -66,6 +69,7 @@ mod tests {
         UlpLock,
         UlpLoopCounter,
         UlpReply,
+        traits::*,
     };
 
     struct Context {
@@ -98,7 +102,7 @@ mod tests {
         // let dbg = ulp_debug::CocpuDebug::read();
         // defmt::debug!("{}", dbg);
 
-        // Rescue the ULP core from a stuck state
+        // LEGACY: Rescue the ULP core from a stuck state
         // ulp_riscv_hard_reset();
 
         Context { p: peripherals }
@@ -274,7 +278,7 @@ mod tests {
     }
 
     #[test]
-    fn ipc_xor_test(ctx: Context) {
+    fn ipc_xor(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         let test_value = 0xff;
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
@@ -291,7 +295,7 @@ mod tests {
     }
 
     #[test]
-    fn ulp_exception_test(ctx: Context) {
+    fn ulp_exception(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             UlpCommand::EXCEPTION_TEST.store();
@@ -311,31 +315,81 @@ mod tests {
     }
 
     #[test]
-    fn ulp_interrupt_test(ctx: Context) {
+    fn ulp_interrupt(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             UlpCommand::START_INT_TEST.store();
-            unsafe { ULP_TEST_DATA_OUT = 0x0 };
-            unsafe { ULP_DEBUG_LAST_ISR_DATA = 0x0 };
         });
-
         hil_test::assert!(ulp_has_booted());
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
         hil_test::assert_eq!(true, ulp_is_looping());
-        // Print debug registers
-        let isr_dbg = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
-        defmt::debug!("ULP_DEBUG_LAST_ISR_DATA = 0x{:08x}", isr_dbg);
-        // Should have first the MachineExternal interrupt handler,
-        // which writes 0xcafebabe
+
         let result = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
         defmt::debug!("interrupt wrote: 0x{:08x}", result);
         hil_test::assert_eq!(0xcafebabe, result);
+
         // The interrupt should not cause the ULP to lock up or halt
         hil_test::assert_eq!(true, ulp_is_looping());
     }
 
     #[test]
-    fn ulp_gpio_interrupt_test(ctx: Context) {
+    fn ulp_timer_waitirq(ctx: Context) {
+        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
+        reprogram_ulp_core_with_run_hook(
+            &mut ulp_core,
+            // LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(53)), // ~10Hz
+            LpCoreWakeupSource::HpCpu,
+            || {
+                UlpCommand::WAITIRQ_TIMER_TEST.store();
+            },
+        );
+
+        hil_test::assert!(ulp_has_booted());
+        hil_test::assert_eq!(UlpReply::BUSY, UlpReply::load());
+
+        let dly = Delay::new();
+        let t0 = Instant::now();
+
+        for _ in 0..17 {
+            let ulp_reply = UlpReply::load();
+            let ulp_loops = UlpLoopCounter::load();
+            let waitirq = unsafe { ULP_TEST_DATA_IN.clone() };
+            let trap_count = unsafe { ULP_DEBUG_GLOBAL_TRAP_COUNT.clone() };
+            let trap_cause = unsafe { ULP_DEBUG_GLOBAL_TRAP_CAUSE.clone() };
+            let last_isr = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
+
+            defmt::debug!(
+                "[{}] reply: {}, loop_count: {}, waitirq: {}, trap_count: {}, trap_cause: 0x{:08x}, last_isr: 0x{:08x}",
+                t0.elapsed(),
+                ulp_reply,
+                ulp_loops,
+                waitirq,
+                trap_count,
+                trap_cause,
+                last_isr
+            );
+
+            // if reply is OK,
+            // send a new command
+            if ulp_reply == UlpReply::OK {
+                UlpCommand::WAITIRQ_TIMER_TEST.store();
+            }
+            dly.delay_millis(50);
+        }
+
+        dly.delay_millis(200);
+
+        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+
+        let result = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
+        hil_test::assert_eq!(0xba5eba11, result);
+
+        // The interrupt should not cause the ULP to lock up or halt
+        hil_test::assert_eq!(true, ulp_is_looping());
+    }
+
+    #[test]
+    fn ulp_gpio_interrupt(ctx: Context) {
         // Configure GPIO5 for RTC to use!
         const TOGGLECOUNT: usize = 16;
         const TOGGLEINTERVAL: u32 = 5; // millis
@@ -446,7 +500,7 @@ mod tests {
     }
 
     #[test]
-    fn ulp_gpio_wakeup_test(ctx: Context) {
+    fn ulp_gpio_wakeup(ctx: Context) {
         // Configure GPIO5 for RTC to use!
         const RTCPIN: usize = 8;
         const INTTYPE: u8 = 5; // HIGH LEVEL. GPIO wake up only supports LOW LEVEL or HIGH LEVEL types.
@@ -553,10 +607,12 @@ mod tests {
     }
 
     #[test]
-    fn ipc_mutex_lock_test(ctx: Context) {
+    fn ipc_mutex_lock(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             UlpCommand::MUTEX_TEST.store();
+            // Number of mutex iterations to run
+            unsafe { ULP_TEST_DATA_IN = TEST_MUTEX_ITERATIONS };
         });
 
         for _ in 0..TEST_MUTEX_ITERATIONS {
@@ -567,12 +623,94 @@ mod tests {
 
         while UlpReply::load() != UlpReply::OK {
             // Need a delay here, else CPU will block the ULP core.
-            Delay::new().delay_micros(100);
+            Delay::new().delay_millis(1);
         }
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
 
         // Assert no race conditions and we incremented 2x the number of loops
         hil_test::assert_eq!(2 * TEST_MUTEX_ITERATIONS, UlpLoopCounter::load());
+    }
+
+    #[test]
+    fn ulp_bitbang_ws2812(ctx: Context) {
+        // Configure the GPIO pins
+        let _ws2812_pin = esp_hal::gpio::Output::new(
+            ctx.p.GPIO18,
+            esp_hal::gpio::Level::Low,
+            esp_hal::gpio::OutputConfig::default()
+                .with_drive_mode(esp_hal::gpio::DriveMode::PushPull)
+                .with_pull(esp_hal::gpio::Pull::Down),
+        )
+        .into_lp::<18>()
+        .unwrap();
+
+        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
+        reprogram_ulp_core_with_run_hook(
+            &mut ulp_core,
+            LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(5)), // Controls speed of rainbow
+            || {
+                UlpCommand::WS2812_LED_TEST.store();
+            },
+        );
+
+        hil_test::assert!(ulp_has_booted());
+        hil_test::assert!(ulp_is_looping());
+        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        // wait a for a bit
+        Delay::new().delay_millis(3000);
+        hil_test::assert!(ulp_is_looping());
+    }
+
+    #[test]
+    fn ulp_bitbang_i2c(ctx: Context) {
+        // Configure the GPIO pins
+        let _scl_pin = esp_hal::gpio::Output::new(
+            ctx.p.GPIO0,
+            esp_hal::gpio::Level::Low,
+            esp_hal::gpio::OutputConfig::default()
+                .with_drive_mode(esp_hal::gpio::DriveMode::OpenDrain)
+                .with_pull(esp_hal::gpio::Pull::None)
+                .with_drive_strength(esp_hal::gpio::DriveStrength::_20mA),
+        )
+        .into_lp::<0>()
+        .unwrap();
+        let _sda_pin = esp_hal::gpio::Output::new(
+            ctx.p.GPIO1,
+            esp_hal::gpio::Level::Low,
+            esp_hal::gpio::OutputConfig::default()
+                .with_drive_mode(esp_hal::gpio::DriveMode::OpenDrain)
+                .with_pull(esp_hal::gpio::Pull::None)
+                .with_drive_strength(esp_hal::gpio::DriveStrength::_20mA),
+        )
+        .into_lp::<1>()
+        .unwrap();
+
+        let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
+        reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
+            UlpCommand::MAX1708_I2C_BMS_TEST.store();
+        });
+
+        // check booted and command acknowledged
+        hil_test::assert!(ulp_has_booted());
+
+        // Wait for scan to complete (UlpReply == OK),
+        // print the result from TEST_DATA_OUT,
+        // then re-trigger a new scan.
+        for _ in 0..10 {
+            UlpCommand::MAX1708_I2C_BMS_TEST.store();
+            Delay::new().delay_millis(1);
+            hil_test::assert_eq!(UlpReply::BUSY, UlpReply::load());
+
+            Delay::new().delay_millis(200);
+            hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+
+            let data = unsafe { ULP_TEST_DATA_OUT };
+            let voltage = (data as f32) / 10000.0;
+            defmt::debug!("Battery: {} V", voltage);
+        }
+
+        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert!(!ulp_is_looping());
     }
 
     #[test]
@@ -633,10 +771,9 @@ mod tests {
         _ = UsbSerialJtag::new(ctx.p.USB_DEVICE).into_async().split();
     }
 
-    #[ignore]
     #[test]
     fn ulp_can_load_alternate_firmware(ctx: Context) {
-        let mut lpwr = LowPower::new(ctx.p.LPWR);
+        // let mut lpwr = LowPower::new(ctx.p.LPWR);
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_rainbow_firmware(
             &mut ulp_core,
@@ -645,14 +782,13 @@ mod tests {
         );
         Delay::new().delay_ms(1000);
 
-        // The core is allowed to wake us up
-        ulp_core.enable_wakeup(LpWakeupConfig::default());
-        let wakeup_deadline = esp_hal::time::Duration::from_millis(10000);
-        lpwr.set_wakeup_deadline(Instant::now() + wakeup_deadline);
-
-        // Enter deep sleep
-        let mut sleep_cfg = RtcSleepConfig::default();
-        sleep_cfg.set_rtc_peri_pd_en(false);
-        lpwr.sleep_deep(sleep_cfg);
+        // // The core is allowed to wake us up
+        // ulp_core.enable_wakeup(LpWakeupConfig::default());
+        // let wakeup_deadline = esp_hal::time::Duration::from_millis(10000);
+        // lpwr.set_wakeup_deadline(Instant::now() + wakeup_deadline);
+        // // Enter deep sleep
+        // let mut sleep_cfg = RtcSleepConfig::default();
+        // sleep_cfg.set_rtc_peri_pd_en(false);
+        // lpwr.sleep_deep(sleep_cfg);
     }
 }

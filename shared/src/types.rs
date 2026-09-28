@@ -6,20 +6,23 @@ use super::*;
 #[repr(u32)]
 #[non_exhaustive]
 pub enum UlpCommand {
-    UNSET             = 0,
-    NOOP              = 1,
-    COUNTER_ONESHOT   = 2,
-    COUNTER_LOOP      = 3,
-    COUNTER_ULP_TIMER = 4,
-    XOR_TEST          = 5,
-    STOP_TEST         = 6,
-    MUTEX_TEST        = 7,
-    TIMER_PERIOD_TEST = 8,
-    LIGHT_SLEEP_TEST  = 9,
-    EXCEPTION_TEST    = 10,
-    START_INT_TEST    = 11,
-    GPIO_INT_TEST     = 12,
-    GPIO_WAKEUP_TEST  = 13,
+    UNSET                = 0,
+    NOOP                 = 1,
+    COUNTER_ONESHOT      = 2,
+    COUNTER_LOOP         = 3,
+    COUNTER_ULP_TIMER    = 4,
+    XOR_TEST             = 5,
+    STOP_TEST            = 6,
+    MUTEX_TEST           = 7,
+    TIMER_PERIOD_TEST    = 8,
+    LIGHT_SLEEP_TEST     = 9,
+    EXCEPTION_TEST       = 10,
+    START_INT_TEST       = 11,
+    WAITIRQ_TIMER_TEST   = 12,
+    GPIO_INT_TEST        = 13,
+    GPIO_WAKEUP_TEST     = 14,
+    MAX1708_I2C_BMS_TEST = 15,
+    WS2812_LED_TEST      = 16,
 }
 
 impl SharedType for UlpCommand {
@@ -36,6 +39,7 @@ pub enum UlpReply {
     UNSET = 0,
     OK    = 1,
     NOK   = 2,
+    BUSY  = 3,
 }
 
 impl SharedType for UlpReply {
@@ -70,9 +74,11 @@ impl SharedType for UlpLoopCounter {
 impl SharedTypeConversion for UlpLoopCounter {}
 
 impl UlpLoopCounter {
-    pub fn increment() {
-        let c = Self::load();
-        Self::store(UlpLoopCounter(c + 1));
+    // Increments counter and returns the new value
+    pub fn increment() -> u32 {
+        let c = Self::load() + 1;
+        Self::store(UlpLoopCounter(c));
+        c
     }
 
     pub fn reset() {

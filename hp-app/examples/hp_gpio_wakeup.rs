@@ -22,12 +22,12 @@ use esp32s3 as pac;
 use hil_test::{hp_utils::configure_rtc_pin, ulp_utils::reprogram_ulp_core_with_run_hook};
 use log::{LevelFilter, debug, info, warn};
 use shared::{
-    SharedType,
     ULP_DEBUG_GPIO_ISR_COUNT,
     ULP_DEBUG_GPIO_ISR_STATUS,
     ULP_DEBUG_LAST_ISR_DATA,
     UlpBootCounter,
     UlpCommand,
+    traits::*,
 };
 
 #[main]
@@ -54,13 +54,13 @@ fn main() -> ! {
     {
         for pin in 0..=14 {
             // disable interrupts, wakeup , on all pins
-            configure_rtc_pin(pin, 0, false);
+            configure_rtc_pin(pin, 0, false, false);
         }
 
         // Configure pin 5 as a high-level wakeup (interrupt 5).
         // GPIO wakeup can use high or low level signals.
         // Its assumes there is a button or something attached to pin5.
-        configure_rtc_pin(5, 5, true);
+        configure_rtc_pin(5, 5, true, false);
     }
 
     // Chill for a couple seconds, allowing serial port to connect

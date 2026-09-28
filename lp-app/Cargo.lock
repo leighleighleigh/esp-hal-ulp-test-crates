@@ -21,6 +21,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "790eea4361631c5e7d22598ecd5723ff611904e3344ce8720784c93e3d83d40b"
 
 [[package]]
+name = "delegate"
+version = "0.13.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "780eb241654bf097afb00fc5f054a09b687dad862e485fdcf8399bb056565370"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "document-features"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -34,6 +45,15 @@ name = "embedded-hal"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "361a90feb7004eca4019fb28352a9465666b24f840f5c3cddf0ff13920590b89"
+
+[[package]]
+name = "embedded-hal-async"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c4c685bbef7fe13c3c6dd4da26841ed3980ef33e841cddfa15ce8a8fb3f1884"
+dependencies = [
+ "embedded-hal",
+]
 
 [[package]]
 name = "embedded-hal-nb"
@@ -54,7 +74,6 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 [[package]]
 name = "esp-hal-procmacros"
 version = "0.23.0"
-source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-riscv-interrupts#9b11dc5ff32d191fa29770d71c05bda96969d202"
 dependencies = [
  "document-features",
  "proc-macro-crate",
@@ -67,7 +86,6 @@ dependencies = [
 [[package]]
 name = "esp-lp-hal"
 version = "0.3.0"
-source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-riscv-interrupts#9b11dc5ff32d191fa29770d71c05bda96969d202"
 dependencies = [
  "critical-section",
  "document-features",
@@ -86,7 +104,6 @@ dependencies = [
 [[package]]
 name = "esp-metadata-generated"
 version = "0.5.1"
-source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-riscv-interrupts#9b11dc5ff32d191fa29770d71c05bda96969d202"
 
 [[package]]
 name = "esp-metadata-generated"
@@ -122,6 +139,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "fugit"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e639847d312d9a82d2e75b0edcc1e934efcc64e6cb7aa94f0b1fbec0bc231d6"
+dependencies = [
+ "gcd",
+]
+
+[[package]]
+name = "gcd"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d758ba1b47b00caf47f24925c0074ecb20d6dfcffe7f6d53395c0465674841a"
+
+[[package]]
 name = "hashbrown"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -148,12 +180,26 @@ name = "lp-app"
 version = "0.2.0"
 dependencies = [
  "cfg-if",
+ "delegate",
  "embedded-hal",
  "esp-lp-hal",
  "esp-metadata-generated 0.5.3",
+ "fugit",
+ "max170xx",
  "panic-halt",
  "riscv-rt",
  "shared",
+ "smart-leds",
+ "ws2812-esp32s3-ulp",
+]
+
+[[package]]
+name = "max170xx"
+version = "1.0.0"
+source = "git+https://github.com/leighleighleigh/max170xx-rs.git#ce52b0b4fb49ea032d2bfe8e6624d22a7b0062fd"
+dependencies = [
+ "embedded-hal",
+ "embedded-hal-async",
 ]
 
 [[package]]
@@ -215,6 +261,12 @@ checksum = "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001"
 dependencies = [
  "proc-macro2",
 ]
+
+[[package]]
+name = "rgb"
+version = "0.8.53"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47b34b781b31e5d73e9fbc8689c70551fd1ade9a19e3e28cfec8580a79290cc4"
 
 [[package]]
 name = "riscv"
@@ -292,6 +344,24 @@ dependencies = [
  "critical-section",
  "embedded-hal",
  "num-traits",
+]
+
+[[package]]
+name = "smart-leds"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66df34e571fa9993fa6f99131a374d58ca3d694b75f9baac93458fe0d6057bf0"
+dependencies = [
+ "smart-leds-trait",
+]
+
+[[package]]
+name = "smart-leds-trait"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7f4441a131924d58da6b83a7ad765c460e64630cce504376c3a87a2558c487f"
+dependencies = [
+ "rgb",
 ]
 
 [[package]]
@@ -398,4 +468,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23b97319f7b8343df12cc98938e5c3eb436064524c8d2b4e30a1d3a36eecdf81"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "ws2812-esp32s3-ulp"
+version = "0.1.0"
+source = "git+https://github.com/leighleighleigh/ws2812-esp32s3-ulp-rs.git#cb22ba43e147d0c9ba3490b09981b43830637f4b"
+dependencies = [
+ "embedded-hal",
+ "smart-leds-trait",
 ]

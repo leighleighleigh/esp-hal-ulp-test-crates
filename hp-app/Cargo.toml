@@ -6,28 +6,37 @@ rust-version = "1.95"
 
 [lib]
 name = "hil_test"
-harness = false
+harness = false # embedded_test brings the harness
+test = false    # No tests within library itself
 bench = false
-test = false # No tests within lib itself, allows cargo test to work.
 
 [[test]]
 name              = "integration"
-harness           = false
+harness           = false 
 
 [[example]]
 name = "hp_deepsleep_wakeup"
 path = "examples/hp_deepsleep_wakeup.rs"
 required-features = [ "unstable", "esp32s3", "println", "defmt" ]
+test = false
 
 [[example]]
 name = "hp_print_rtcio_interrupts"
 path = "examples/hp_print_rtcio_interrupts.rs"
 required-features = [ "unstable", "esp32s3", "println", "defmt" ]
+test = false
 
 [[example]]
 name = "hp_gpio_wakeup"
 path = "examples/hp_gpio_wakeup.rs"
 required-features = [ "unstable", "esp32s3", "println", "defmt" ]
+test = false
+
+[[example]]
+name = "hp_ipc_locks"
+path = "examples/hp_ipc_locks.rs"
+required-features = [ "unstable", "esp32s3", "println", "defmt" ]
+test = false
 
 [features]
 default = ["unstable","defmt"]
@@ -68,6 +77,7 @@ shared = { version = "0.3.0", path = "../shared", features = [ "defmt" ] }
 log = "0.4.27"
 critical-section = "1.2.0"
 riscv-decode = "0.2.3"
+embedded-hal       = "1.0.0"
 esp-bootloader-esp-idf = { version = "0.6.0" }
 esp-hal = { version = "1.2.0", features = [ "unstable" ] }
 esp-backtrace = { version = "0.20.0", features = [ "panic-handler", "defmt" ]}
@@ -78,11 +88,13 @@ esp32c6 = { version = "0.24", features = ["critical-section", "rt"], optional = 
 esp32s2 = { version = "0.32", features = ["critical-section", "rt"], optional = true }
 esp32s3 = { version = "0.36", features = ["critical-section", "rt"], optional = true }
 
-# test-specific crates
-embedded-hal       = "1.0.0"
+# Testing/debug related
 defmt              = "1.0.1"
 defmt-rtt          = { version = "1.0.0", optional = true }
-embedded-test       = { version = "0.7.1", default-features = false, features = ["panic-handler", "semihosting"] }
+
+# test-specific crates
+[dev-dependencies]
+embedded-test       = { version = "0.7.2", default-features = false, features = ["panic-handler", "semihosting"] }
 semihosting = { version = "0.1.25", features = ["openocd-semihosting"] }
 
 [build-dependencies]
@@ -96,8 +108,8 @@ debug            = 2
 debug-assertions = true
 incremental      = false
 opt-level        = "z"
+lto              = false # LTO (thin or fat) miscompiles some tests on RISC-V
 overflow-checks  = true
-# lto = true
 
 [profile.release]
 codegen-units    = 1
@@ -106,7 +118,6 @@ debug-assertions = true
 incremental      = false
 opt-level        = 3
 lto              = false # LTO (thin or fat) miscompiles some tests on RISC-V
-# lto = true
 overflow-checks  = true
 
 # git development patches

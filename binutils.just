@@ -33,23 +33,23 @@ binutil TOOL_NAME FILE *ARGS="":
   #!/usr/bin/env bash
   {{bin_arch}}-{{TOOL_NAME}} {{ARGS}} {{FILE}}
 
-objdump FILE *ARGS="-d":
+objdump FILE=`just find-last-built-app-elf` *ARGS="-d":
   #!/usr/bin/env bash
   just binutil objdump {{FILE}} {{objdump_defaults}} {{ARGS}}
 
-objcopy FILE *ARGS="":
+objcopy FILE=`just find-last-built-app-elf` *ARGS="":
   #!/usr/bin/env bash
   just binutil objcopy {{FILE}} {{ARGS}}
 
-readelf FILE *ARGS="":
+readelf FILE=`just find-last-built-app-elf` *ARGS="":
   #!/usr/bin/env bash
   just binutil readelf {{FILE}} {{readelf_defaults}} {{ARGS}}
 
-size FILE *ARGS="-A":
+size FILE=`just find-last-built-app-elf` *ARGS="-A":
   #!/usr/bin/env bash
   just binutil size {{FILE}} {{size_defaults}} {{ARGS}}
 
-nm FILE *ARGS="-An":
+nm FILE=`just find-last-built-app-elf` *ARGS="-An":
   #!/usr/bin/env bash
   just binutil nm {{FILE}} {{nm_defaults}} {{ARGS}}
 

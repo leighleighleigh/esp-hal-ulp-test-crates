@@ -8,14 +8,20 @@ pub use esp_hal::lp_core::{
 };
 use esp_hal::{delay::Delay, load_lp_code, time::Instant};
 use shared::{
-    SharedType,
+    ULP_DEBUG_GLOBAL_TRAP_CAUSE,
+    ULP_DEBUG_GLOBAL_TRAP_COUNT,
+    ULP_DEBUG_GPIO_ISR_COUNT,
+    ULP_DEBUG_GPIO_ISR_STATUS,
+    ULP_DEBUG_LAST_ISR_DATA,
     ULP_TEST_DATA_IN,
     ULP_TEST_DATA_OUT,
     UlpBootCounter,
     UlpCommand,
+    UlpHaltCounter,
     UlpLock,
     UlpLoopCounter,
     UlpReply,
+    traits::*,
 };
 
 // Type aliasing for peripheral type
@@ -110,12 +116,18 @@ pub fn ulp_erase() {
 // This can be called within the pre_run_hook.
 fn reset_ulp_shared_variables() {
     UlpBootCounter::reset();
+    UlpHaltCounter::reset();
     UlpLoopCounter::reset();
     UlpReply::UNSET.store();
     UlpCommand::UNSET.store();
     unsafe {
         ULP_TEST_DATA_IN = 0;
         ULP_TEST_DATA_OUT = 0;
+        ULP_DEBUG_GPIO_ISR_COUNT = 0;
+        ULP_DEBUG_GPIO_ISR_STATUS = 0;
+        ULP_DEBUG_LAST_ISR_DATA = 0;
+        ULP_DEBUG_GLOBAL_TRAP_COUNT = 0;
+        ULP_DEBUG_GLOBAL_TRAP_CAUSE = 0;
     }
     UlpLock::reset();
 }

@@ -1,18 +1,4 @@
 use esp32s3 as pac;
-use esp_hal::{
-    clock::CpuClock,
-    lp_core::{
-        UlpCore as LpCore,
-        UlpCoreTimerCycles as LpCoreTimerCycles,
-        UlpCoreWakeupSource as LpCoreWakeupSource,
-        WakeupConfig as LpWakeupConfig,
-    },
-    main,
-    rtc_cntl::{
-        sleep::{LowPower, RtcSleepConfig},
-        WakeupSource,
-    },
-};
 
 /// Configures the RTC GPIO pins so they can be used by the LP core,
 /// and enables interrupts for them.

@@ -1,24 +1,9 @@
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
+use super::*;
 
-// use core::arch;
-// use embedded_hal::delay::DelayNs;
-// use super::SharedType;
-
-cfg_if::cfg_if! {
-    if #[cfg(feature = "is-lp-core")] {
-        #[unsafe(no_mangle)]
-        #[used]
-        pub static mut ULP_LOCK: UlpLock = UlpLock::new();
-    } else {
-        unsafe extern "Rust" {
-            pub static mut ULP_LOCK: UlpLock;
-        }
-    }
-}
-
-// (Speculative) This needs to be 4-byte aligned so that the RISCV core can mutate single fields in
-// a single instruction.
+// (Speculative) This needs to be 4-byte aligned so that the
+// RISCV core can mutate single fields in a single instruction.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[cfg_attr(not(feature = "is-lp-core"), derive(Debug))]
 #[repr(C, align(4))]
 #[derive(Clone, Copy)]
 pub struct UlpLock {
@@ -27,13 +12,14 @@ pub struct UlpLock {
     pub is_ulp_turn: bool,
 }
 
-// impl SharedType for UlpLock {
-//     const BACKING_VAR: *const Self = unsafe { &ULP_LOCK };
-// }
+impl SharedType for UlpLock {
+    const VAR: *const Self::VarType = unsafe { &ULP_LOCK };
+    type VarType = Self;
+}
 
 impl UlpLock {
     #[allow(dead_code)]
-    const fn new() -> Self {
+    pub const fn new() -> Self {
         UlpLock {
             flag_ulp: false,
             flag_hp: false,
@@ -61,7 +47,7 @@ impl UlpLock {
 
 // Based on
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/system/ulp-risc-v.html#_CPPv422ulp_riscv_lock_acquireP16ulp_riscv_lock_t
-pub fn ulp_riscv_lock_acquire() {
+fn ulp_riscv_lock_acquire() {
     cfg_if::cfg_if! {
     if #[cfg(feature = "is-lp-core")] {
         unsafe {
@@ -94,7 +80,7 @@ pub fn ulp_riscv_lock_acquire() {
     }
 }
 
-pub fn ulp_riscv_lock_release() {
+fn ulp_riscv_lock_release() {
     cfg_if::cfg_if! {
         if #[cfg(feature = "is-lp-core")] {
             unsafe {
@@ -107,73 +93,3 @@ pub fn ulp_riscv_lock_release() {
         }
     }
 }
-
-// pub fn ulp_riscv_lock_acquire_delayed<D>(mut wait_delay: D)
-// where
-//     D: DelayNs,
-// {
-//     cfg_if::cfg_if! {
-//         if #[cfg(feature = "is-lp-core")] {
-//         unsafe {
-//             ULP_LOCK.flag_ulp = true;
-//             ULP_LOCK.is_ulp_turn = false;
-
-//             while ULP_LOCK.flag_hp && !ULP_LOCK.is_ulp_turn {
-//                 wait_delay.delay_ms(1);
-//             }
-//         }
-//         } else {
-//         unsafe {
-//             ULP_LOCK.flag_hp = true;
-//             ULP_LOCK.is_ulp_turn = true;
-
-//             while ULP_LOCK.flag_ulp && ULP_LOCK.is_ulp_turn {
-//                 // wait_delay.delay_ms(1);
-//                 wait_delay.delay_us(1);
-//             }
-//         }
-//         }
-//     }
-// }
-
-// pub fn ulp_riscv_lock_acquire_with_callback<T>(mut busy_loop_callback: T) -> Result<usize, usize>
-// where
-//     T: FnMut(usize) -> bool,
-// {
-//     // Count how many tries it took
-//     let mut tries = 0;
-
-//     cfg_if::cfg_if! {
-//         if #[cfg(feature = "is-lp-core")] {
-//         unsafe {
-//             ULP_LOCK.flag_ulp = true;
-//             ULP_LOCK.is_ulp_turn = false;
-
-//             while ULP_LOCK.flag_hp && !ULP_LOCK.is_ulp_turn {
-//                 tries += 1;
-//                 // Call the busy loop callback,'
-//                 // if it returns true then we will abort the waiting loop.
-//                 if busy_loop_callback(tries) {
-//                     return Err(tries);
-//                 }
-//             }
-//         }
-//         } else {
-//         unsafe {
-//             ULP_LOCK.flag_hp = true;
-//             ULP_LOCK.is_ulp_turn = true;
-
-//             while ULP_LOCK.flag_ulp && ULP_LOCK.is_ulp_turn {
-//                 tries += 1;
-//                 // Call the busy loop callback,
-//                 // if it returns true then we will abort the waiting loop.
-//                 if busy_loop_callback(tries) {
-//                     return Err(tries);
-//                 }
-//             }
-//         }
-//         }
-//     }
-
-//     Ok(tries)
-// }

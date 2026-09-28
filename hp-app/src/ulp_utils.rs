@@ -9,13 +9,13 @@ pub use esp_hal::lp_core::{
 use esp_hal::{delay::Delay, load_lp_code, time::Instant};
 use shared::{
     SharedType,
+    ULP_TEST_DATA_IN,
+    ULP_TEST_DATA_OUT,
     UlpBootCounter,
     UlpCommand,
     UlpLock,
     UlpLoopCounter,
     UlpReply,
-    ULP_TEST_DATA_IN,
-    ULP_TEST_DATA_OUT,
 };
 
 // Type aliasing for peripheral type

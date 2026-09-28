@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 
-use esp32s3 as pac;
 use esp_backtrace as _;
 use esp_hal::{
     clock::CpuClock,
@@ -14,15 +13,16 @@ use esp_hal::{
     main,
 };
 use esp_println as _;
+use esp32s3 as pac;
 use hil_test::{hp_utils::configure_rtc_pin, ulp_utils::reprogram_ulp_core_with_run_hook};
 use shared::{
     SharedType,
-    UlpBootCounter,
-    UlpCommand,
-    UlpHaltCounter,
     ULP_DEBUG_GPIO_ISR_COUNT,
     ULP_DEBUG_GPIO_ISR_STATUS,
     ULP_DEBUG_LAST_ISR_DATA,
+    UlpBootCounter,
+    UlpCommand,
+    UlpHaltCounter,
 };
 
 #[main]

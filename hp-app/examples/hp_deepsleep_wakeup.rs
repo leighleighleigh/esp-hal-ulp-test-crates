@@ -3,12 +3,11 @@
 #![allow(unused_imports)]
 #![allow(static_mut_refs)]
 
-use esp32s3 as pac;
 use esp_backtrace as _;
 use esp_hal::{
     clock::CpuClock,
     delay::Delay,
-    gpio::{lp_io::LowPowerPin, DriveMode, Flex, OutputConfig, Pull},
+    gpio::{DriveMode, Flex, OutputConfig, Pull, lp_io::LowPowerPin},
     interrupt,
     load_lp_code,
     lp_core::{
@@ -18,18 +17,19 @@ use esp_hal::{
         WakeupConfig as LpWakeupConfig,
     },
     main,
-    peripherals::{self, Peripherals, GPIO2},
+    peripherals::{self, GPIO2, Peripherals},
     rtc_cntl::{
-        reset_reason,
-        sleep::{LowPower, RtcSleepConfig},
-        wakeup_cause,
         SocResetReason,
         WakeupReason,
         WakeupSource,
+        reset_reason,
+        sleep::{LowPower, RtcSleepConfig},
+        wakeup_cause,
     },
     time::Instant,
 };
 use esp_println as _;
+use esp32s3 as pac;
 use hil_test::ulp_utils::ulp_riscv_reset;
 
 unsafe extern "Rust" {

@@ -113,3 +113,9 @@ try-stream PORT:
   done
   echo "# [$(date +%s)] Disconnected from {{PORT}}"
 
+format:
+  #!/usr/bin/env bash
+  shopt -s globstar 
+  cargo fmt --all -- --config-path=rustfmt.toml src/*.rs
+  cargo fmt --all -- --config-path=rustfmt.toml examples/*.rs
+  cargo fmt --all -- --config-path=rustfmt.toml tests/*.rs

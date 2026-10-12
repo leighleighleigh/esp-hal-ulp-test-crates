@@ -154,13 +154,9 @@ mod tests {
     #[test]
     fn ulp_timer_counter(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
-        reprogram_ulp_core_with_run_hook(
-            &mut ulp_core,
-            LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(5)),
-            || {
-                UlpCommand::COUNTER_ULP_TIMER.store();
-            },
-        );
+        reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(5)), || {
+            UlpCommand::COUNTER_ULP_TIMER.store();
+        });
         hil_test::assert_eq!(ulp_has_booted(), true);
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
         defmt::debug!("count: {}", UlpLoopCounter::load());
@@ -175,13 +171,9 @@ mod tests {
     #[test]
     fn hp_can_pause_ulp_timer(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
-        reprogram_ulp_core_with_run_hook(
-            &mut ulp_core,
-            LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(5)),
-            || {
-                UlpCommand::COUNTER_ULP_TIMER.store();
-            },
-        );
+        reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(5)), || {
+            UlpCommand::COUNTER_ULP_TIMER.store();
+        });
         hil_test::assert_eq!(ulp_has_booted(), true);
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
         hil_test::assert!(ulp_is_looping());
@@ -334,58 +326,79 @@ mod tests {
 
     #[test]
     fn ulp_timer_waitirq(ctx: Context) {
+        // This tests the 'waitirq' and 'timer' instructions of the ULP core.
+        // The ULP core will:
+        //   0. Fetch timer period from ULP_TEST_DATA_IN
+        //   1. Set reply to BUSY
+        //   2. Call the timer instruction with the requested duration
+        //   3. Block on waitirq
+        //   4. If waitirq returned 1, store OK, increment loop counter, and goto NOOP.
+        //   5. Else if waitirq did not return 1, store NOK, and goto NOOP.
+        let mut timer_duration_ms: u32 = 200;
+        const TICKS_PER_MILLIS: u32 = 17_500_000 / 1000;
+        const TIMER_PERIOD: f64 = 1.0 / 17500000.0;
+
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
-        reprogram_ulp_core_with_run_hook(
-            &mut ulp_core,
-            // LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(53)), // ~10Hz
-            LpCoreWakeupSource::HpCpu,
-            || {
-                UlpCommand::WAITIRQ_TIMER_TEST.store();
-            },
-        );
+        reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || unsafe {
+            UlpCommand::WAITIRQ_TIMER_TEST.store();
+            // ULP timer period is in clock cycles, which is 17.5MHz.
+            ULP_TEST_DATA_IN = TICKS_PER_MILLIS * timer_duration_ms;
+        });
 
         hil_test::assert!(ulp_has_booted());
-        hil_test::assert_eq!(UlpReply::BUSY, UlpReply::load());
 
         let dly = Delay::new();
-        let t0 = Instant::now();
 
-        for _ in 0..17 {
+        // HP core will trigger the WAITIRQ_TIMER_TEST 5 times.
+        // Each successive loop will double timer period.
+        for i in 1..=5 {
+            // Check that the command was received, and the ULP core is currently
+            // blocking until the timer expires.
+            hil_test::assert_eq!(UlpReply::BUSY, UlpReply::load());
+
+            // HP core wait until timer should have expired
+            dly.delay_millis(timer_duration_ms);
+
+            // Print debug information
             let ulp_reply = UlpReply::load();
             let ulp_loops = UlpLoopCounter::load();
-            let waitirq = unsafe { ULP_TEST_DATA_IN.clone() };
-            let trap_count = unsafe { ULP_DEBUG_GLOBAL_TRAP_COUNT.clone() };
-            let trap_cause = unsafe { ULP_DEBUG_GLOBAL_TRAP_CAUSE.clone() };
-            let last_isr = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
+            let waitirq_cycles = unsafe { ULP_TEST_DATA_OUT.clone() };
 
+            // Calculate the difference between the expected number of timer cycles,
+            // and the number of cycles that were measured by LP core.
+            let timer_duration_seconds = timer_duration_ms as f64 / 1000.0;
+            let expected_waitirq_cycles = (timer_duration_seconds / TIMER_PERIOD) as u32;
+            let delta_waitirq_cycles = ((expected_waitirq_cycles as i64) - (waitirq_cycles as i64)) as i32;
+
+            // Print the number of cycles that the lp core blocked for
             defmt::debug!(
-                "[{}] reply: {}, loop_count: {}, waitirq: {}, trap_count: {}, trap_cause: 0x{:08x}, last_isr: 0x{:08x}",
-                t0.elapsed(),
-                ulp_reply,
-                ulp_loops,
-                waitirq,
-                trap_count,
-                trap_cause,
-                last_isr
+                "waitirq cycles: {}, expected cycles: {}, delta cycles: {}",
+                waitirq_cycles,
+                expected_waitirq_cycles,
+                delta_waitirq_cycles
             );
+            // hil_test::assert_eq!(1, waitirq_cycles);
 
-            // if reply is OK,
-            // send a new command
-            if ulp_reply == UlpReply::OK {
-                UlpCommand::WAITIRQ_TIMER_TEST.store();
+            // Core should have replied with OK
+            hil_test::assert_eq!(UlpReply::OK, ulp_reply);
+            // Loop counter should be equal to i
+            hil_test::assert_eq!(i, ulp_loops);
+
+            // If i equals 5, break this loop.
+            if i == 5 {
+                break;
             }
-            dly.delay_millis(50);
+
+            // Double the timer period and re-start the command
+            timer_duration_ms *= 2;
+            unsafe {
+                ULP_TEST_DATA_IN = TICKS_PER_MILLIS * timer_duration_ms;
+            }
+            UlpCommand::WAITIRQ_TIMER_TEST.store();
+
+            // Wait a small period to allow the core to start the command
+            dly.delay_millis(10);
         }
-
-        dly.delay_millis(200);
-
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
-
-        let result = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
-        hil_test::assert_eq!(0xba5eba11, result);
-
-        // The interrupt should not cause the ULP to lock up or halt
-        hil_test::assert_eq!(true, ulp_is_looping());
     }
 
     #[test]
@@ -398,22 +411,11 @@ mod tests {
 
         {
             let btn_reg = unsafe { &*pac::RTC_IO::PTR };
-            btn_reg.touch_pad(RTCPIN).write(|w| unsafe {
-                w.mux_sel()
-                    .set_bit()
-                    .fun_ie()
-                    .set_bit()
-                    .rue()
-                    .clear_bit()
-                    .rde()
-                    .clear_bit()
-                    .fun_sel()
-                    .bits(0)
-            });
-            // Enable the pin interrupt
             btn_reg
-                .pin(RTCPIN)
-                .write(|w| unsafe { w.int_type().bits(INTTYPE) });
+                .touch_pad(RTCPIN)
+                .write(|w| unsafe { w.mux_sel().set_bit().fun_ie().set_bit().rue().clear_bit().rde().clear_bit().fun_sel().bits(0) });
+            // Enable the pin interrupt
+            btn_reg.pin(RTCPIN).write(|w| unsafe { w.int_type().bits(INTTYPE) });
         }
 
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
@@ -434,19 +436,13 @@ mod tests {
             let hp_reg = unsafe { &*pac::RTC_IO::PTR };
 
             // Pin must be set as an output, before we can control it.
-            hp_reg
-                .rtc_gpio_enable()
-                .write(|w| unsafe { w.rtc_gpio_enable().bits(1 << RTCPIN) });
+            hp_reg.rtc_gpio_enable().write(|w| unsafe { w.rtc_gpio_enable().bits(1 << RTCPIN) });
 
             // toggle the pin output level, using manual register writes.
             if hp_output_lvl {
-                hp_reg
-                    .rtc_gpio_out_w1ts()
-                    .write(|w| unsafe { w.rtc_gpio_out_data_w1ts().bits(1 << RTCPIN) });
+                hp_reg.rtc_gpio_out_w1ts().write(|w| unsafe { w.rtc_gpio_out_data_w1ts().bits(1 << RTCPIN) });
             } else {
-                hp_reg
-                    .rtc_gpio_out_w1tc()
-                    .write(|w| unsafe { w.rtc_gpio_out_data_w1tc().bits(1 << RTCPIN) });
+                hp_reg.rtc_gpio_out_w1tc().write(|w| unsafe { w.rtc_gpio_out_data_w1tc().bits(1 << RTCPIN) });
             }
 
             // Tweak this for fun to see how fast it can go
@@ -464,12 +460,7 @@ mod tests {
             let lp_did_interrupt = ((lp_trap_data >> 10) & (1 << RTCPIN)) != 0;
             let lp_input_lvl = ((lp_isr_data >> 10) & (1 << RTCPIN)) != 0;
 
-            defmt::debug!(
-                "HP output: {}, LP interrupted: {}, LP input: {}",
-                hp_output_lvl,
-                lp_did_interrupt,
-                lp_input_lvl
-            );
+            defmt::debug!("HP output: {}, LP interrupted: {}, LP input: {}", hp_output_lvl, lp_did_interrupt, lp_input_lvl);
 
             match INTTYPE {
                 1 => {
@@ -507,23 +498,12 @@ mod tests {
 
         {
             let btn_reg = unsafe { &*pac::RTC_IO::PTR };
-            btn_reg.touch_pad(RTCPIN).write(|w| unsafe {
-                w.mux_sel()
-                    .set_bit()
-                    .fun_ie()
-                    .set_bit()
-                    .rue()
-                    .clear_bit()
-                    .rde()
-                    .clear_bit()
-                    .fun_sel()
-                    .bits(0)
-            });
+            btn_reg
+                .touch_pad(RTCPIN)
+                .write(|w| unsafe { w.mux_sel().set_bit().fun_ie().set_bit().rue().clear_bit().rde().clear_bit().fun_sel().bits(0) });
 
             // Enable the pin interrupt? (maybe not needed?)
-            btn_reg
-                .pin(RTCPIN)
-                .write(|w| unsafe { w.int_type().bits(INTTYPE).wakeup_enable().set_bit() });
+            btn_reg.pin(RTCPIN).write(|w| unsafe { w.int_type().bits(INTTYPE).wakeup_enable().set_bit() });
         }
 
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
@@ -538,22 +518,16 @@ mod tests {
         // high.
         let hp_reg = unsafe { &*pac::RTC_IO::PTR };
         // Pin must be set as an output, before we can control it.
-        hp_reg
-            .rtc_gpio_enable()
-            .write(|w| unsafe { w.rtc_gpio_enable().bits(1 << RTCPIN) });
+        hp_reg.rtc_gpio_enable().write(|w| unsafe { w.rtc_gpio_enable().bits(1 << RTCPIN) });
         fn hp_pin_on() {
             let hp_reg = unsafe { &*pac::RTC_IO::PTR };
             // set pin high
-            hp_reg
-                .rtc_gpio_out_w1ts()
-                .write(|w| unsafe { w.rtc_gpio_out_data_w1ts().bits(1 << RTCPIN) });
+            hp_reg.rtc_gpio_out_w1ts().write(|w| unsafe { w.rtc_gpio_out_data_w1ts().bits(1 << RTCPIN) });
         }
         fn hp_pin_off() {
             let hp_reg = unsafe { &*pac::RTC_IO::PTR };
             // set pin high
-            hp_reg
-                .rtc_gpio_out_w1tc()
-                .write(|w| unsafe { w.rtc_gpio_out_data_w1tc().bits(1 << RTCPIN) });
+            hp_reg.rtc_gpio_out_w1tc().write(|w| unsafe { w.rtc_gpio_out_data_w1tc().bits(1 << RTCPIN) });
         }
 
         hp_pin_on();
@@ -583,13 +557,9 @@ mod tests {
     #[test]
     fn ulp_can_stop_itself_then_resumed_by_hp(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
-        reprogram_ulp_core_with_run_hook(
-            &mut ulp_core,
-            LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(5)),
-            || {
-                UlpCommand::STOP_TEST.store();
-            },
-        );
+        reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(5)), || {
+            UlpCommand::STOP_TEST.store();
+        });
         hil_test::assert!(ulp_has_booted());
         hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
         // It should not be looping if it stopped itself correctly
@@ -775,11 +745,7 @@ mod tests {
     fn ulp_can_load_alternate_firmware(ctx: Context) {
         // let mut lpwr = LowPower::new(ctx.p.LPWR);
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
-        reprogram_ulp_core_with_rainbow_firmware(
-            &mut ulp_core,
-            LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(1)),
-            ctx.p.GPIO18,
-        );
+        reprogram_ulp_core_with_rainbow_firmware(&mut ulp_core, LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(1)), ctx.p.GPIO18);
         Delay::new().delay_ms(1000);
 
         // // The core is allowed to wake us up

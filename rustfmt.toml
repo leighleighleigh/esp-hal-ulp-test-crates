@@ -6,9 +6,8 @@ normalize_comments          = true
 wrap_comments               = true
 
 # Code in comments
-doc_comment_code_block_width = 200
-comment_width                = 200
-max_width                    = 200
+doc_comment_code_block_width = 100
+comment_width                = 100
 
 # Enums
 enum_discrim_align_threshold = 35

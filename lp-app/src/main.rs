@@ -9,7 +9,18 @@ use embedded_hal::i2c::I2c;
 use esp_lp_hal::{
     delay::Delay,
     gpio,
-    interrupt::{CoreInterrupt, Exception, ExternalInterrupt, TrapFrame, core_interrupt, exception, external_interrupt, ulp_maskirq, ulp_timer_insn, ulp_wait_irq},
+    interrupt::{
+        CoreInterrupt,
+        Exception,
+        ExternalInterrupt,
+        TrapFrame,
+        core_interrupt,
+        exception,
+        external_interrupt,
+        ulp_maskirq,
+        ulp_timer_insn,
+        ulp_wait_irq,
+    },
     prelude::*,
     ulp_riscv_timer_stop,
     ulp_timer_period,
@@ -111,24 +122,34 @@ fn delay_for_a_second() {
 unsafe fn setup_gpio_wakeup(enabled: bool) {
     let reg = unsafe { &*esp_lp_hal::pac::RTC_CNTL::PTR };
     // Clear outstanding wakeup events
-    reg.rtc_ulp_cp_timer().write(|w| w.ulp_cp_gpio_wakeup_clr().set_bit());
+    reg.rtc_ulp_cp_timer()
+        .write(|w| w.ulp_cp_gpio_wakeup_clr().set_bit());
 
     // Re-enable if desired
     if enabled {
-        reg.rtc_ulp_cp_timer().write(|w| w.ulp_cp_gpio_wakeup_ena().set_bit());
+        reg.rtc_ulp_cp_timer()
+            .write(|w| w.ulp_cp_gpio_wakeup_ena().set_bit());
     }
 }
 
 // Steal a GPIO pin from the HP core by enabling IO_MUX
-unsafe fn steal_i2c_pins() -> (esp_lp_hal::gpio::OutputOpenDrain<0>, esp_lp_hal::gpio::OutputOpenDrain<1>) {
+unsafe fn steal_i2c_pins() -> (
+    esp_lp_hal::gpio::OutputOpenDrain<0>,
+    esp_lp_hal::gpio::OutputOpenDrain<1>,
+) {
     let reg = unsafe { &*esp_lp_hal::pac::RTC_IO::PTR };
     unsafe {
-        reg.touch_pad0().write(|w| w.fun_ie().set_bit().mux_sel().set_bit());
-        reg.touch_pad1().write(|w| w.fun_ie().set_bit().mux_sel().set_bit());
+        reg.touch_pad0()
+            .write(|w| w.fun_ie().set_bit().mux_sel().set_bit());
+        reg.touch_pad1()
+            .write(|w| w.fun_ie().set_bit().mux_sel().set_bit());
         reg.pin0().write(|w| w.pad_driver().set_bit());
         reg.pin1().write(|w| w.pad_driver().set_bit());
     }
-    (esp_lp_hal::gpio::OutputOpenDrain::<0>::new(), esp_lp_hal::gpio::OutputOpenDrain::<1>::new())
+    (
+        esp_lp_hal::gpio::OutputOpenDrain::<0>::new(),
+        esp_lp_hal::gpio::OutputOpenDrain::<1>::new(),
+    )
 }
 
 unsafe fn steal_output<const PIN: u8>() -> esp_lp_hal::gpio::Output<PIN> {
@@ -228,7 +249,8 @@ fn main() {
                     UlpReply::OK.store();
                     // Enable the COCPU start interrupt
                     let reg = unsafe { &*esp_lp_hal::pac::SENS::PTR };
-                    reg.sar_cocpu_int_ena().write(|w| w.sar_cocpu_start_int_ena().set_bit());
+                    reg.sar_cocpu_int_ena()
+                        .write(|w| w.sar_cocpu_start_int_ena().set_bit());
                 }
                 // Increment the loop counter
                 UlpLoopCounter::increment();
@@ -236,7 +258,8 @@ fn main() {
                 delay_for_a_tenth_second();
             },
             UlpCommand::WAITIRQ_TIMER_TEST => unsafe {
-                // ULP_TEST_DATA_OUT --> approx number of CPU cycles that were elapsed while waitirq blocked.
+                // ULP_TEST_DATA_OUT --> approx number of CPU cycles
+                // that were elapsed while waitirq blocked.
                 // ULP_TEST_DATA_IN <-- TIMER_PER duration to run the timer
                 // for TIMER_PER is in clock cycles, which is 17.5MHz.
                 let timer_period: u32 = ULP_TEST_DATA_IN;
@@ -358,13 +381,16 @@ unsafe fn machine_timer() {
 // Used for START_INT_TEST
 #[external_interrupt(ExternalInterrupt::SensInterrupt)]
 unsafe fn sens_interrupt() {
-    let sens_int = unsafe { &*esp_lp_hal::pac::SENS::PTR }.sar_cocpu_int_st().read();
+    let sens_int = unsafe { &*esp_lp_hal::pac::SENS::PTR }
+        .sar_cocpu_int_st()
+        .read();
     if sens_int.sar_cocpu_start_int_st().bit_is_set() {
         unsafe { ULP_DEBUG_LAST_ISR_DATA = 0xcafebabe };
         // Disable the COCPU start interrupt,
         // to prevent it happening again.
         let reg = unsafe { &*esp_lp_hal::pac::SENS::PTR };
-        reg.sar_cocpu_int_ena().write(|w| w.sar_cocpu_start_int_ena().clear_bit());
+        reg.sar_cocpu_int_ena()
+            .write(|w| w.sar_cocpu_start_int_ena().clear_bit());
     }
 }
 

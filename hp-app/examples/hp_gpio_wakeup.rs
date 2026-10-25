@@ -17,7 +17,6 @@ use esp_hal::{
         sleep::{LowPower, RtcSleepConfig},
     },
 };
-use esp_println as _;
 use esp32s3 as pac;
 use hil_test::{hp_utils::configure_rtc_pin, ulp_utils::reprogram_ulp_core_with_run_hook};
 use log::{LevelFilter, debug, info, warn};

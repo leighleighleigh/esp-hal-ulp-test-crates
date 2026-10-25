@@ -34,7 +34,7 @@ build *ARGS="": prepare
 [private]
 be EXAMPLE *ARGS="":
   #!/usr/bin/env bash
-  cargo build --target xtensa-esp32s3-none-elf --features esp32s3,println,unstable,defmt --example {{EXAMPLE}} {{ARGS}}
+  cargo build --target xtensa-esp32s3-none-elf --features esp32s3 --example {{EXAMPLE}} {{ARGS}}
   # Symlink the compiled ELF for easier debugging
   elf_path="$(just find-last-built-app-elf {{EXAMPLE}})"
   ln -srf "${elf_path}" ./{{EXAMPLE}}.elf
@@ -50,9 +50,7 @@ build-examples: prepare
 # Build and run an example
 example EXAMPLE=example_name: prepare
   #!/usr/bin/env bash
-  # For some reason the .cargo link flags aren't passing through to the crate binaries reliably.
-  #export RUSTFLAGS="-Clink-arg=-nostartfiles -Clink-arg=-Tdefmt.x -Clink-arg=-Wl,-Tlinkall.x -Clink-arg=-Wl,-Tlp_rainbow.x"
-  cargo run --target xtensa-esp32s3-none-elf --features esp32s3,println,unstable,defmt --example {{EXAMPLE}}
+  cargo run --target xtensa-esp32s3-none-elf --features esp32s3 --example {{EXAMPLE}}
 
 [private]
 prepare:

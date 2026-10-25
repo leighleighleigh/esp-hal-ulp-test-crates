@@ -8,7 +8,6 @@ use esp_hal::{
     main,
     time::Instant,
 };
-use esp_println as _;
 use hil_test::ulp_utils::reprogram_ulp_core_with_run_hook;
 use shared::{ULP_TEST_DATA_IN, UlpCommand, UlpLock, UlpLoopCounter, UlpReply, traits::*};
 

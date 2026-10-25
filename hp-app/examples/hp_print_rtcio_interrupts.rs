@@ -6,14 +6,11 @@ use esp_hal::{
     clock::CpuClock,
     lp_core::{
         UlpCore as LpCore,
-        UlpCoreTimerCycles as LpCoreTimerCycles,
         UlpCoreWakeupSource as LpCoreWakeupSource,
         // WakeupConfig as LpWakeupConfig,
     },
     main,
 };
-use esp_println as _;
-use esp32s3 as pac;
 use hil_test::{hp_utils::configure_rtc_pin, ulp_utils::reprogram_ulp_core_with_run_hook};
 use shared::{
     ULP_DEBUG_GPIO_ISR_COUNT,
@@ -21,7 +18,6 @@ use shared::{
     ULP_DEBUG_LAST_ISR_DATA,
     UlpBootCounter,
     UlpCommand,
-    UlpHaltCounter,
     traits::*,
 };
 
@@ -48,7 +44,7 @@ fn main() -> ! {
     {
         for pin in 0..=14 {
             // enable all interrupts, no wakeup
-            configure_rtc_pin(pin, 3, false);
+            configure_rtc_pin(pin, 3, false, false);
         }
     }
 

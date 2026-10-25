@@ -1,48 +1,50 @@
 [package]
-name         = "hp-app"
-version      = "0.2.0"
-edition      = "2024"
+name = "hp-app"
+version = "0.2.0"
+edition = "2024"
 rust-version = "1.95"
 
 [lib]
 name = "hil_test"
-harness = false # embedded_test brings the harness
-test = false    # No tests within library itself
+harness = false   # embedded_test brings the harness
+test = false      # No tests within library itself
 bench = false
 
 [[test]]
-name              = "integration"
-harness           = false 
+name = "integration"
+harness = false
 
 [[example]]
 name = "hp_deepsleep_wakeup"
 path = "examples/hp_deepsleep_wakeup.rs"
-required-features = [ "unstable", "esp32s3", "println", "defmt" ]
 test = false
 
 [[example]]
 name = "hp_print_rtcio_interrupts"
 path = "examples/hp_print_rtcio_interrupts.rs"
-required-features = [ "unstable", "esp32s3", "println", "defmt" ]
 test = false
 
 [[example]]
 name = "hp_gpio_wakeup"
 path = "examples/hp_gpio_wakeup.rs"
-required-features = [ "unstable", "esp32s3", "println", "defmt" ]
 test = false
 
 [[example]]
 name = "hp_ipc_locks"
 path = "examples/hp_ipc_locks.rs"
-required-features = [ "unstable", "esp32s3", "println", "defmt" ]
 test = false
 
 [features]
-default = ["unstable","defmt"]
-unstable = ["esp-hal/unstable"]
-defmt = ["dep:defmt-rtt", "embedded-test/defmt", "esp-hal/defmt"]
-println = ["dep:esp-println" ]
+default = ["defmt-rtt"]
+defmt = [
+    "dep:defmt-rtt",
+    "shared/defmt",
+    "esp-backtrace/defmt",
+    "embedded-test/defmt",
+    "esp-hal/defmt",
+]
+defmt-rtt = ["defmt", "dep:defmt-rtt"]
+defmt-println = ["defmt", "dep:esp-println"]
 
 esp32s2 = [
     "embedded-test/xtensa-semihosting",
@@ -51,7 +53,7 @@ esp32s2 = [
     "esp-bootloader-esp-idf/esp32s2",
     "esp-metadata-generated/esp32s2",
     "esp-println?/esp32s2",
-    "dep:esp32s2"
+    "dep:esp32s2",
 ]
 esp32s3 = [
     "embedded-test/xtensa-semihosting",
@@ -60,7 +62,7 @@ esp32s3 = [
     "esp-bootloader-esp-idf/esp32s3",
     "esp-metadata-generated/esp32s3",
     "esp-println?/esp32s3",
-    "dep:esp32s3"
+    "dep:esp32s3",
 ]
 esp32c6 = [
     "esp-hal/esp32c6",
@@ -68,33 +70,45 @@ esp32c6 = [
     "esp-bootloader-esp-idf/esp32c6",
     "esp-metadata-generated/esp32c6",
     "esp-println?/esp32c6",
-    "dep:esp32c6"
+    "dep:esp32c6",
 ]
 
 [dependencies]
-shared = { version = "0.3.0", path = "../shared", features = [ "defmt" ] }
-
+shared = { version = "0.3.0", path = "../shared" }
+defmt = "1.1"
+defmt-rtt = { version = "1.0.0", optional = true }
 log = "0.4.27"
 critical-section = "1.2.0"
 riscv-decode = "0.2.3"
-embedded-hal       = "1.0.0"
+embedded-hal = "1.0.0"
 esp-bootloader-esp-idf = { version = "0.6.0" }
-esp-hal = { version = "1.2.0", features = [ "unstable" ] }
-esp-backtrace = { version = "0.20.0", features = [ "panic-handler", "defmt" ]}
-esp-println = { version = "0.18.0", features = [ "log-04" ], optional = true }
+esp-hal = { version = "1.2.0", features = ["unstable"] }
+esp-backtrace = { version = "0.20.0", features = ["panic-handler"] }
+esp-println = { version = "0.18.0", optional = true, features = [
+    "log-04",
+    "defmt-espflash",
+] }
 
 # PACS
-esp32c6 = { version = "0.24", features = ["critical-section", "rt"], optional = true }
-esp32s2 = { version = "0.32", features = ["critical-section", "rt"], optional = true }
-esp32s3 = { version = "0.36", features = ["critical-section", "rt"], optional = true }
-
-# Testing/debug related
-defmt              = "1.0.1"
-defmt-rtt          = { version = "1.0.0", optional = true }
+esp32c6 = { version = "0.24", features = [
+    "critical-section",
+    "rt",
+], optional = true }
+esp32s2 = { version = "0.32", features = [
+    "critical-section",
+    "rt",
+], optional = true }
+esp32s3 = { version = "0.36", features = [
+    "critical-section",
+    "rt",
+], optional = true }
 
 # test-specific crates
 [dev-dependencies]
-embedded-test       = { version = "0.7.2", default-features = false, features = ["panic-handler", "semihosting"] }
+embedded-test = { version = "0.7.2", default-features = false, features = [
+    "panic-handler",
+    "semihosting",
+] }
 semihosting = { version = "0.1.25", features = ["openocd-semihosting"] }
 
 [build-dependencies]
@@ -103,22 +117,22 @@ esp-metadata-generated = { version = "0.5.1", features = ["build-script"] }
 # https://doc.rust-lang.org/cargo/reference/profiles.html#test
 # Test and bench profiles inherit from dev and release respectively.
 [profile.dev]
-codegen-units    = 1
-debug            = 2
+codegen-units = 1
+debug = 2
 debug-assertions = true
-incremental      = false
-opt-level        = "z"
-lto              = false # LTO (thin or fat) miscompiles some tests on RISC-V
-overflow-checks  = true
+incremental = false
+opt-level = "z"
+lto = false             # LTO (thin or fat) miscompiles some tests on RISC-V
+overflow-checks = true
 
 [profile.release]
-codegen-units    = 1
-debug            = 2
+codegen-units = 1
+debug = 2
 debug-assertions = true
-incremental      = false
-opt-level        = 3
-lto              = false # LTO (thin or fat) miscompiles some tests on RISC-V
-overflow-checks  = true
+incremental = false
+opt-level = 3
+lto = false             # LTO (thin or fat) miscompiles some tests on RISC-V
+overflow-checks = true
 
 # git development patches
 #[patch.crates-io]

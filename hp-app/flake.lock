@@ -1,0 +1,61 @@
+{
+  "nodes": {
+    "esp-rs": {
+      "inputs": {
+        "esp-rs-src": "esp-rs-src",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793585796,
+        "narHash": "sha256-nB3AKxYG6CJPww63j+xmLde6O6u/UJONTUMqA0is6zU=",
+        "ref": "refs/tags/v3.1.0",
+        "rev": "7ad7c9a0283ea83b0c0a7a39b0c4dfe26c50f491",
+        "revCount": 69,
+        "type": "git",
+        "url": "ssh://git@github.com/leighleighleigh/esp-rs-nix.git"
+      },
+      "original": {
+        "ref": "refs/tags/v3.1.0",
+        "type": "git",
+        "url": "ssh://git@github.com/leighleighleigh/esp-rs-nix.git"
+      }
+    },
+    "esp-rs-src": {
+      "flake": false,
+      "locked": {
+        "path": "./",
+        "type": "path"
+      },
+      "original": {
+        "path": "./",
+        "type": "path"
+      },
+      "parent": [
+        "esp-rs"
+      ]
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1793977579,
+        "narHash": "sha256-4/Yzr1fWTh/zBAR1tR84ZQ1Zhmor8AXwgD4AS7sPn60=",
+        "rev": "4fe25e12eb9f4c744966dd3de5a05246cf098601",
+        "type": "tarball",
+        "url": "https://releases.nixos.org/nixpkgs/nixpkgs-26.11pre1109744.4fe25e12eb9f/nixexprs.tar.zst"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "root": {
+      "inputs": {
+        "esp-rs": "esp-rs",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

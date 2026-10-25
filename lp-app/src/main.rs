@@ -315,18 +315,11 @@ fn main() {
                 let i2c_clk = Timer::new();
                 let mut i2c = I2cBB::new(scl, sda, i2c_clk);
                 let mut max1708 = Max17048::new(i2c);
-                match max1708.voltage() {
-                    Ok(v) => unsafe {
+                if let Ok(v) = max1708.voltage() {
+                    unsafe {
                         ULP_TEST_DATA_OUT = v as u32;
-                    },
-                    Err(_) => {}
+                    }
                 }
-
-                match max1708.reset() {
-                    Ok(_) => unsafe {},
-                    Err(_) => {}
-                }
-
                 UlpLoopCounter::increment();
                 Delay {}.delay_millis(10);
                 UlpCommand::NOOP.store();

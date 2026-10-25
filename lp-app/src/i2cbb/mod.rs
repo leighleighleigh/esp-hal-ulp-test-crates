@@ -225,7 +225,7 @@ where
         for op in operations {
             match op {
                 Operation::Read(items) => {
-                    if items.len() == 0 {
+                    if items.is_empty() {
                         continue;
                     }
                     // ST
@@ -240,7 +240,7 @@ where
                 }
                 Operation::Write(items) => {
                     self.raw_i2c_start();
-                    self.i2c_write_byte((address << 1) | 0x0)?;
+                    self.i2c_write_byte(address << 1)?;
                     self.check_ack()
                         .map_err(|_| ErrorKind::NoAcknowledge(NoAcknowledgeSource::Address))?;
                     self.raw_write_to_slave(items)?;

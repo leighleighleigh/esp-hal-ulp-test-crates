@@ -11,9 +11,13 @@ pub mod hp_utils;
 pub mod ulp_debug;
 pub mod ulp_utils;
 
+// defmt_rtt installs the global defmt logger for running tests,
+// but if not enabled the esp-println will install one instead.
 #[cfg(feature = "defmt")]
 use defmt_rtt as _;
 use esp_hal as _;
+#[cfg(not(feature = "defmt"))]
+use esp_println as _;
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

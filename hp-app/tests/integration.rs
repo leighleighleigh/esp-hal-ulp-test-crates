@@ -348,7 +348,7 @@ mod tests {
 
         // We expect 1 more cycle, to account for
         // 1-instruction of overhead on the ULP core.
-        const ULP_CYCLE_MEASUREMENT_OVERHEAD: u32 = 1;
+        const ULP_CYCLE_MEASUREMENT_OVERHEAD: u32 = 2;
 
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || unsafe {

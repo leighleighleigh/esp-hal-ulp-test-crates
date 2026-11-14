@@ -140,7 +140,7 @@ pub fn reprogram_ulp_core_with_run_hook<'a, F>(
     F: FnOnce(),
 {
     ulp_core.erase();
-    let ulp_code = load_lp_code!("lp_app");
+    let ulp_code = load_lp_code!("target/lp_app");
     // All shared variables are reset before reprogramming.
     reset_ulp_shared_variables();
     pre_run_hook();
@@ -153,7 +153,7 @@ pub fn reprogram_ulp_core_with_rainbow_firmware(
     ws2812_pin: esp_hal::peripherals::GPIO18,
 ) {
     ulp_core.erase();
-    let ulp_code = load_lp_code!("lp_rainbow");
+    let ulp_code = load_lp_code!("target/lp_rainbow");
 
     // configure GPIO 1 as LP output pin
     let lp_pin = esp_hal::gpio::Output::new(

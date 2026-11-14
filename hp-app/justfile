@@ -17,6 +17,9 @@ set allow-duplicate-recipes
 import "../binutils.just"
 import "../clippy.just"
 
+# Utility variables
+target_dir := justfile_directory() / "target"
+
 # Run HP-LP integration tests with probe-rs
 test *ARGS="": prepare
   #!/usr/bin/env bash
@@ -29,7 +32,7 @@ build *ARGS="": prepare
   set -eou pipefail
   cargo build --target xtensa-esp32s3-none-elf --features esp32s3 --test integration
   elf_path="$(just find-last-built-test-elf)"
-  ln -srf "${elf_path}" ./hp_test.elf
+  ln -srf "${elf_path}" "{{target_dir}}/hp_test.elf"
 
 [private]
 be EXAMPLE *ARGS="":
@@ -37,7 +40,7 @@ be EXAMPLE *ARGS="":
   cargo build --target xtensa-esp32s3-none-elf --features esp32s3 --example {{EXAMPLE}} {{ARGS}}
   # Symlink the compiled ELF for easier debugging
   elf_path="$(just find-last-built-app-elf {{EXAMPLE}})"
-  ln -srf "${elf_path}" ./{{EXAMPLE}}.elf
+  ln -srf "${elf_path}" "{{target_dir}}/{{EXAMPLE}}.elf"
 
 # Build all examples and symlink them into the root
 build-examples: prepare
@@ -81,7 +84,7 @@ build-ulp-app APPCRATE CHIP:
   appname="$(just crate-binary-name)"
   popd >/dev/null
   # Copy the built application to lp_app
-  outfile="$(realpath ./)/${appname}"
+  outfile="{{target_dir}}/${appname}"
   cp "${appfile}" "${outfile}"
   test -f "${appfile%.*}.x" && cp "${appfile%.*}.x" "${outfile}.x"
   exit $ecode

@@ -804,18 +804,38 @@ mod tests {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_rainbow_firmware(
             &mut ulp_core,
-            LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(1)),
+            LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(1)), /* Affects the rate of RGB
+                                                                   * rainbow cycles */
             ctx.p.GPIO18,
         );
-        Delay::new().delay_ms(1000);
 
-        // // The core is allowed to wake us up
-        // ulp_core.enable_wakeup(LpWakeupConfig::default());
-        // let wakeup_deadline = esp_hal::time::Duration::from_millis(10000);
-        // lpwr.set_wakeup_deadline(Instant::now() + wakeup_deadline);
-        // // Enter deep sleep
-        // let mut sleep_cfg = RtcSleepConfig::default();
-        // sleep_cfg.set_rtc_peri_pd_en(false);
-        // lpwr.sleep_deep(sleep_cfg);
+        // The RAINBOW_RUN shared variable,
+        // turns the WS2812B RGB on and off,
+        // when it is set to 0xCAFEBABE.
+        unsafe extern "Rust" {
+            static mut RAINBOW_RUN: u32;
+            static mut RAINBOW_COUNTER: u32;
+        }
+
+        hil_test::assert_eq!(unsafe { RAINBOW_COUNTER }, 0);
+
+        // Turn it on
+        unsafe {
+            RAINBOW_RUN = 0xCAFEBABE;
+        }
+
+        // Run for three seconds
+        Delay::new().delay_ms(3000);
+
+        // Turn it off
+        unsafe {
+            RAINBOW_RUN = 0x0;
+        }
+
+        // Must have some time here to allow the ULP core to run
+        Delay::new().delay_ms(10);
+
+        // counter should be non-zero
+        hil_test::assert_ne!(unsafe { RAINBOW_COUNTER }, 0);
     }
 }

@@ -2,14 +2,12 @@
 #![no_main]
 #![allow(static_mut_refs)]
 
-#[allow(unused_imports)]
-use esp_lp_hal::interrupt::{external_interrupt, ExternalInterrupt};
 use esp_lp_hal::{delay::Delay, prelude::*};
 use panic_halt as _;
 use smart_leds::{
-    colors::BLACK,
-    hsv::{hsv2rgb, Hsv},
     SmartLedsWrite,
+    colors::BLACK,
+    hsv::{Hsv, hsv2rgb},
 };
 use ws2812_esp32s3_ulp::Ws2812;
 mod colours;
@@ -26,7 +24,7 @@ pub static mut RAINBOW_COUNTER: u32 = 0;
 pub static mut RAINBOW_RUN: u32 = 0xCAFEBABE;
 
 #[entry]
-fn main(gpio18_led: esp_lp_hal::gpio::Output<18>) {
+fn main(gpio18_led: esp_lp_hal::gpio::Output<18>, gpio5_button: esp_lp_hal::gpio::Input<5>) {
     let count = unsafe { RAINBOW_COUNTER };
     let is_paused = !(unsafe { RAINBOW_RUN } == 0xCAFEBABE);
 
@@ -54,7 +52,18 @@ fn main(gpio18_led: esp_lp_hal::gpio::Output<18>) {
             RAINBOW_COUNTER = count + 1;
         }
     }
+
+    if gpio5_button.level() == esp_lp_hal::gpio::Level::High {
+        esp_lp_hal::wake_hp_core();
+        let dly = Delay {};
+        dly.delay_millis(100);
+    }
 }
+
+// Old code snippets for testing gpio pin interrupts and deep-sleep wakeup
+
+// #[allow(unused_imports)]
+// use esp_lp_hal::interrupt::{external_interrupt, ExternalInterrupt};
 
 // fn enable_button_interrupts() {
 //     let btn_reg = unsafe { &*esp_lp_hal::pac::RTC_IO::PTR };

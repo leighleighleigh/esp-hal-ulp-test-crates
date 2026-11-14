@@ -151,22 +151,30 @@ pub fn reprogram_ulp_core_with_rainbow_firmware(
     ulp_core: &mut LpCore,
     wakeup_source: LpCoreWakeupSource,
     ws2812_pin: esp_hal::peripherals::GPIO18,
+    button_pin: esp_hal::peripherals::GPIO5,
 ) {
     ulp_core.erase();
     let ulp_code = load_lp_code!("target/lp_rainbow");
 
-    // configure GPIO 1 as LP output pin
-    let lp_pin = esp_hal::gpio::Output::new(
+    // configure GPIO 18 as LP output pin
+    let lp_led_pin = esp_hal::gpio::Output::new(
         ws2812_pin,
         esp_hal::gpio::Level::Low,
         esp_hal::gpio::OutputConfig::default()
             .with_drive_mode(esp_hal::gpio::DriveMode::PushPull)
             .with_pull(esp_hal::gpio::Pull::Down),
     )
-    .into_lp::<18>()
+    .into_lp()
     .unwrap();
 
-    ulp_code.run(ulp_core, wakeup_source, lp_pin);
+    let lp_button_pin = esp_hal::gpio::Input::new(
+        button_pin,
+        esp_hal::gpio::InputConfig::default().with_pull(esp_hal::gpio::Pull::None),
+    )
+    .into_lp()
+    .unwrap();
+
+    ulp_code.run(ulp_core, wakeup_source, lp_led_pin, lp_button_pin);
 }
 
 #[allow(static_mut_refs)]

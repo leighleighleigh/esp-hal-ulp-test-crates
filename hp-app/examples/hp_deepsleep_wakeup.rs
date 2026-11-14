@@ -32,25 +32,25 @@ use esp32s3 as pac;
 use hil_test::ulp_utils::ulp_riscv_reset;
 
 // Global on/off controls
-const RAINBOW_ENABLED: bool = false;
-const ULP_ENABLED: bool = true;
-// const RAINBOW_SPEED: u32 = 10; // Fast
-const RAINBOW_SPEED: u32 = 540; // Very slow
+const ULP_CORE_ENABLED: bool = true;
+const ULP_RAINBOW_DURING_SLEEP: bool = true;
+const ULP_RAINBOW_SPEED: u32 = 10; // Fast
+// const RAINBOW_SPEED: u32 = 540; // Very slow
 
 unsafe extern "Rust" {
-    static mut RAINBOW_RUN: bool;
+    static mut RAINBOW_RUN: u32; // Runs when set to 0xcafebabe
     static mut RAINBOW_COUNTER: u32;
 }
 
 #[main]
 fn main() -> ! {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
-    let peripherals = esp_hal::init(config);
+    let p = esp_hal::init(config);
 
     {
         // REQUIRED FOR LEIGHLEIGHLEIGH's CUSTOM DEVBOARD ONLY
-        let io_reg_en = unsafe { peripherals.GPIO2.clone_unchecked() };
-        let chg_reset = unsafe { peripherals.GPIO7.clone_unchecked() };
+        let io_reg_en = unsafe { p.GPIO2.clone_unchecked() };
+        let chg_reset = unsafe { p.GPIO7.clone_unchecked() };
         setup_gpio_holds(io_reg_en, chg_reset);
     }
 
@@ -58,7 +58,7 @@ fn main() -> ! {
 
     // Pause the rainbow, we are awake!
     unsafe {
-        RAINBOW_RUN = false;
+        RAINBOW_RUN = 0;
     }
 
     // Figure out the wake reason, if it was due to Ulp, don't re-program.
@@ -70,38 +70,46 @@ fn main() -> ! {
         }
     }
 
-    let mut lpwr = LowPower::new(peripherals.LPWR);
-    let mut ulp_core = LpCore::new(peripherals.ULP_RISCV_CORE);
+    let mut lpwr = LowPower::new(p.LPWR);
+    let mut ulp_core = LpCore::new(p.ULP_RISCV_CORE);
 
-    if ULP_ENABLED {
+    if ULP_CORE_ENABLED {
         ulp_core.enable_wakeup(LpWakeupConfig::default()); // HP can be woken by ULP
 
         if !ulp_was_running {
-            defmt::warn!("Re-programming ULP!");
-            let ulp_code = load_lp_code!("lp_rainbow");
+            // Chill for a couple seconds, allowing serial port to connect
+            let dly = esp_hal::delay::Delay::new();
+            dly.delay_millis(2000);
 
-            let mut led_pin = esp_hal::gpio::Output::new(
-                peripherals.GPIO18,
+            defmt::warn!("Re-programming ULP!");
+            ulp_core.erase();
+            let ulp_code = load_lp_code!("target/lp_rainbow");
+
+            let lp_led_pin = esp_hal::gpio::Output::new(
+                p.GPIO18,
                 esp_hal::gpio::Level::Low,
                 esp_hal::gpio::OutputConfig::default()
-                    .with_drive_mode(esp_hal::gpio::DriveMode::OpenDrain) // Previous was PushPull
-                    .with_pull(esp_hal::gpio::Pull::None),
-            );
-            // led_pin.set_low(); // previous working
+                    .with_drive_mode(esp_hal::gpio::DriveMode::PushPull)
+                    .with_pull(esp_hal::gpio::Pull::Down),
+            )
+            .into_lp()
+            .expect("got LP pin");
 
-            led_pin.set_high();
-            led_pin.set_pad_hold(false);
-            let lp_led_pin = led_pin.into_lp::<18>().unwrap();
+            let lp_button_pin = esp_hal::gpio::Input::new(
+                p.GPIO5,
+                esp_hal::gpio::InputConfig::default().with_pull(esp_hal::gpio::Pull::None),
+            )
+            .into_lp()
+            .unwrap();
 
             // Only when .run is called, will the ULP core be re-flashed.
-            let wakeup_source = LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(RAINBOW_SPEED));
-            ulp_code.run(&mut ulp_core, wakeup_source, lp_led_pin);
-        }
-    }
+            let wakeup_source =
+                LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(ULP_RAINBOW_SPEED));
 
-    // Pause the rainbow, we are awake!
-    unsafe {
-        RAINBOW_RUN = false;
+            ulp_code.run(&mut ulp_core, wakeup_source, lp_led_pin, lp_button_pin);
+
+            defmt::warn!("ULP reprogrammed!");
+        }
     }
 
     let count = unsafe { RAINBOW_COUNTER };
@@ -115,17 +123,19 @@ fn main() -> ! {
 
     defmt::warn!("Entering deep sleep!");
 
-    unsafe {
-        RAINBOW_RUN = RAINBOW_ENABLED;
+    if ULP_RAINBOW_DURING_SLEEP {
+        unsafe {
+            RAINBOW_RUN = 0xCAFEBABE;
+        }
     }
 
-    if !ULP_ENABLED {
+    if !ULP_CORE_ENABLED {
         let wakeup_deadline = esp_hal::time::Duration::from_millis(10000);
         lpwr.set_wakeup_deadline(Instant::now() + wakeup_deadline);
     }
 
     let mut sleep_cfg = RtcSleepConfig::default();
-    if RAINBOW_ENABLED {
+    if ULP_RAINBOW_DURING_SLEEP {
         sleep_cfg.set_rtc_peri_pd_en(false); // keep power on for low-power pins
     }
 

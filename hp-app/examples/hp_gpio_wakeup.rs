@@ -2,6 +2,7 @@
 #![no_main]
 #![allow(unused)]
 
+use defmt::{info, warn};
 use esp_backtrace as _;
 use esp_hal::{
     clock::CpuClock,
@@ -17,9 +18,7 @@ use esp_hal::{
         sleep::{LowPower, RtcSleepConfig},
     },
 };
-use esp32s3 as pac;
 use hil_test::{hp_utils::configure_rtc_pin, ulp_utils::reprogram_ulp_core_with_run_hook};
-use log::{LevelFilter, debug, info, warn};
 use shared::{
     ULP_DEBUG_GPIO_ISR_COUNT,
     ULP_DEBUG_GPIO_ISR_STATUS,
@@ -33,7 +32,6 @@ use shared::{
 fn main() -> ! {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
-    esp_println::logger::init_logger(LevelFilter::Info);
 
     {
         // REQUIRED FOR LEIGHLEIGHLEIGH's CUSTOM DEVBOARD ONLY

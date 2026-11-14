@@ -807,6 +807,7 @@ mod tests {
             LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(1)), /* Affects the rate of RGB
                                                                    * rainbow cycles */
             ctx.p.GPIO18,
+            ctx.p.GPIO5,
         );
 
         // The RAINBOW_RUN shared variable,

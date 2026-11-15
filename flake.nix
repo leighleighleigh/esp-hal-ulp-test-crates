@@ -21,7 +21,7 @@
           esp-rs = inputs.esp-rs.packages.${system}.default;
         in
         pkgs.mkShell rec {
-          name = "esp-hal-ulp";
+          name = "ulp-test-crates";
 
           packages = [
             esp-rs

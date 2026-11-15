@@ -8,8 +8,6 @@ pub use esp_hal::lp_core::{
 };
 use esp_hal::{delay::Delay, load_lp_code, time::Instant};
 use shared::{
-    ULP_DEBUG_GLOBAL_TRAP_CAUSE,
-    ULP_DEBUG_GLOBAL_TRAP_COUNT,
     ULP_DEBUG_GPIO_ISR_COUNT,
     ULP_DEBUG_GPIO_ISR_STATUS,
     ULP_DEBUG_LAST_ISR_DATA,
@@ -120,14 +118,18 @@ fn reset_ulp_shared_variables() {
     UlpLoopCounter::reset();
     UlpReply::UNSET.store();
     UlpCommand::UNSET.store();
+
+    // unsafe extern "Rust" {
+    //     load_shared!("target/lp_app");
+    //     load_shared!("target/lp_rainbow");
+    // }
+
     unsafe {
         ULP_TEST_DATA_IN = 0;
         ULP_TEST_DATA_OUT = 0;
         ULP_DEBUG_GPIO_ISR_COUNT = 0;
         ULP_DEBUG_GPIO_ISR_STATUS = 0;
         ULP_DEBUG_LAST_ISR_DATA = 0;
-        ULP_DEBUG_GLOBAL_TRAP_COUNT = 0;
-        ULP_DEBUG_GLOBAL_TRAP_CAUSE = 0;
     }
     UlpLock::reset();
 }

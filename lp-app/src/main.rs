@@ -32,11 +32,6 @@ use riscv_rt::InterruptNumber;
 use shared::{
     TEST_MUTEX_ITERATIONS,
     TEST_XOR_MASK,
-    ULP_DEBUG_GPIO_ISR_COUNT,
-    ULP_DEBUG_GPIO_ISR_STATUS,
-    ULP_DEBUG_LAST_ISR_DATA,
-    ULP_TEST_DATA_IN,
-    ULP_TEST_DATA_OUT,
     UlpBootCounter,
     UlpCommand,
     UlpHaltCounter,
@@ -50,10 +45,13 @@ use smart_leds::{
     hsv::{Hsv, hsv2rgb},
 };
 use ws2812_esp32s3_ulp::Ws2812;
-
 // Colours for ws2812
 mod colours;
 use colours::apply_brightness;
+
+// Shared variables
+pub mod exported;
+pub use exported::*;
 
 // Instant and Duration for lp hal
 mod time;

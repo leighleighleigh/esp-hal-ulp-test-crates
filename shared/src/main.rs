@@ -3,91 +3,112 @@
 /// e.g. ULP-core ELF will share symbols, to the HP-core program.
 extern crate clap;
 extern crate comfy_table;
-extern crate elf;
+use std::{error, error::Error, fmt, fs, path::PathBuf};
 
-use std::{error::Error, fs, path::PathBuf};
-
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use clap_num::maybe_hex;
 use comfy_table::{Cell, Table};
-// use object::{Object, ObjectSection};
-use elf::ElfStream;
-use elf::endian::AnyEndian;
+use object::{Object, ObjectSymbol};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
+    /// Input ELF file
     #[arg(short, long)]
     file_name: String,
 
-    #[arg(long)]
-    show_zero_sized: bool,
+    // Symbol filtering mode
+    #[arg(value_enum, short, long, default_value_t = Mode::V2)]
+    mode: Mode,
 
-    #[arg(short, long)]
-    linker: bool,
-
+    /// Offset added to each symbol address
     #[arg(short,long,value_parser=maybe_hex::<u64>)]
     base_address: Option<u64>,
+
+    /// Print using linker script format
+    #[arg(short, long)]
+    linker_format: bool,
 }
 
-// Represents an extracted STB_GLOBAL STT_OBJECT symbol,
-// with fully qualified address
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-struct GlobalObjectSymbol {
-    address: u64,
-    name: String,
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+enum Mode {
+    V1, // Legacy, hard-coded rules, doesnt expect __ULP_ prefix on shared variables.
+    V2, // New, expects __ULP_ prefix on shared variables, will remap their names
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
-
-    let path: PathBuf = From::from(args.file_name);
-    let io = std::fs::File::open(path).expect("Could not open file");
-
-    let mut elf_file =
-        ElfStream::<AnyEndian, _>::open_stream(io).expect("Failed to open ELF stream");
 
     let addr_offset = match args.base_address {
         Some(o) => o,
         None => 0,
     };
 
-    let elf_section_hdrs = elf_file.section_headers().clone();
-    let elf_symtab = elf_file.symbol_table().expect("got .symtab").clone();
-    let mut global_syms = vec![];
+    let path: PathBuf = From::from(args.file_name);
+    let file_data = fs::read(path.clone())?;
+    let obj_file = object::File::parse(&*file_data)?;
 
-    if let Some((symtab, strtab)) = elf_symtab {
-        // Filter the symbols, then extract their address and name
-        global_syms = symtab
-            .iter()
-            .filter(|sym| {
-                (sym.st_bind() == elf::abi::STB_GLOBAL)
-                    && (sym.st_symtype() == elf::abi::STT_OBJECT)
-                    && (args.show_zero_sized || (sym.st_size != 0))
-            })
-            .map(|sym| {
-                // symbol name is stored in strtab
-                let name = strtab.get(sym.st_name as usize).expect("got symbol name");
-                // resolve the symbol address relative to it's section offset address
-                let _sym_section = elf_section_hdrs[sym.st_shndx as usize];
-                let symbol_address = sym.st_value;
-                GlobalObjectSymbol {
-                    address: symbol_address,
-                    name: name.into(),
+    let mut global_syms: Vec<_> = obj_file
+        .symbols()
+        .filter(|x| x.is_global() && (x.kind() == object::SymbolKind::Data))
+        .collect::<Vec<_>>();
+
+    // Check for __ULP_MAGIC_..., which confirms that the ELF is a valid ULP/LP program.
+    if global_syms
+        .iter()
+        .filter(|x| x.name().unwrap().starts_with(ULP_MAGIC_PREFIX))
+        .count()
+        == 0
+    {
+        return Err(NoMagic.to_string().into());
+    }
+
+    // Filter symbols by name, depending on which CLI args were provided
+    global_syms = global_syms
+        .into_iter()
+        .filter(|x| {
+            // Remove the ULP magic symbol
+            if x.name().unwrap().starts_with(ULP_MAGIC_PREFIX) {
+                return false;
+            }
+
+            // Different filtering modes can be selected, based on the desired behaviour,
+            // this is done to preserve backwards compatibility (functionally, but the CLI interface
+            // is not backwards-compat lol)
+            match &args.mode {
+                Mode::V1 => {
+                    if x.name().unwrap().starts_with("_") {
+                        return false;
+                    }
+                    if x.name().unwrap() == "DEVICE_PERIPHERALS" {
+                        return false;
+                    }
+                    true
                 }
-            })
-            .filter(|gos| !gos.name.starts_with("_") && (gos.name != "DEVICE_PERIPHERALS"))
-            .collect();
-    };
+                Mode::V2 => x.name().unwrap().starts_with(ULP_SHARED_PREFIX),
+            }
+        })
+        .collect();
 
-    if !args.linker {
+    // Sort ascending by symbol address
+    global_syms.sort_by(|a, b| a.address().partial_cmp(&b.address()).expect("comparison"));
+
+    if !args.linker_format {
         // Pretty-print as a formatted table to stdout
         let mut table = Table::new();
-        table.set_header(["sym_addr", "sym_name"]);
+        table.set_header(["input_addr", "input_name", "output_addr", "output_name"]);
+
         for sym in global_syms.iter() {
+            let i_addr = sym.address();
+            let i_name = sym.name()?;
+            let o_addr = i_addr + addr_offset;
+            let o_name = extract_clean_symbol_name(&args.mode, i_name.to_string());
+
             let cells: Vec<Cell> = vec![
-                format!("{:#x}", sym.address + addr_offset).into(),
-                sym.name.clone().into(),
+                format!("{:#x}", i_addr).into(),
+                i_name.into(),
+                format!("{:#x}", o_addr).into(),
+                o_name.into(),
             ];
             table.add_row(cells);
         }
@@ -95,11 +116,51 @@ fn main() {
     } else {
         // Print as a linker script to stdout
         for sym in global_syms.iter() {
-            println!(
-                "PROVIDE({} = {});",
-                sym.name.clone(),
-                format!("{:#x}", sym.address + addr_offset)
-            );
+            let i_addr = sym.address();
+            let i_name = sym.name()?;
+            let o_addr = i_addr + addr_offset;
+            let o_name = extract_clean_symbol_name(&args.mode, i_name.to_string());
+
+            // Different entries per symbol, depending on mode
+            match &args.mode {
+                Mode::V1 => {
+                    println!("PROVIDE({} = {});", o_name, format!("{:#x}", o_addr));
+                }
+                Mode::V2 => {
+                    println!("PROVIDE({} = {});", i_name, format!("{:#x}", o_addr));
+                    println!("PROVIDE({} = {});", o_name, i_name);
+                }
+            }
         }
     }
+
+    Ok(())
 }
+
+fn extract_clean_symbol_name(mode: &Mode, iname: String) -> String {
+    match mode {
+        Mode::V1 => iname,
+        Mode::V2 => iname
+            .trim_start_matches(ULP_SHARED_PREFIX)
+            .splitn(2, "$")
+            .take(1)
+            .collect(),
+    }
+}
+
+const ULP_MAGIC_PREFIX: &str = "__ULP_MAGIC_";
+const ULP_SHARED_PREFIX: &str = "__ULP_$";
+
+#[derive(Debug, Clone)]
+struct NoMagic;
+
+impl fmt::Display for NoMagic {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Given file doesn't seem to be an LP/ULP core application."
+        )
+    }
+}
+
+impl error::Error for NoMagic {}

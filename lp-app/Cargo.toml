@@ -20,7 +20,7 @@ fugit = "0.3.7"
 # LP HAL from esp-hal
 # which will need a chip feature-flag specified,
 # in order to provide the right linker script.
-shared = { path = "../shared", features = ["is-lp-core"] }
+shared = { path = "../shared", features = [ "is-lp-core" ] }
 esp-lp-hal = { version = "0.3.0" }
 riscv-rt = { version = "0.18.0", default-features = false }
 smart-leds = { version = "0.4.0" }
@@ -45,5 +45,5 @@ codegen-units = 1 # LLVM can perform better optimizations using a single thread
 lto = false
 
 [patch.crates-io]
-# esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-riscv-interrupts" }
 esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
+esp-metadata-generated = { path = "/home/leigh/Git/esp-hal/esp-metadata-generated" }

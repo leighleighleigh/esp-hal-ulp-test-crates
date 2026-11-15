@@ -1,6 +1,6 @@
 [package]
 name = "shared"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 rust-version = "1.95.0"
 
@@ -24,24 +24,20 @@ defmt = { version = "1.1", optional = true }
 # BEGN CLI utility deps
 clap = { version = "4", features = ["derive", "unicode"], optional = true }
 comfy-table = { version = "7.1", optional = true }
-elf = { version = "0.7.4", optional = true }
-clap-num = {version = "1.2.0", optional = true }
+clap-num = { version = "1.2.0", optional = true }
 embedded-hal = "1.0.0"
 num-traits = { version = "0.2.19", default-features = false }
+object = { version = "0.41.0", optional = true }
 # END CLI utility deps
 
 [features]
 default = []
-# for extra logging on the HP
 defmt = ["dep:defmt"]
 
-# affects how the shared variables are defined
+# Enabled for the CLI program
+cli = ["dep:clap", "dep:comfy-table", "dep:object", "dep:clap-num"]
+
+# Must be enabled for ULP/LP cores
 is-lp-core = []
 
-# for the CLI program
-cli = [
-    "dep:clap",
-    "dep:comfy-table",
-    "dep:elf",
-    "dep:clap-num",
-]
+

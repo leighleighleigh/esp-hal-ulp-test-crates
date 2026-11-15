@@ -57,8 +57,6 @@ mod tests {
     use semihosting::sys::arm_compat::syscall::{self, ParamRegR, ParamRegW};
     use shared::{
         TEST_MUTEX_ITERATIONS,
-        ULP_DEBUG_GLOBAL_TRAP_CAUSE,
-        ULP_DEBUG_GLOBAL_TRAP_COUNT,
         ULP_DEBUG_GPIO_ISR_STATUS,
         ULP_DEBUG_LAST_ISR_DATA,
         ULP_TEST_DATA_IN,

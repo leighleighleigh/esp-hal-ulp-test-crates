@@ -12,11 +12,6 @@ pub struct UlpLock {
     pub is_ulp_turn: bool,
 }
 
-// impl SharedType for UlpLock {
-//     const VAR: *const Self::VarType = unsafe { &ULP_LOCK };
-//     type VarType = Self;
-// }
-
 impl UlpLock {
     #[allow(dead_code)]
     pub const fn new() -> Self {

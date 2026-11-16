@@ -9,7 +9,7 @@ use esp_hal::{
     time::Instant,
 };
 use hil_test::ulp_utils::reprogram_ulp_core_with_run_hook;
-use shared::{ULP_TEST_DATA_IN, UlpCommand, UlpLock, UlpCounter, UlpReply, traits::*};
+use shared::{ULP_TEST_DATA_IN, UlpCommand, UlpCounter, UlpLock, UlpReply, traits::*};
 
 const MUTEX_ITERATIONS: u32 = 10000;
 const HP_CORE_INCREMENTS: bool = false;

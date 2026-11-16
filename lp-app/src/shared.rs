@@ -2,7 +2,15 @@
 #![allow(static_mut_refs)]
 
 use esp_lp_hal::prelude::shared;
-use sharedtypes::{UlpCmd, UlpCmdWrapper, UlpCounter, UlpLockWrapper, UlpReply, UlpReplyWrapper};
+use sharedtypes::{
+    UlpCmd,
+    UlpCmdWrapper,
+    UlpCounter,
+    UlpLockInner,
+    UlpLockWrapper,
+    UlpReply,
+    UlpReplyWrapper,
+};
 
 #[shared]
 pub static ULP_HALT_COUNTER: UlpCounter = UlpCounter::new(0);
@@ -15,7 +23,7 @@ pub static ULP_COMMAND: UlpCmdWrapper = UlpCmdWrapper::new(UlpCmd::NOOP);
 #[shared]
 pub static ULP_REPLY: UlpReplyWrapper = UlpReplyWrapper::new(UlpReply::UNSET);
 #[shared]
-pub static ULP_LOCK: UlpLockWrapper = UlpLockWrapper::new();
+pub static ULP_LOCK: UlpLockWrapper = UlpLockWrapper::new(UlpLockInner::new());
 
 #[shared]
 pub static mut ULP_DEBUG_GPIO_ISR_COUNT: u32 = 0;

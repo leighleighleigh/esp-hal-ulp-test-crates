@@ -1,17 +1,17 @@
-use core::cell::SyncUnsafeCell;
+use crate::traits::SharedWrapper;
 
 // Inner type, exists for interior mutability reasons
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[cfg_attr(not(feature = "is-lp-core"), derive(Debug))]
 #[repr(C, align(4))]
-#[derive(Clone, Copy)]
-pub struct UlpLockData {
+#[derive(Clone, Copy, PartialEq, PartialOrd)]
+pub struct UlpLockInner {
     pub flag_ulp: bool,
     pub flag_hp: bool,
     pub is_ulp_turn: bool,
 }
 
-impl UlpLockData {
+impl UlpLockInner {
     #[allow(dead_code)]
     pub const fn new() -> Self {
         Self {
@@ -22,90 +22,68 @@ impl UlpLockData {
     }
 }
 
-// (I think) This needs to be 4-byte aligned so that the
-// RISCV core can mutate single fields in a single instruction.
-// #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-#[cfg_attr(not(feature = "is-lp-core"), derive(Debug))]
-#[repr(C, align(4))]
-pub struct UlpLockWrapper {
-    pub inner: SyncUnsafeCell<UlpLockData>,
-}
+pub type UlpLockWrapper = SharedWrapper<UlpLockInner>;
 
+// Based on: https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/system/ulp-risc-v.html#_CPPv422ulp_riscv_lock_acquireP16ulp_riscv_lock_t
 impl UlpLockWrapper {
-    #[allow(dead_code)]
-    pub const fn new() -> Self {
-        UlpLockWrapper {
-            inner: SyncUnsafeCell::new(UlpLockData::new()),
+    // Blocks until the lock is available.
+    #[cfg(feature = "is-lp-core")]
+    pub fn acquire(&self) {
+        let x = self.load_mut();
+        x.flag_ulp = true;
+        x.is_ulp_turn = false;
+
+        loop {
+            let u = self.load_mut();
+            if u.flag_hp && !u.is_ulp_turn {
+                // must have atleast one instruction of delay here.
+                memory_fence_nop();
+            } else {
+                break;
+            }
         }
     }
 
     // Blocks until the lock is available.
+    #[cfg(not(feature = "is-lp-core"))]
     pub fn acquire(&self) {
-        // Based on
-        // https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/system/ulp-risc-v.html#_CPPv422ulp_riscv_lock_acquireP16ulp_riscv_lock_t
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "is-lp-core")] {
-                unsafe {
-                    let x = self.inner.get().as_mut_unchecked();
-                    x.flag_ulp = true;
-                    x.is_ulp_turn = false;
-                }
+        let x = self.load_mut();
+        x.flag_hp = true;
+        x.is_ulp_turn = true;
+        memory_fence_nop();
 
-                loop {
-                    unsafe {
-                        let u = self.inner.get().as_mut_unchecked();
-                        if u.flag_hp && !u.is_ulp_turn {
-                            // must have atleast one instruction of delay here.
-                            memory_fence_nop();
-                        } else {
-                            break;
-                        }
-                    }
-                }
-            } else {
-                unsafe {
-                    let x = self.inner.get().as_mut_unchecked();
-                    x.flag_hp = true;
-                    x.is_ulp_turn = true;
-                }
+        loop {
+            let u = self.load_mut();
+            if u.flag_ulp && u.is_ulp_turn {
+                // must have atleast one instruction of delay here.
                 memory_fence_nop();
-
-                loop {
-                    unsafe {
-                        let u = self.inner.get().as_mut_unchecked();
-                        if u.flag_ulp && u.is_ulp_turn {
-                            // must have atleast one instruction of delay here.
-                            memory_fence_nop();
-                        } else {
-                            break;
-                        }
-                    }
-                }
+            } else {
+                break;
             }
         }
     }
 
+    // Releases the lock, if held
+    #[cfg(feature = "is-lp-core")]
     pub fn release(&self) {
-        unsafe {
-            let x = self.inner.get().as_mut_unchecked();
-            cfg_if::cfg_if! {
-                if #[cfg(feature = "is-lp-core")] {
-                    x.flag_ulp = false;
-                } else {
-                    x.flag_hp = false;
-                }
-            }
-        }
+        let x = self.load_mut();
+        x.flag_ulp = false;
+        memory_fence_nop();
+    }
+
+    // Releases the lock, if held
+    #[cfg(not(feature = "is-lp-core"))]
+    pub fn release(&self) {
+        let x = self.load_mut();
+        x.flag_hp = false;
         memory_fence_nop();
     }
 
     pub fn reset(&self) {
-        unsafe {
-            let x = self.inner.get().as_mut_unchecked();
-            x.flag_hp = false;
-            x.flag_ulp = false;
-            x.is_ulp_turn = false;
-        }
+        let x = self.load_mut();
+        x.flag_hp = false;
+        x.flag_ulp = false;
+        x.is_ulp_turn = false;
     }
 }
 

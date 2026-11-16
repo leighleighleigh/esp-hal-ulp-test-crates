@@ -3,6 +3,7 @@ use core::cell::SyncUnsafeCell;
 
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[cfg_attr(not(feature = "is-lp-core"), derive(Debug))]
+#[repr(C, align(4))]
 pub struct SharedWrapper<ET: Sized>
 where
     ET: Clone + Copy + PartialEq + PartialOrd,
@@ -28,5 +29,9 @@ where
         unsafe {
             self.inner.get().replace(value);
         }
+    }
+
+    pub fn load_mut(&self) -> &mut ET {
+        unsafe { self.inner.get().as_mut_unchecked() }
     }
 }

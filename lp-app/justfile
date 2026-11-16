@@ -44,7 +44,7 @@ build-linker-script *ARGS="-l":
   out_file="${app_file%.*}.x"
   base_addr="$(just get-chip-base-address {{chip}})"
   # Run the script
-  just run-shared-cli -f "${app_file}" -b "${base_addr}" -l | sort -ru | tee "${out_file}"
+  just run-shared-cli -f "${app_file}" -b "${base_addr}" -l | sort -ru > "${out_file}"
 
 run-shared-cli *ARGS="":
   #!/usr/bin/env bash

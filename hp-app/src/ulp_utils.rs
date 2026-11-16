@@ -8,18 +8,19 @@ pub use esp_hal::lp_core::{
 };
 use esp_hal::{delay::Delay, load_lp_code, time::Instant};
 use shared::{
+    ULP_BOOT_COUNTER,
+    ULP_COMMAND,
     ULP_DEBUG_GPIO_ISR_COUNT,
     ULP_DEBUG_GPIO_ISR_STATUS,
     ULP_DEBUG_LAST_ISR_DATA,
+    ULP_HALT_COUNTER,
+    ULP_LOCK,
+    ULP_LOOP_COUNTER,
+    ULP_REPLY,
     ULP_TEST_DATA_IN,
     ULP_TEST_DATA_OUT,
-    UlpBootCounter,
-    UlpCommand,
-    UlpHaltCounter,
-    UlpLock,
-    UlpLoopCounter,
+    UlpCmd,
     UlpReply,
-    traits::*,
 };
 
 // Type aliasing for peripheral type
@@ -113,16 +114,11 @@ pub fn ulp_erase() {
 // Reset all of the shared variables to their uninitialised state.
 // This can be called within the pre_run_hook.
 fn reset_ulp_shared_variables() {
-    UlpBootCounter::reset();
-    UlpHaltCounter::reset();
-    UlpLoopCounter::reset();
-    UlpReply::UNSET.store();
-    UlpCommand::UNSET.store();
-
-    // unsafe extern "Rust" {
-    //     load_shared!("target/lp_app");
-    //     load_shared!("target/lp_rainbow");
-    // }
+    ULP_BOOT_COUNTER.reset();
+    ULP_HALT_COUNTER.reset();
+    ULP_LOOP_COUNTER.reset();
+    ULP_REPLY.store(UlpReply::UNSET);
+    ULP_COMMAND.store(UlpCmd::UNSET);
 
     unsafe {
         ULP_TEST_DATA_IN = 0;
@@ -131,7 +127,8 @@ fn reset_ulp_shared_variables() {
         ULP_DEBUG_GPIO_ISR_STATUS = 0;
         ULP_DEBUG_LAST_ISR_DATA = 0;
     }
-    UlpLock::reset();
+
+    ULP_LOCK.reset();
 }
 
 pub fn reprogram_ulp_core_with_run_hook<'a, F>(
@@ -182,21 +179,21 @@ pub fn reprogram_ulp_core_with_rainbow_firmware(
 #[allow(static_mut_refs)]
 pub fn ulp_has_booted() -> bool {
     Delay::new().delay_ms(ULP_HAS_BOOTED_DELAY_MILLIS);
-    UlpBootCounter::load() != 0
+    ULP_BOOT_COUNTER.load() != 0
 }
 
 #[allow(static_mut_refs)]
 pub fn ulp_is_looping() -> bool {
     let t0 = Instant::now();
     let mut t1;
-    let a = UlpLoopCounter::load();
+    let a = ULP_LOOP_COUNTER.load();
     let mut b;
 
     loop {
         Delay::new().delay_us(10);
 
         t1 = Instant::now();
-        b = UlpLoopCounter::load();
+        b = ULP_LOOP_COUNTER.load();
 
         if a != b {
             break;

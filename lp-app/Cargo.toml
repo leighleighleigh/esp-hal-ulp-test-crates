@@ -20,7 +20,7 @@ fugit = "0.3.7"
 # LP HAL from esp-hal
 # which will need a chip feature-flag specified,
 # in order to provide the right linker script.
-shared = { path = "../shared", features = [ "is-lp-core" ] }
+sharedtypes = { path = "../shared", features = [ "is-lp-core" ], package = "shared" }
 esp-lp-hal = { version = "0.3.0" }
 riscv-rt = { version = "0.18.0", default-features = false }
 smart-leds = { version = "0.4.0" }

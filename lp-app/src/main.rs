@@ -29,17 +29,7 @@ use esp_lp_hal::{
 use max170xx::Max17048;
 use panic_halt as _;
 use riscv_rt::InterruptNumber;
-use shared::{
-    TEST_MUTEX_ITERATIONS,
-    TEST_XOR_MASK,
-    UlpBootCounter,
-    UlpCommand,
-    UlpHaltCounter,
-    UlpLock,
-    UlpLoopCounter,
-    UlpReply,
-    traits::*,
-};
+use sharedtypes::{TEST_MUTEX_ITERATIONS, TEST_XOR_MASK, UlpCmd, UlpReply};
 use smart_leds::{
     SmartLedsWrite,
     hsv::{Hsv, hsv2rgb},
@@ -50,8 +40,8 @@ mod colours;
 use colours::apply_brightness;
 
 // Shared variables
-pub mod exported;
-pub use exported::*;
+pub mod shared;
+pub use shared::*;
 
 // Instant and Duration for lp hal
 mod time;
@@ -156,106 +146,106 @@ unsafe fn steal_output<const PIN: u8>() -> esp_lp_hal::gpio::Output<PIN> {
 
 #[entry]
 fn main() {
-    UlpBootCounter::increment();
+    ULP_BOOT_COUNTER.increment();
 
     loop {
         // Re-reading the command allows it to be modified by ourself.
         // E.g. MUTEX_TEST will change the command to NOOP when completed,
         // to prevent re-running the test.
-        let cmd: UlpCommand = UlpCommand::load();
+        let cmd = ULP_COMMAND.load();
 
         match cmd {
-            UlpCommand::NOOP => {
+            UlpCmd::NOOP => {
                 // Do nothing
-                UlpReply::OK.store();
+                ULP_REPLY.store(UlpReply::OK);
             }
-            UlpCommand::COUNTER_ONESHOT => {
+            UlpCmd::COUNTER_ONESHOT => {
                 // Increment counter ONCE, then stay loop-ing on NOOP.
-                UlpLoopCounter::increment();
-                UlpCommand::NOOP.store();
-                UlpReply::OK.store();
+                ULP_LOOP_COUNTER.increment();
+                ULP_COMMAND.store(UlpCmd::NOOP);
+                ULP_REPLY.store(UlpReply::OK);
             }
-            UlpCommand::COUNTER_LOOP => unsafe {
+            UlpCmd::COUNTER_LOOP => unsafe {
                 // Keep incrementing the counter in a loop
-                UlpLoopCounter::increment();
-                UlpReply::OK.store();
+                ULP_LOOP_COUNTER.increment();
+                ULP_REPLY.store(UlpReply::OK);
             },
-            UlpCommand::COUNTER_ULP_TIMER => unsafe {
-                UlpLoopCounter::increment();
-                UlpReply::OK.store();
+            UlpCmd::COUNTER_ULP_TIMER => unsafe {
+                ULP_LOOP_COUNTER.increment();
+                ULP_REPLY.store(UlpReply::OK);
                 // Exit the loop, the ULP Timer will re-start us.
                 break;
             },
-            UlpCommand::XOR_TEST => unsafe {
-                UlpLoopCounter::increment();
+            UlpCmd::XOR_TEST => unsafe {
+                ULP_LOOP_COUNTER.increment();
                 let data_in = unsafe { ULP_TEST_DATA_IN };
                 unsafe { ULP_TEST_DATA_OUT = data_in ^ TEST_XOR_MASK };
                 // Run once.
-                UlpCommand::NOOP.store();
-                UlpReply::OK.store();
+                ULP_COMMAND.store(UlpCmd::NOOP);
+                ULP_REPLY.store(UlpReply::OK);
             },
-            UlpCommand::STOP_TEST => unsafe {
-                UlpLoopCounter::increment();
-                UlpReply::OK.store();
+            UlpCmd::STOP_TEST => unsafe {
+                ULP_LOOP_COUNTER.increment();
+                ULP_REPLY.store(UlpReply::OK);
                 ulp_riscv_timer_stop();
                 break;
             },
-            UlpCommand::MUTEX_TEST => unsafe {
+            UlpCmd::MUTEX_TEST => {
                 // Reset status to indicate we are processing
-                UlpReply::BUSY.store();
+                ULP_REPLY.store(UlpReply::BUSY);
                 let iters = unsafe { ULP_TEST_DATA_IN };
                 for _ in 0..iters {
-                    UlpLock::acquire();
-                    UlpLoopCounter::increment();
-                    UlpLock::release();
+                    ULP_LOCK.acquire();
+                    ULP_LOOP_COUNTER.increment();
+                    ULP_LOCK.release();
                 }
-                UlpReply::OK.store();
-                UlpCommand::NOOP.store();
-            },
-            UlpCommand::TIMER_PERIOD_TEST => unsafe {
-                UlpLoopCounter::increment();
+                ULP_REPLY.store(UlpReply::OK);
+                ULP_COMMAND.store(UlpCmd::NOOP);
+            }
+            UlpCmd::TIMER_PERIOD_TEST => unsafe {
+                ULP_LOOP_COUNTER.increment();
                 let new_cycles = unsafe { ULP_TEST_DATA_IN };
                 ulp_timer_period(new_cycles);
-                UlpReply::OK.store();
+                ULP_REPLY.store(UlpReply::OK);
                 break;
             },
-            UlpCommand::LIGHT_SLEEP_TEST => unsafe {
-                UlpLoopCounter::increment();
-                UlpReply::OK.store();
+            UlpCmd::LIGHT_SLEEP_TEST => {
+                ULP_LOOP_COUNTER.increment();
+                ULP_REPLY.store(UlpReply::OK);
 
                 // NEW approach - wait for HP core to release the lock.
                 // HP core has 0.1 seconds to acquire before we do.
                 delay_for_a_tenth_second();
                 // BLOCK HERE UNTIL HP CORE RELEASES
-                UlpLock::acquire();
+                ULP_LOCK.acquire();
                 // Wake up the core
                 wake_hp_core();
                 // Disable the timer, so the LP-core will remain halted on exit.
                 ulp_riscv_timer_stop();
                 break;
-            },
-            UlpCommand::EXCEPTION_TEST => unsafe {
+            }
+            UlpCmd::EXCEPTION_TEST => unsafe {
                 // Should trigger an illegal instruction
-                UlpLoopCounter::increment();
-                UlpReply::OK.store();
+                ULP_LOOP_COUNTER.increment();
+                ULP_REPLY.store(UlpReply::OK);
                 unsafe {
                     core::arch::asm!("csrrs a1, mcause, zero");
                 }
             },
-            UlpCommand::START_INT_TEST => unsafe {
-                if UlpLoopCounter::load() == 0 {
-                    UlpReply::OK.store();
+            UlpCmd::START_INT_TEST => unsafe {
+                if ULP_LOOP_COUNTER.load() == 0 {
+                    ULP_REPLY.store(UlpReply::OK);
                     // Enable the COCPU start interrupt
                     let reg = unsafe { &*esp_lp_hal::pac::SENS::PTR };
                     reg.sar_cocpu_int_ena()
                         .write(|w| w.sar_cocpu_start_int_ena().set_bit());
                 }
                 // Increment the loop counter
-                UlpLoopCounter::increment();
+                ULP_LOOP_COUNTER.increment();
                 // Add a delay to make the counter chill out
                 delay_for_a_tenth_second();
             },
-            UlpCommand::WAITIRQ_TIMER_TEST => unsafe {
+            UlpCmd::WAITIRQ_TIMER_TEST => unsafe {
                 // ULP_TEST_DATA_OUT --> approx number of CPU cycles
                 // that were elapsed while waitirq blocked.
                 // ULP_TEST_DATA_IN <-- TIMER_PER duration to run the timer
@@ -264,7 +254,7 @@ fn main() {
                 // Clear the previous test data state
                 ULP_TEST_DATA_OUT = 0;
                 // This will run BUSY -> OK -> BUSY -> OK
-                UlpReply::BUSY.store();
+                ULP_REPLY.store(UlpReply::BUSY);
                 // Start the timer
                 ulp_timer_insn(timer_period);
                 // Get our cpu cycle count before blocking on waitirq
@@ -279,27 +269,27 @@ fn main() {
                 if (irqm & 1) != 0 {
                     // Disable the timer (unsure if needed?)
                     ulp_timer_insn(0);
-                    UlpReply::OK.store();
-                    UlpLoopCounter::increment();
+                    ULP_REPLY.store(UlpReply::OK);
+                    ULP_LOOP_COUNTER.increment();
                 } else {
                     // Waitirq did catch the timer IRQ, test has failed
-                    UlpReply::NOK.store();
+                    ULP_REPLY.store(UlpReply::NOK);
                 }
                 // Change to NO-OP
-                UlpCommand::NOOP.store();
+                ULP_COMMAND.store(UlpCmd::NOOP);
             },
-            UlpCommand::GPIO_INT_TEST => unsafe {
-                if UlpLoopCounter::load() == 0 {
-                    UlpReply::OK.store();
+            UlpCmd::GPIO_INT_TEST => unsafe {
+                if ULP_LOOP_COUNTER.load() == 0 {
+                    ULP_REPLY.store(UlpReply::OK);
                 }
                 // Increment the loop counter
-                UlpLoopCounter::increment();
+                ULP_LOOP_COUNTER.increment();
                 // Add a delay to make the counter chill out
                 delay_for_a_tenth_second();
             },
-            UlpCommand::GPIO_WAKEUP_TEST => unsafe {
-                UlpLoopCounter::increment();
-                UlpReply::OK.store();
+            UlpCmd::GPIO_WAKEUP_TEST => unsafe {
+                ULP_LOOP_COUNTER.increment();
+                ULP_REPLY.store(UlpReply::OK);
                 // Wake the HP core too (not used in the test suite, but useful in other examples)
                 esp_lp_hal::wake_hp_core();
                 // ULP will keep booting while the GPIO wake-up event is true,
@@ -307,8 +297,8 @@ fn main() {
                 setup_gpio_wakeup(true);
                 break;
             },
-            UlpCommand::MAX1708_I2C_BMS_TEST => unsafe {
-                UlpReply::BUSY.store();
+            UlpCmd::MAX1708_I2C_BMS_TEST => unsafe {
+                ULP_REPLY.store(UlpReply::BUSY);
                 let (mut scl, mut sda) = steal_i2c_pins();
                 let i2c_clk = Timer::new();
                 let mut i2c = I2cBB::new(scl, sda, i2c_clk);
@@ -318,34 +308,34 @@ fn main() {
                         ULP_TEST_DATA_OUT = v as u32;
                     }
                 }
-                UlpLoopCounter::increment();
+                ULP_LOOP_COUNTER.increment();
                 Delay {}.delay_millis(10);
-                UlpCommand::NOOP.store();
+                ULP_COMMAND.store(UlpCmd::NOOP);
             },
-            UlpCommand::WS2812_LED_TEST => unsafe {
-                UlpReply::OK.store();
+            UlpCmd::WS2812_LED_TEST => unsafe {
+                ULP_REPLY.store(UlpReply::OK);
                 let mut gpio18_led = steal_output::<18>();
                 let ws_clk = Timer::new();
                 let mut ws = Ws2812::new(gpio18_led, ws_clk);
                 let hsv = Hsv {
-                    hue: UlpBootCounter::load() as u8,
+                    hue: ULP_BOOT_COUNTER.load() as u8,
                     sat: 240,
                     val: 240,
                 };
                 let rgb = apply_brightness(hsv2rgb(hsv), 10);
                 ws.write([rgb]);
-                UlpLoopCounter::increment();
+                ULP_LOOP_COUNTER.increment();
                 // Break and go to sleep
                 break;
             },
             _ => unsafe {
                 // Unknown command, not okay!
-                UlpReply::NOK.store();
+                ULP_REPLY.store(UlpReply::NOK);
             },
         };
     }
 
-    UlpHaltCounter::increment();
+    ULP_HALT_COUNTER.increment();
 }
 
 // Used for EXCEPTION_TEST
@@ -365,7 +355,7 @@ unsafe fn misaligned_load(_trap: &TrapFrame) -> ! {
 
 #[core_interrupt(CoreInterrupt::MachineTimer)]
 unsafe fn machine_timer() {
-    UlpLoopCounter::increment();
+    ULP_LOOP_COUNTER.increment();
     unsafe { ULP_DEBUG_LAST_ISR_DATA = 0xba5eba11 };
 }
 

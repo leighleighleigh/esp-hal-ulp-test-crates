@@ -57,15 +57,17 @@ mod tests {
     use semihosting::sys::arm_compat::syscall::{self, ParamRegR, ParamRegW};
     use shared::{
         TEST_MUTEX_ITERATIONS,
+        ULP_BOOT_COUNTER,
+        ULP_COMMAND,
         ULP_DEBUG_GPIO_ISR_STATUS,
         ULP_DEBUG_LAST_ISR_DATA,
+        ULP_HALT_COUNTER,
+        ULP_LOCK,
+        ULP_LOOP_COUNTER,
+        ULP_REPLY,
         ULP_TEST_DATA_IN,
         ULP_TEST_DATA_OUT,
-        UlpBootCounter,
-        UlpCommand,
-        UlpHaltCounter,
-        UlpLock,
-        UlpLoopCounter,
+        UlpCmd,
         UlpReply,
         traits::*,
     };
@@ -110,15 +112,15 @@ mod tests {
     fn ulp_can_boot(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
-            UlpCommand::NOOP.store();
+            ULP_COMMAND.store(UlpCmd::NOOP);
         });
         hil_test::assert_eq!(ulp_has_booted(), true);
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
         // Booted once
-        let a = UlpBootCounter::load();
+        let a = ULP_BOOT_COUNTER.load();
         hil_test::assert_eq!(1, a);
         // Did not loop
-        let b = UlpLoopCounter::load();
+        let b = ULP_LOOP_COUNTER.load();
         hil_test::assert_eq!(0, b);
     }
 
@@ -126,15 +128,15 @@ mod tests {
     fn ulp_loop_oneshot(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
-            UlpCommand::COUNTER_ONESHOT.store();
+            ULP_COMMAND.store(UlpCmd::COUNTER_ONESHOT);
         });
         hil_test::assert_eq!(ulp_has_booted(), true);
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
         // Booted once
-        let a = UlpBootCounter::load();
+        let a = ULP_BOOT_COUNTER.load();
         hil_test::assert_eq!(1, a);
         // Looped once
-        let b = UlpLoopCounter::load();
+        let b = ULP_LOOP_COUNTER.load();
         hil_test::assert_eq!(1, b);
     }
 
@@ -142,10 +144,10 @@ mod tests {
     fn ulp_loop_counter(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
-            UlpCommand::COUNTER_LOOP.store();
+            ULP_COMMAND.store(UlpCmd::COUNTER_LOOP);
         });
         hil_test::assert_eq!(ulp_has_booted(), true);
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
         hil_test::assert_eq!(true, ulp_is_looping());
     }
 
@@ -156,16 +158,16 @@ mod tests {
             &mut ulp_core,
             LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(5)),
             || {
-                UlpCommand::COUNTER_ULP_TIMER.store();
+                ULP_COMMAND.store(UlpCmd::COUNTER_ULP_TIMER);
             },
         );
         hil_test::assert_eq!(ulp_has_booted(), true);
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
-        defmt::debug!("count: {}", UlpLoopCounter::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
+        defmt::debug!("count: {}", ULP_LOOP_COUNTER.load());
         // Delay for a second
         Delay::new().delay_ms(1000);
         // Check the count is above 10
-        let count = UlpLoopCounter::load();
+        let count = ULP_LOOP_COUNTER.load();
         defmt::debug!("count: {}", count);
         hil_test::assert!(count >= 10);
     }
@@ -177,11 +179,11 @@ mod tests {
             &mut ulp_core,
             LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(5)),
             || {
-                UlpCommand::COUNTER_ULP_TIMER.store();
+                ULP_COMMAND.store(UlpCmd::COUNTER_ULP_TIMER);
             },
         );
         hil_test::assert_eq!(ulp_has_booted(), true);
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
         hil_test::assert!(ulp_is_looping());
         ulp_riscv_timer_stop();
         ulp_riscv_halt(); // esp-idf tests do a halt here, unsure why...
@@ -197,29 +199,29 @@ mod tests {
             &mut ulp_core,
             LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(530)), // Approx 1Hz
             || {
-                UlpCommand::COUNTER_ULP_TIMER.store();
+                ULP_COMMAND.store(UlpCmd::COUNTER_ULP_TIMER);
             },
         );
         hil_test::assert_eq!(ulp_has_booted(), true);
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
         hil_test::assert!(ulp_is_looping());
         // Confirm the slow rate is being used
-        let count = UlpLoopCounter::load();
+        let count = ULP_LOOP_COUNTER.load();
         hil_test::assert!(count <= 10);
 
         // Change speed to a fast one
         ulp_timer_period(0);
-        UlpLoopCounter::reset();
+        ULP_LOOP_COUNTER.reset();
         Delay::new().delay_ms(100);
-        let count = UlpLoopCounter::load();
+        let count = ULP_LOOP_COUNTER.load();
         defmt::debug!("count: {}", count);
         hil_test::assert!(count >= 100);
 
         // Change speed to a slow one
         ulp_timer_period(1000);
-        UlpLoopCounter::reset();
+        ULP_LOOP_COUNTER.reset();
         Delay::new().delay_ms(1000);
-        let count = UlpLoopCounter::load();
+        let count = ULP_LOOP_COUNTER.load();
         defmt::debug!("count: {}", count);
         hil_test::assert!(count <= 2);
     }
@@ -232,7 +234,7 @@ mod tests {
             // Set the timer to a known ~1Hz period
             LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(530)),
             || {
-                UlpCommand::TIMER_PERIOD_TEST.store();
+                ULP_COMMAND.store(UlpCmd::TIMER_PERIOD_TEST);
                 // Using DATA_IN, ask the ULP to configure a much faster rate.
                 unsafe {
                     ULP_TEST_DATA_IN = 1;
@@ -240,13 +242,13 @@ mod tests {
             },
         );
         hil_test::assert!(ulp_has_booted());
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
         hil_test::assert_eq!(true, ulp_is_looping());
 
         // Check it is running at a fast rate
         defmt::debug!("Waiting for 1 second...");
         Delay::new().delay_ms(1000);
-        let count = UlpLoopCounter::load();
+        let count = ULP_LOOP_COUNTER.load();
         defmt::debug!("count: {}", count);
         hil_test::assert!(count >= 10);
 
@@ -258,19 +260,19 @@ mod tests {
         unsafe {
             ULP_TEST_DATA_IN = 530 / 2; // 2Hz
         }
-        UlpLoopCounter::reset();
-        UlpBootCounter::reset();
-        UlpReply::UNSET.store();
+        ULP_LOOP_COUNTER.reset();
+        ULP_BOOT_COUNTER.reset();
+        ULP_REPLY.store(UlpReply::UNSET);
 
         defmt::debug!("Resuming timer...");
         ulp_riscv_timer_resume();
         hil_test::assert!(ulp_has_booted());
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
 
         // Confirm the slow rate was applied
         defmt::debug!("Waiting for 1 second...");
         Delay::new().delay_ms(1000);
-        let count = UlpLoopCounter::load();
+        let count = ULP_LOOP_COUNTER.load();
         defmt::debug!("count: {}", count);
         hil_test::assert!(count >= 1 && count <= 3);
     }
@@ -280,12 +282,12 @@ mod tests {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         let test_value = 0xff;
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
-            UlpCommand::XOR_TEST.store();
+            ULP_COMMAND.store(UlpCmd::XOR_TEST);
             // The value for the LP core to XOR
             unsafe { ULP_TEST_DATA_IN = test_value };
         });
         hil_test::assert!(ulp_has_booted());
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
 
         // Check the data
         let result = unsafe { ULP_TEST_DATA_OUT.clone() };
@@ -296,12 +298,12 @@ mod tests {
     fn ulp_exception(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
-            UlpCommand::EXCEPTION_TEST.store();
+            ULP_COMMAND.store(UlpCmd::EXCEPTION_TEST);
             unsafe { ULP_TEST_DATA_OUT = 0x0 };
             unsafe { ULP_DEBUG_LAST_ISR_DATA = 0x0 };
         });
         hil_test::assert!(ulp_has_booted());
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
 
         // Check the exception write 0xdeadbeef to the DATA1 variable
         let result = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
@@ -316,10 +318,10 @@ mod tests {
     fn ulp_interrupt(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
-            UlpCommand::START_INT_TEST.store();
+            ULP_COMMAND.store(UlpCmd::START_INT_TEST);
         });
         hil_test::assert!(ulp_has_booted());
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
         hil_test::assert_eq!(true, ulp_is_looping());
 
         let result = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
@@ -350,7 +352,7 @@ mod tests {
 
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || unsafe {
-            UlpCommand::WAITIRQ_TIMER_TEST.store();
+            ULP_COMMAND.store(UlpCmd::WAITIRQ_TIMER_TEST);
             // ULP will set it's timer to the value of ULP_TEST_DATA_IN.
             ULP_TEST_DATA_IN = ULP_TICKS_PER_MILLIS * timer_duration_ms;
         });
@@ -364,14 +366,14 @@ mod tests {
         for i in 1..=5 {
             // Check that the command was received, and the ULP core is currently
             // blocking until the timer expires.
-            hil_test::assert_eq!(UlpReply::BUSY, UlpReply::load());
+            hil_test::assert_eq!(UlpReply::BUSY, ULP_REPLY.load());
 
             // HP core wait until timer should have expired
             dly.delay_millis(timer_duration_ms);
 
             // Read the result variables
-            let ulp_reply = UlpReply::load();
-            let ulp_loop_count = UlpLoopCounter::load();
+            let ulp_reply = ULP_REPLY.load();
+            let ulp_loop_count = ULP_LOOP_COUNTER.load();
             let ulp_waitirq_cycles = unsafe { ULP_TEST_DATA_OUT.clone() };
 
             // Calculate the difference between the expected number of timer cycles,
@@ -406,7 +408,7 @@ mod tests {
             unsafe {
                 ULP_TEST_DATA_IN = ULP_TICKS_PER_MILLIS * timer_duration_ms;
             }
-            UlpCommand::WAITIRQ_TIMER_TEST.store();
+            ULP_COMMAND.store(UlpCmd::WAITIRQ_TIMER_TEST);
 
             // Wait a small period to allow the core to start the command
             dly.delay_millis(10);
@@ -443,14 +445,14 @@ mod tests {
 
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
-            UlpCommand::GPIO_INT_TEST.store();
+            ULP_COMMAND.store(UlpCmd::GPIO_INT_TEST);
             unsafe { ULP_TEST_DATA_OUT = 0x0 };
             unsafe { ULP_DEBUG_GPIO_ISR_STATUS = 0x0 };
             unsafe { ULP_DEBUG_LAST_ISR_DATA = 0x0 };
         });
 
         hil_test::assert!(ulp_has_booted());
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
         hil_test::assert_eq!(true, ulp_is_looping());
 
         // The HP core will toggle the pin, and check that the LP core interrupt was fired.
@@ -553,7 +555,7 @@ mod tests {
 
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::Gpio, || {
-            UlpCommand::GPIO_WAKEUP_TEST.store();
+            ULP_COMMAND.store(UlpCmd::GPIO_WAKEUP_TEST);
         });
 
         // Should not be awake (yet!)
@@ -584,7 +586,7 @@ mod tests {
         hp_pin_on();
         Delay::new().delay_millis(100);
         hil_test::assert!(ulp_has_booted());
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
         hil_test::assert_eq!(true, ulp_is_looping());
         hp_pin_off();
         Delay::new().delay_millis(100);
@@ -602,7 +604,7 @@ mod tests {
         Delay::new().delay_millis(100);
         hil_test::assert_eq!(false, ulp_is_looping());
 
-        // hil_test::assert_eq!(2, UlpBootCounter::load());
+        // hil_test::assert_eq!(2, ULP_BOOT_COUNTER.load());
     }
 
     #[test]
@@ -612,48 +614,48 @@ mod tests {
             &mut ulp_core,
             LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(5)),
             || {
-                UlpCommand::STOP_TEST.store();
+                ULP_COMMAND.store(UlpCmd::STOP_TEST);
             },
         );
         hil_test::assert!(ulp_has_booted());
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
         // It should not be looping if it stopped itself correctly
         hil_test::assert_eq!(false, ulp_is_looping());
-        hil_test::assert_eq!(1, UlpBootCounter::load());
-        hil_test::assert_eq!(1, UlpHaltCounter::load());
+        hil_test::assert_eq!(1, ULP_BOOT_COUNTER.load());
+        hil_test::assert_eq!(1, ULP_HALT_COUNTER.load());
 
         // Now try and resume it from the HP core,
         // which should cause the boot counter to increment again.
         // The UlpCommand should be the same, so both Boot and Halt counters should increment.
         ulp_riscv_timer_resume();
         hil_test::assert!(ulp_has_booted());
-        hil_test::assert_eq!(2, UlpBootCounter::load());
-        hil_test::assert_eq!(2, UlpHaltCounter::load());
+        hil_test::assert_eq!(2, ULP_BOOT_COUNTER.load());
+        hil_test::assert_eq!(2, ULP_HALT_COUNTER.load());
     }
 
     #[test]
     fn ipc_mutex_lock(ctx: Context) {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
-            UlpCommand::MUTEX_TEST.store();
+            ULP_COMMAND.store(UlpCmd::MUTEX_TEST);
             // Number of mutex iterations to run
             unsafe { ULP_TEST_DATA_IN = TEST_MUTEX_ITERATIONS };
         });
 
         for _ in 0..TEST_MUTEX_ITERATIONS {
-            UlpLock::acquire();
-            UlpLoopCounter::increment();
-            UlpLock::release();
+            ULP_LOCK.acquire();
+            ULP_LOOP_COUNTER.increment();
+            ULP_LOCK.release();
         }
 
-        while UlpReply::load() != UlpReply::OK {
+        while ULP_REPLY.load() != UlpReply::OK {
             // Need a delay here, else CPU will block the ULP core.
             Delay::new().delay_millis(1);
         }
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
 
         // Assert no race conditions and we incremented 2x the number of loops
-        hil_test::assert_eq!(2 * TEST_MUTEX_ITERATIONS, UlpLoopCounter::load());
+        hil_test::assert_eq!(2 * TEST_MUTEX_ITERATIONS, ULP_LOOP_COUNTER.load());
     }
 
     #[test]
@@ -674,13 +676,13 @@ mod tests {
             &mut ulp_core,
             LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(5)), // Controls speed of rainbow
             || {
-                UlpCommand::WS2812_LED_TEST.store();
+                ULP_COMMAND.store(UlpCmd::WS2812_LED_TEST);
             },
         );
 
         hil_test::assert!(ulp_has_booted());
         hil_test::assert!(ulp_is_looping());
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
         // wait a for a bit
         Delay::new().delay_millis(3000);
         hil_test::assert!(ulp_is_looping());
@@ -712,7 +714,7 @@ mod tests {
 
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
-            UlpCommand::MAX1708_I2C_BMS_TEST.store();
+            ULP_COMMAND.store(UlpCmd::MAX1708_I2C_BMS_TEST);
         });
 
         // check booted and command acknowledged
@@ -722,19 +724,19 @@ mod tests {
         // print the result from TEST_DATA_OUT,
         // then re-trigger a new scan.
         for _ in 0..10 {
-            UlpCommand::MAX1708_I2C_BMS_TEST.store();
+            ULP_COMMAND.store(UlpCmd::MAX1708_I2C_BMS_TEST);
             Delay::new().delay_millis(1);
-            hil_test::assert_eq!(UlpReply::BUSY, UlpReply::load());
+            hil_test::assert_eq!(UlpReply::BUSY, ULP_REPLY.load());
 
             Delay::new().delay_millis(200);
-            hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+            hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
 
             let data = unsafe { ULP_TEST_DATA_OUT };
             let voltage = (data as f32) / 10000.0;
             defmt::debug!("Battery: {} V", voltage);
         }
 
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
         hil_test::assert!(!ulp_is_looping());
     }
 
@@ -745,17 +747,16 @@ mod tests {
 
         // Program and start the ULP core, which will wake us up after 3 seconds.
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
-            UlpCommand::LIGHT_SLEEP_TEST.store();
-            UlpHaltCounter::store(0.into());
+            ULP_COMMAND.store(UlpCmd::LIGHT_SLEEP_TEST);
         });
 
         // Immediately acquire the lock, before the ULP core does,
         // and release it when we want to be woken up.
-        UlpLock::acquire();
+        ULP_LOCK.acquire();
         defmt::debug!("UlpLock acquired.");
 
         hil_test::assert!(ulp_has_booted());
-        hil_test::assert_eq!(UlpReply::OK, UlpReply::load());
+        hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
         defmt::debug!("ULP booted.");
 
         // Wait 0.1 seconds (maximum time) for ULP to be ready to handle the lock
@@ -771,7 +772,7 @@ mod tests {
         // Enter light sleep, recording the time of entry.
         let sleep_cfg = RtcSleepConfig::default();
         let sleep_start_timestamp = Instant::now();
-        UlpLock::release();
+        ULP_LOCK.release();
         lpwr.sleep_light(sleep_cfg);
 
         /////////////////////////////////////////////////////////////////////////////////
@@ -787,7 +788,7 @@ mod tests {
         hil_test::assert!(sleep_duration < wakeup_deadline);
 
         // Check that the ULP core only ran once
-        hil_test::assert_eq!(UlpHaltCounter::load(), 1);
+        hil_test::assert_eq!(ULP_HALT_COUNTER.load(), 1);
     }
 
     #[test]

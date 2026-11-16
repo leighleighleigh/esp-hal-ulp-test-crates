@@ -9,7 +9,7 @@ use esp_hal::{
     time::Instant,
 };
 use hil_test::ulp_utils::reprogram_ulp_core_with_run_hook;
-use shared::{ULP_TEST_DATA_IN, UlpCommand, UlpLock, UlpLoopCounter, UlpReply, traits::*};
+use shared::{ULP_TEST_DATA_IN, UlpCommand, UlpLock, UlpCounter, UlpReply, traits::*};
 
 const MUTEX_ITERATIONS: u32 = 10000;
 const HP_CORE_INCREMENTS: bool = false;
@@ -51,7 +51,7 @@ fn main() -> ! {
         for _i in 0..MUTEX_ITERATIONS {
             UlpLock::acquire();
             if HP_CORE_INCREMENTS {
-                UlpLoopCounter::increment();
+                UlpCounter::increment();
             }
             UlpLock::release();
         }
@@ -75,10 +75,10 @@ fn main() -> ! {
 
         if HP_CORE_INCREMENTS {
             // Assert no race conditions and we incremented 2x the number of loops
-            hil_test::assert_eq!(2 * MUTEX_ITERATIONS, UlpLoopCounter::load());
+            hil_test::assert_eq!(2 * MUTEX_ITERATIONS, UlpCounter::load());
         } else {
             // Assert the ULP core incremented 1x the number of loops
-            hil_test::assert_eq!(MUTEX_ITERATIONS, UlpLoopCounter::load());
+            hil_test::assert_eq!(MUTEX_ITERATIONS, UlpCounter::load());
         }
 
         superloop += 1;
@@ -86,7 +86,7 @@ fn main() -> ! {
         dly.delay_millis(1000); // wait for a second before running again
 
         // Reset the counter
-        UlpLoopCounter::reset();
+        UlpCounter::reset();
         // Tell the core to do the test again
         UlpCommand::MUTEX_TEST.store();
     }

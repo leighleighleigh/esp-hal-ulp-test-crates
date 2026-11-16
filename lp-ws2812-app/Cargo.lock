@@ -48,7 +48,6 @@ checksum = "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
 [[package]]
 name = "esp-hal-procmacros"
 version = "0.23.0"
-source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "document-features",
  "proc-macro-crate",
@@ -61,7 +60,6 @@ dependencies = [
 [[package]]
 name = "esp-lp-hal"
 version = "0.3.0"
-source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "critical-section",
  "document-features",
@@ -80,7 +78,6 @@ dependencies = [
 [[package]]
 name = "esp-metadata-generated"
 version = "0.5.1"
-source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 
 [[package]]
 name = "esp-metadata-generated"

@@ -1,14 +1,11 @@
 #![no_std]
 #![no_main]
-#![allow(unused)]
 #![allow(static_mut_refs)]
 
-use core::iter;
-
-use embedded_hal::i2c::I2c;
+// use embedded_hal::i2c::I2c;
 use esp_lp_hal::{
     delay::Delay,
-    gpio,
+    // gpio,
     interrupt::{
         CoreInterrupt,
         Exception,
@@ -17,7 +14,7 @@ use esp_lp_hal::{
         core_interrupt,
         exception,
         external_interrupt,
-        ulp_maskirq,
+        // ulp_maskirq,
         ulp_timer_insn,
         ulp_wait_irq,
     },
@@ -28,8 +25,7 @@ use esp_lp_hal::{
 };
 use max170xx::Max17048;
 use panic_halt as _;
-use riscv_rt::InterruptNumber;
-use sharedtypes::{TEST_MUTEX_ITERATIONS, TEST_XOR_MASK, UlpCmd, UlpReply};
+// use riscv_rt::InterruptNumber;
 use smart_leds::{
     SmartLedsWrite,
     hsv::{Hsv, hsv2rgb},
@@ -38,20 +34,39 @@ use ws2812_esp32s3_ulp::Ws2812;
 // Colours for ws2812
 mod colours;
 use colours::apply_brightness;
-
-// Shared variables
-pub mod shared;
-pub use shared::*;
-
 // Instant and Duration for lp hal
 mod time;
 // better timer for bit-banged devices
 mod timer;
 use timer::Timer;
-
 // bit-banged i2c driver
 mod i2cbb;
 use i2cbb::I2cBB;
+use shared::{TEST_XOR_MASK, UlpCmd, UlpReply};
+
+// GLOBAL SHARED VARIABLES
+#[shared]
+pub static ULP_HALT_COUNTER: shared::UlpCounter = shared::UlpCounter::new();
+#[shared]
+pub static ULP_LOOP_COUNTER: shared::UlpCounter = shared::UlpCounter::new();
+#[shared]
+pub static ULP_BOOT_COUNTER: shared::UlpCounter = shared::UlpCounter::new();
+#[shared]
+pub static ULP_COMMAND: shared::UlpCmdWrapper = shared::UlpCmdWrapper::new();
+#[shared]
+pub static ULP_REPLY: shared::UlpReplyWrapper = shared::UlpReplyWrapper::new();
+#[shared]
+pub static ULP_LOCK: shared::UlpLockWrapper = shared::UlpLockWrapper::new();
+#[shared]
+pub static ULP_DEBUG_GPIO_ISR_COUNT: shared::UlpCounter = shared::UlpCounter::new();
+#[shared]
+pub static ULP_DEBUG_GPIO_ISR_STATUS: shared::UlpCounter = shared::UlpCounter::new();
+#[shared]
+pub static ULP_DEBUG_LAST_ISR_DATA: shared::UlpCounter = shared::UlpCounter::new();
+#[shared]
+pub static ULP_TEST_DATA_IN: shared::UlpCounter = shared::UlpCounter::new();
+#[shared]
+pub static ULP_TEST_DATA_OUT: shared::UlpCounter = shared::UlpCounter::new();
 
 #[inline(always)]
 fn cycles() -> u64 {
@@ -79,29 +94,8 @@ fn cycles32() -> u32 {
     cycles
 }
 
-#[inline]
-fn delay_using_loop(iterations: u32) {
-    for i in 0..iterations {
-        unsafe {
-            core::arch::asm!("nop");
-        }
-    }
-}
-
-fn delay_for_a_hundred_microseconds() {
-    const DELAYYY: u64 = 1750;
-    let t0 = cycles();
-    while cycles().wrapping_sub(t0) <= DELAYYY {}
-}
-
 fn delay_for_a_tenth_second() {
     const DELAYYY: u64 = 17_500_000 / 10;
-    let t0 = cycles();
-    while cycles().wrapping_sub(t0) <= DELAYYY {}
-}
-
-fn delay_for_a_second() {
-    const DELAYYY: u64 = 17_500_000;
     let t0 = cycles();
     while cycles().wrapping_sub(t0) <= DELAYYY {}
 }
@@ -126,14 +120,12 @@ unsafe fn steal_i2c_pins() -> (
     esp_lp_hal::gpio::OutputOpenDrain<1>,
 ) {
     let reg = unsafe { &*esp_lp_hal::pac::RTC_IO::PTR };
-    unsafe {
-        reg.touch_pad0()
-            .write(|w| w.fun_ie().set_bit().mux_sel().set_bit());
-        reg.touch_pad1()
-            .write(|w| w.fun_ie().set_bit().mux_sel().set_bit());
-        reg.pin0().write(|w| w.pad_driver().set_bit());
-        reg.pin1().write(|w| w.pad_driver().set_bit());
-    }
+    reg.touch_pad0()
+        .write(|w| w.fun_ie().set_bit().mux_sel().set_bit());
+    reg.touch_pad1()
+        .write(|w| w.fun_ie().set_bit().mux_sel().set_bit());
+    reg.pin0().write(|w| w.pad_driver().set_bit());
+    reg.pin1().write(|w| w.pad_driver().set_bit());
     (
         esp_lp_hal::gpio::OutputOpenDrain::<0>::new(),
         esp_lp_hal::gpio::OutputOpenDrain::<1>::new(),
@@ -165,35 +157,35 @@ fn main() {
                 ULP_COMMAND.store(UlpCmd::NOOP);
                 ULP_REPLY.store(UlpReply::OK);
             }
-            UlpCmd::COUNTER_LOOP => unsafe {
+            UlpCmd::COUNTER_LOOP => {
                 // Keep incrementing the counter in a loop
                 ULP_LOOP_COUNTER.increment();
                 ULP_REPLY.store(UlpReply::OK);
-            },
-            UlpCmd::COUNTER_ULP_TIMER => unsafe {
+            }
+            UlpCmd::COUNTER_ULP_TIMER => {
                 ULP_LOOP_COUNTER.increment();
                 ULP_REPLY.store(UlpReply::OK);
                 // Exit the loop, the ULP Timer will re-start us.
                 break;
-            },
-            UlpCmd::XOR_TEST => unsafe {
+            }
+            UlpCmd::XOR_TEST => {
                 ULP_LOOP_COUNTER.increment();
-                let data_in = unsafe { ULP_TEST_DATA_IN };
-                unsafe { ULP_TEST_DATA_OUT = data_in ^ TEST_XOR_MASK };
+                let data_in = ULP_TEST_DATA_IN.load();
+                ULP_TEST_DATA_OUT.store(data_in ^ TEST_XOR_MASK);
                 // Run once.
                 ULP_COMMAND.store(UlpCmd::NOOP);
                 ULP_REPLY.store(UlpReply::OK);
-            },
-            UlpCmd::STOP_TEST => unsafe {
+            }
+            UlpCmd::STOP_TEST => {
                 ULP_LOOP_COUNTER.increment();
                 ULP_REPLY.store(UlpReply::OK);
                 ulp_riscv_timer_stop();
                 break;
-            },
+            }
             UlpCmd::MUTEX_TEST => {
                 // Reset status to indicate we are processing
                 ULP_REPLY.store(UlpReply::BUSY);
-                let iters = unsafe { ULP_TEST_DATA_IN };
+                let iters = ULP_TEST_DATA_IN.load();
                 for _ in 0..iters {
                     ULP_LOCK.acquire();
                     ULP_LOOP_COUNTER.increment();
@@ -202,13 +194,13 @@ fn main() {
                 ULP_REPLY.store(UlpReply::OK);
                 ULP_COMMAND.store(UlpCmd::NOOP);
             }
-            UlpCmd::TIMER_PERIOD_TEST => unsafe {
+            UlpCmd::TIMER_PERIOD_TEST => {
                 ULP_LOOP_COUNTER.increment();
-                let new_cycles = unsafe { ULP_TEST_DATA_IN };
+                let new_cycles = ULP_TEST_DATA_IN.load();
                 ulp_timer_period(new_cycles);
                 ULP_REPLY.store(UlpReply::OK);
                 break;
-            },
+            }
             UlpCmd::LIGHT_SLEEP_TEST => {
                 ULP_LOOP_COUNTER.increment();
                 ULP_REPLY.store(UlpReply::OK);
@@ -224,15 +216,15 @@ fn main() {
                 ulp_riscv_timer_stop();
                 break;
             }
-            UlpCmd::EXCEPTION_TEST => unsafe {
+            UlpCmd::EXCEPTION_TEST => {
                 // Should trigger an illegal instruction
                 ULP_LOOP_COUNTER.increment();
                 ULP_REPLY.store(UlpReply::OK);
                 unsafe {
                     core::arch::asm!("csrrs a1, mcause, zero");
                 }
-            },
-            UlpCmd::START_INT_TEST => unsafe {
+            }
+            UlpCmd::START_INT_TEST => {
                 if ULP_LOOP_COUNTER.load() == 0 {
                     ULP_REPLY.store(UlpReply::OK);
                     // Enable the COCPU start interrupt
@@ -244,15 +236,15 @@ fn main() {
                 ULP_LOOP_COUNTER.increment();
                 // Add a delay to make the counter chill out
                 delay_for_a_tenth_second();
-            },
-            UlpCmd::WAITIRQ_TIMER_TEST => unsafe {
+            }
+            UlpCmd::WAITIRQ_TIMER_TEST => {
                 // ULP_TEST_DATA_OUT --> approx number of CPU cycles
                 // that were elapsed while waitirq blocked.
                 // ULP_TEST_DATA_IN <-- TIMER_PER duration to run the timer
                 // for TIMER_PER is in clock cycles, which is 17.5MHz.
-                let timer_period: u32 = ULP_TEST_DATA_IN;
+                let timer_period: u32 = ULP_TEST_DATA_IN.load();
                 // Clear the previous test data state
-                ULP_TEST_DATA_OUT = 0;
+                ULP_TEST_DATA_OUT.store(0);
                 // This will run BUSY -> OK -> BUSY -> OK
                 ULP_REPLY.store(UlpReply::BUSY);
                 // Start the timer
@@ -264,7 +256,7 @@ fn main() {
                 // Get cpu cycles after blocking
                 let t1 = cycles32();
                 // Store the number of cycles we blocked for
-                ULP_TEST_DATA_OUT = t1.wrapping_sub(t0);
+                ULP_TEST_DATA_OUT.store(t1.wrapping_sub(t0));
                 // If the irq flag is 1, it means the timer expired.
                 if (irqm & 1) != 0 {
                     // Disable the timer (unsure if needed?)
@@ -277,8 +269,8 @@ fn main() {
                 }
                 // Change to NO-OP
                 ULP_COMMAND.store(UlpCmd::NOOP);
-            },
-            UlpCmd::GPIO_INT_TEST => unsafe {
+            }
+            UlpCmd::GPIO_INT_TEST => {
                 if ULP_LOOP_COUNTER.load() == 0 {
                     ULP_REPLY.store(UlpReply::OK);
                 }
@@ -286,7 +278,7 @@ fn main() {
                 ULP_LOOP_COUNTER.increment();
                 // Add a delay to make the counter chill out
                 delay_for_a_tenth_second();
-            },
+            }
             UlpCmd::GPIO_WAKEUP_TEST => unsafe {
                 ULP_LOOP_COUNTER.increment();
                 ULP_REPLY.store(UlpReply::OK);
@@ -299,13 +291,13 @@ fn main() {
             },
             UlpCmd::MAX1708_I2C_BMS_TEST => unsafe {
                 ULP_REPLY.store(UlpReply::BUSY);
-                let (mut scl, mut sda) = steal_i2c_pins();
+                let (scl, sda) = steal_i2c_pins();
                 let i2c_clk = Timer::new();
-                let mut i2c = I2cBB::new(scl, sda, i2c_clk);
+                let i2c = I2cBB::new(scl, sda, i2c_clk);
                 let mut max1708 = Max17048::new(i2c);
                 if let Ok(v) = max1708.voltage() {
-                    unsafe {
-                        ULP_TEST_DATA_OUT = v as u32;
+                    {
+                        ULP_TEST_DATA_OUT.store(v as u32);
                     }
                 }
                 ULP_LOOP_COUNTER.increment();
@@ -314,7 +306,7 @@ fn main() {
             },
             UlpCmd::WS2812_LED_TEST => unsafe {
                 ULP_REPLY.store(UlpReply::OK);
-                let mut gpio18_led = steal_output::<18>();
+                let gpio18_led = steal_output::<18>();
                 let ws_clk = Timer::new();
                 let mut ws = Ws2812::new(gpio18_led, ws_clk);
                 let hsv = Hsv {
@@ -323,15 +315,15 @@ fn main() {
                     val: 240,
                 };
                 let rgb = apply_brightness(hsv2rgb(hsv), 10);
-                ws.write([rgb]);
+                let _ = ws.write([rgb]);
                 ULP_LOOP_COUNTER.increment();
                 // Break and go to sleep
                 break;
             },
-            _ => unsafe {
+            _ => {
                 // Unknown command, not okay!
                 ULP_REPLY.store(UlpReply::NOK);
-            },
+            }
         };
     }
 
@@ -341,14 +333,14 @@ fn main() {
 // Used for EXCEPTION_TEST
 #[exception(Exception::IllegalInstruction)]
 unsafe fn illegal_instruction(_trap: &TrapFrame) -> ! {
-    unsafe { ULP_DEBUG_LAST_ISR_DATA = 0xdeadbeef };
+    ULP_DEBUG_LAST_ISR_DATA.store(0xdeadbeef);
     #[allow(clippy::empty_loop)]
     loop {}
 }
 
 #[exception(Exception::LoadMisaligned)]
 unsafe fn misaligned_load(_trap: &TrapFrame) -> ! {
-    unsafe { ULP_DEBUG_LAST_ISR_DATA = 0x0000beef };
+    ULP_DEBUG_LAST_ISR_DATA.store(0x0000beef);
     #[allow(clippy::empty_loop)]
     loop {}
 }
@@ -356,7 +348,7 @@ unsafe fn misaligned_load(_trap: &TrapFrame) -> ! {
 #[core_interrupt(CoreInterrupt::MachineTimer)]
 unsafe fn machine_timer() {
     ULP_LOOP_COUNTER.increment();
-    unsafe { ULP_DEBUG_LAST_ISR_DATA = 0xba5eba11 };
+    ULP_DEBUG_LAST_ISR_DATA.store(0xba5eba11);
 }
 
 // Used for START_INT_TEST
@@ -366,7 +358,7 @@ unsafe fn sens_interrupt() {
         .sar_cocpu_int_st()
         .read();
     if sens_int.sar_cocpu_start_int_st().bit_is_set() {
-        unsafe { ULP_DEBUG_LAST_ISR_DATA = 0xcafebabe };
+        ULP_DEBUG_LAST_ISR_DATA.store(0xcafebabe);
         // Disable the COCPU start interrupt,
         // to prevent it happening again.
         let reg = unsafe { &*esp_lp_hal::pac::SENS::PTR };
@@ -382,9 +374,7 @@ unsafe fn gpio_interrupt() {
     let rtcio_int_st = unsafe { &*esp_lp_hal::pac::RTC_IO::PTR }.status().read();
     // GPIO interrupts must be right shifted by 10,
     // so that Bit 0 == GPIO 0.
-    unsafe {
-        ULP_DEBUG_GPIO_ISR_COUNT += 1;
-        ULP_DEBUG_GPIO_ISR_STATUS = rtcio_int_st.bits(); // Trap data holds the ISR status bits
-        ULP_DEBUG_LAST_ISR_DATA = rtcio_level_status.bits(); // ISR data holds the pin level bits
-    };
+    ULP_DEBUG_GPIO_ISR_COUNT.increment();
+    ULP_DEBUG_GPIO_ISR_STATUS.store(rtcio_int_st.bits()); // Trap data holds the ISR status bits
+    ULP_DEBUG_LAST_ISR_DATA.store(rtcio_level_status.bits()); // ISR data holds the pin level bits
 }

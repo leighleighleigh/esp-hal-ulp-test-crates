@@ -1,3 +1,4 @@
+#![allow(unused)]
 //! # Timekeeping
 //!
 //! This module provides types for representing frequency and duration, as well

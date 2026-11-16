@@ -1,4 +1,4 @@
-use super::traits::SharedWrapper;
+use super::traits::SharedCell;
 
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[cfg_attr(not(feature = "is-lp-core"), derive(Debug))]
@@ -37,18 +37,36 @@ pub enum UlpReply {
     BUSY  = 3,
 }
 
-pub type UlpCmdWrapper = SharedWrapper<UlpCmd>;
-pub type UlpReplyWrapper = SharedWrapper<UlpReply>;
-pub type UlpCounter = SharedWrapper<u32>;
+pub type UlpCmdWrapper = SharedCell<UlpCmd>;
+
+impl UlpCmdWrapper {
+    pub const fn new() -> Self {
+        Self::init(UlpCmd::UNSET)
+    }
+}
+
+pub type UlpReplyWrapper = SharedCell<UlpReply>;
+
+impl UlpReplyWrapper {
+    pub const fn new() -> Self {
+        Self::init(UlpReply::UNSET)
+    }
+}
+
+pub type UlpCounter = SharedCell<u32>;
 
 impl UlpCounter {
-    // Increments counter and returns the new value
-    pub fn increment(&self) -> u32 {
-        let c = self.load() + 1;
-        self.store(c);
-        c
+    pub const fn new() -> Self {
+        Self::init(0)
     }
 
+    /// Increments the counter in-place.
+    pub fn increment(&self) {
+        let c = self.load() + 1;
+        self.store(c);
+    }
+
+    // Reset the counter to 0
     pub fn reset(&self) {
         self.store(0);
     }

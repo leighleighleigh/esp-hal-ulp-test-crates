@@ -13,27 +13,10 @@ use defmt;
 pub mod locks;
 pub mod traits;
 pub mod types;
-pub use types::{UlpCmd, UlpReply};
+
+pub use locks::{UlpLockInner, UlpLockWrapper};
+pub use traits::SharedCell;
+pub use types::{UlpCmd, UlpCmdWrapper, UlpCounter, UlpReply, UlpReplyWrapper};
 
 pub const TEST_XOR_MASK: u32 = 0xcafe;
 pub const TEST_MUTEX_ITERATIONS: u32 = 1000;
-
-// NOTE: Below is temporary, provides HP with all extern-ed variables. These will be PROVIDE-ed by
-// the lp_app.x file.       This extern block will be auto-generated using a different macro in
-// future, or maybe hidden behind a shared type or something, idk yet.
-#[cfg(not(feature = "is-lp-core"))]
-unsafe extern "Rust" {
-    // mark these as 'safe' so Rust doesn't freak out,
-    // allowing it to be treated like a regular global static.
-    pub safe static ULP_LOCK: locks::UlpLockWrapper;
-    pub safe static ULP_COMMAND: types::UlpCmdWrapper;
-    pub safe static ULP_REPLY: types::UlpReplyWrapper;
-    pub safe static ULP_BOOT_COUNTER: types::UlpCounter;
-    pub safe static ULP_HALT_COUNTER: types::UlpCounter;
-    pub safe static ULP_LOOP_COUNTER: types::UlpCounter;
-    pub safe static mut ULP_TEST_DATA_IN: u32;
-    pub safe static mut ULP_TEST_DATA_OUT: u32;
-    pub safe static mut ULP_DEBUG_GPIO_ISR_COUNT: u32;
-    pub safe static mut ULP_DEBUG_GPIO_ISR_STATUS: u32;
-    pub safe static mut ULP_DEBUG_LAST_ISR_DATA: u32;
-}

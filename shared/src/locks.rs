@@ -1,4 +1,4 @@
-use crate::traits::SharedWrapper;
+use crate::traits::SharedCell;
 
 // Inner type, exists for interior mutability reasons
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -22,10 +22,15 @@ impl UlpLockInner {
     }
 }
 
-pub type UlpLockWrapper = SharedWrapper<UlpLockInner>;
+pub type UlpLockWrapper = SharedCell<UlpLockInner>;
 
 // Based on: https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/system/ulp-risc-v.html#_CPPv422ulp_riscv_lock_acquireP16ulp_riscv_lock_t
 impl UlpLockWrapper {
+    // Create a new lock
+    pub const fn new() -> Self {
+        Self::init(UlpLockInner::new())
+    }
+
     // Blocks until the lock is available.
     #[cfg(feature = "is-lp-core")]
     pub fn acquire(&self) {
@@ -79,6 +84,7 @@ impl UlpLockWrapper {
         memory_fence_nop();
     }
 
+    // Reset the lock state (unsafe)
     pub fn reset(&self) {
         let x = self.load_mut();
         x.flag_hp = false;

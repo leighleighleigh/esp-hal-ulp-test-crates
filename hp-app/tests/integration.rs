@@ -42,6 +42,7 @@ mod tests {
             LpCoreTimerCycles,
             LpCoreWakeupSource,
             LpWakeupConfig,
+            externs::*,
             reprogram_ulp_core_with_rainbow_firmware,
             reprogram_ulp_core_with_run_hook,
             ulp_has_booted,
@@ -55,22 +56,7 @@ mod tests {
         },
     };
     use semihosting::sys::arm_compat::syscall::{self, ParamRegR, ParamRegW};
-    use shared::{
-        TEST_MUTEX_ITERATIONS,
-        ULP_BOOT_COUNTER,
-        ULP_COMMAND,
-        ULP_DEBUG_GPIO_ISR_STATUS,
-        ULP_DEBUG_LAST_ISR_DATA,
-        ULP_HALT_COUNTER,
-        ULP_LOCK,
-        ULP_LOOP_COUNTER,
-        ULP_REPLY,
-        ULP_TEST_DATA_IN,
-        ULP_TEST_DATA_OUT,
-        UlpCmd,
-        UlpReply,
-        traits::*,
-    };
+    use shared::{TEST_MUTEX_ITERATIONS, UlpCmd, UlpReply};
 
     struct Context {
         p: Peripherals,
@@ -236,9 +222,7 @@ mod tests {
             || {
                 ULP_COMMAND.store(UlpCmd::TIMER_PERIOD_TEST);
                 // Using DATA_IN, ask the ULP to configure a much faster rate.
-                unsafe {
-                    ULP_TEST_DATA_IN = 1;
-                }
+                ULP_TEST_DATA_IN.store(1);
             },
         );
         hil_test::assert!(ulp_has_booted());
@@ -257,9 +241,7 @@ mod tests {
         ulp_riscv_timer_stop();
         Delay::new().delay_ms(10);
         hil_test::assert_eq!(false, ulp_is_looping());
-        unsafe {
-            ULP_TEST_DATA_IN = 530 / 2; // 2Hz
-        }
+        ULP_TEST_DATA_IN.store(530 / 2); // 2Hz
         ULP_LOOP_COUNTER.reset();
         ULP_BOOT_COUNTER.reset();
         ULP_REPLY.store(UlpReply::UNSET);
@@ -284,13 +266,13 @@ mod tests {
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             ULP_COMMAND.store(UlpCmd::XOR_TEST);
             // The value for the LP core to XOR
-            unsafe { ULP_TEST_DATA_IN = test_value };
+            ULP_TEST_DATA_IN.store(test_value);
         });
         hil_test::assert!(ulp_has_booted());
         hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
 
         // Check the data
-        let result = unsafe { ULP_TEST_DATA_OUT.clone() };
+        let result = { ULP_TEST_DATA_OUT.load() };
         hil_test::assert_eq!(test_value ^ shared::TEST_XOR_MASK, result);
     }
 
@@ -299,14 +281,14 @@ mod tests {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             ULP_COMMAND.store(UlpCmd::EXCEPTION_TEST);
-            unsafe { ULP_TEST_DATA_OUT = 0x0 };
-            unsafe { ULP_DEBUG_LAST_ISR_DATA = 0x0 };
+            ULP_TEST_DATA_OUT.store(0x0);
+            ULP_DEBUG_LAST_ISR_DATA.store(0x0);
         });
         hil_test::assert!(ulp_has_booted());
         hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
 
         // Check the exception write 0xdeadbeef to the DATA1 variable
-        let result = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
+        let result = { ULP_DEBUG_LAST_ISR_DATA.load() };
         defmt::debug!("ULP_DEBUG_TRAP_DATA1: 0x{:08x}", result);
         hil_test::assert_eq!(0xdeadbeef, result);
 
@@ -324,7 +306,7 @@ mod tests {
         hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
         hil_test::assert_eq!(true, ulp_is_looping());
 
-        let result = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
+        let result = { ULP_DEBUG_LAST_ISR_DATA.load() };
         defmt::debug!("interrupt wrote: 0x{:08x}", result);
         hil_test::assert_eq!(0xcafebabe, result);
 
@@ -351,10 +333,10 @@ mod tests {
         const ULP_CYCLE_MEASUREMENT_OVERHEAD: u32 = 2;
 
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
-        reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || unsafe {
+        reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             ULP_COMMAND.store(UlpCmd::WAITIRQ_TIMER_TEST);
             // ULP will set it's timer to the value of ULP_TEST_DATA_IN.
-            ULP_TEST_DATA_IN = ULP_TICKS_PER_MILLIS * timer_duration_ms;
+            ULP_TEST_DATA_IN.store(ULP_TICKS_PER_MILLIS * timer_duration_ms);
         });
 
         hil_test::assert!(ulp_has_booted());
@@ -374,7 +356,7 @@ mod tests {
             // Read the result variables
             let ulp_reply = ULP_REPLY.load();
             let ulp_loop_count = ULP_LOOP_COUNTER.load();
-            let ulp_waitirq_cycles = unsafe { ULP_TEST_DATA_OUT.clone() };
+            let ulp_waitirq_cycles = ULP_TEST_DATA_OUT.load();
 
             // Calculate the difference between the expected number of timer cycles,
             // and the number of cycles that were measured by LP core.
@@ -405,9 +387,7 @@ mod tests {
 
             // Double the timer period and re-start the command
             timer_duration_ms *= 2;
-            unsafe {
-                ULP_TEST_DATA_IN = ULP_TICKS_PER_MILLIS * timer_duration_ms;
-            }
+            ULP_TEST_DATA_IN.store(ULP_TICKS_PER_MILLIS * timer_duration_ms);
             ULP_COMMAND.store(UlpCmd::WAITIRQ_TIMER_TEST);
 
             // Wait a small period to allow the core to start the command
@@ -446,9 +426,9 @@ mod tests {
         let mut ulp_core = LpCore::new(ctx.p.ULP_RISCV_CORE);
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             ULP_COMMAND.store(UlpCmd::GPIO_INT_TEST);
-            unsafe { ULP_TEST_DATA_OUT = 0x0 };
-            unsafe { ULP_DEBUG_GPIO_ISR_STATUS = 0x0 };
-            unsafe { ULP_DEBUG_LAST_ISR_DATA = 0x0 };
+            ULP_TEST_DATA_OUT.reset();
+            ULP_DEBUG_GPIO_ISR_STATUS.reset();
+            ULP_DEBUG_LAST_ISR_DATA.reset();
         });
 
         hil_test::assert!(ulp_has_booted());
@@ -480,13 +460,11 @@ mod tests {
             Delay::new().delay_millis(TOGGLEINTERVAL);
 
             // Evaluate the result, which depends on INTTYPE
-            let lp_trap_data = unsafe { ULP_DEBUG_GPIO_ISR_STATUS.clone() };
-            let lp_isr_data = unsafe { ULP_DEBUG_LAST_ISR_DATA.clone() };
+            let lp_trap_data = ULP_DEBUG_GPIO_ISR_STATUS.load();
+            let lp_isr_data = ULP_DEBUG_LAST_ISR_DATA.load();
             // Now need to clear the interrupt data, for the next iteration.
-            unsafe {
-                ULP_DEBUG_GPIO_ISR_STATUS = 0;
-                ULP_DEBUG_LAST_ISR_DATA = 0;
-            }
+            ULP_DEBUG_GPIO_ISR_STATUS.reset();
+            ULP_DEBUG_LAST_ISR_DATA.reset();
 
             let lp_did_interrupt = ((lp_trap_data >> 10) & (1 << RTCPIN)) != 0;
             let lp_input_lvl = ((lp_isr_data >> 10) & (1 << RTCPIN)) != 0;
@@ -639,7 +617,7 @@ mod tests {
         reprogram_ulp_core_with_run_hook(&mut ulp_core, LpCoreWakeupSource::HpCpu, || {
             ULP_COMMAND.store(UlpCmd::MUTEX_TEST);
             // Number of mutex iterations to run
-            unsafe { ULP_TEST_DATA_IN = TEST_MUTEX_ITERATIONS };
+            ULP_TEST_DATA_IN.store(TEST_MUTEX_ITERATIONS);
         });
 
         for _ in 0..TEST_MUTEX_ITERATIONS {
@@ -731,7 +709,7 @@ mod tests {
             Delay::new().delay_millis(200);
             hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
 
-            let data = unsafe { ULP_TEST_DATA_OUT };
+            let data = ULP_TEST_DATA_OUT.load();
             let voltage = (data as f32) / 10000.0;
             defmt::debug!("Battery: {} V", voltage);
         }
@@ -812,10 +790,10 @@ mod tests {
         // The RAINBOW_RUN shared variable,
         // turns the WS2812B RGB on and off,
         // when it is set to 0xCAFEBABE.
-        unsafe extern "Rust" {
-            static mut RAINBOW_RUN: u32;
-            static mut RAINBOW_COUNTER: u32;
-        }
+        // unsafe extern "Rust" {
+        //     static mut RAINBOW_RUN: u32;
+        //     static mut RAINBOW_COUNTER: u32;
+        // }
 
         hil_test::assert_eq!(unsafe { RAINBOW_COUNTER }, 0);
 

@@ -7,21 +7,14 @@ pub use esp_hal::lp_core::{
     WakeupConfig as LpWakeupConfig,
 };
 use esp_hal::{delay::Delay, load_lp_code, time::Instant};
-use shared::{
-    ULP_BOOT_COUNTER,
-    ULP_COMMAND,
-    ULP_DEBUG_GPIO_ISR_COUNT,
-    ULP_DEBUG_GPIO_ISR_STATUS,
-    ULP_DEBUG_LAST_ISR_DATA,
-    ULP_HALT_COUNTER,
-    ULP_LOCK,
-    ULP_LOOP_COUNTER,
-    ULP_REPLY,
-    ULP_TEST_DATA_IN,
-    ULP_TEST_DATA_OUT,
-    UlpCmd,
-    UlpReply,
-};
+use shared::{UlpCmd, UlpReply};
+
+pub mod externs {
+    use esp_hal::load_shared;
+    load_shared!("target/lp_app");
+    load_shared!("target/lp_rainbow");
+}
+use externs::*;
 
 // Type aliasing for peripheral type
 pub type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
@@ -119,15 +112,11 @@ fn reset_ulp_shared_variables() {
     ULP_LOOP_COUNTER.reset();
     ULP_REPLY.store(UlpReply::UNSET);
     ULP_COMMAND.store(UlpCmd::UNSET);
-
-    unsafe {
-        ULP_TEST_DATA_IN = 0;
-        ULP_TEST_DATA_OUT = 0;
-        ULP_DEBUG_GPIO_ISR_COUNT = 0;
-        ULP_DEBUG_GPIO_ISR_STATUS = 0;
-        ULP_DEBUG_LAST_ISR_DATA = 0;
-    }
-
+    ULP_TEST_DATA_IN.store(0);
+    ULP_TEST_DATA_OUT.store(0);
+    ULP_DEBUG_GPIO_ISR_COUNT.store(0);
+    ULP_DEBUG_GPIO_ISR_STATUS.store(0);
+    ULP_DEBUG_LAST_ISR_DATA.store(0);
     ULP_LOCK.reset();
 }
 

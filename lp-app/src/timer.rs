@@ -1,3 +1,4 @@
+#![allow(unused)]
 use embedded_hal::delay::DelayNs;
 
 use crate::time::{Duration, Instant, Rate};

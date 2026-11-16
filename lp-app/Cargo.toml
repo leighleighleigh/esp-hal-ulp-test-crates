@@ -45,5 +45,7 @@ codegen-units = 1 # LLVM can perform better optimizations using a single thread
 lto = false
 
 [patch.crates-io]
-esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
-esp-metadata-generated = { path = "/home/leigh/Git/esp-hal/esp-metadata-generated" }
+#esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
+#esp-metadata-generated = { path = "/home/leigh/Git/esp-hal/esp-metadata-generated" }
+esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+esp-metadata-generated = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }

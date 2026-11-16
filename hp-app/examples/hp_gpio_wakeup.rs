@@ -20,11 +20,13 @@ use esp_hal::{
 };
 use hil_test::{hp_utils::configure_rtc_pin, ulp_utils::reprogram_ulp_core_with_run_hook};
 use shared::{
+    ULP_BOOT_COUNTER,
+    ULP_COMMAND,
     ULP_DEBUG_GPIO_ISR_COUNT,
     ULP_DEBUG_GPIO_ISR_STATUS,
     ULP_DEBUG_LAST_ISR_DATA,
-    UlpBootCounter,
-    UlpCommand,
+    UlpCmd,
+    UlpReply,
     traits::*,
 };
 
@@ -81,14 +83,14 @@ fn main() -> ! {
         warn!("Re-programming ULP!");
         let lp_wake_src = LpCoreWakeupSource::Gpio;
         reprogram_ulp_core_with_run_hook(&mut ulp_core, lp_wake_src, || {
-            UlpCommand::GPIO_WAKEUP_TEST.store();
+            ULP_COMMAND.store(UlpCmd::GPIO_WAKEUP_TEST);
         });
         warn!("ULP re-programmed!");
     }
 
     // Print 3 times
     for _ in 0..3 {
-        let new_boot_counter = UlpBootCounter::load();
+        let new_boot_counter = ULP_BOOT_COUNTER.load();
         let new_gpio_isr_count = unsafe { ULP_DEBUG_GPIO_ISR_COUNT };
         let trap_data = unsafe { ULP_DEBUG_GPIO_ISR_STATUS };
         let isr_data = unsafe { ULP_DEBUG_LAST_ISR_DATA };

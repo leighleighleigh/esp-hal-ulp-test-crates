@@ -10,11 +10,10 @@
 #[cfg(feature = "defmt")]
 use defmt;
 
+pub mod locks;
 pub mod traits;
-mod types;
-pub use types::*;
-mod locks;
-pub use locks::*;
+pub mod types;
+pub use types::{UlpCmd, UlpReply};
 
 pub const TEST_XOR_MASK: u32 = 0xcafe;
 pub const TEST_MUTEX_ITERATIONS: u32 = 1000;
@@ -26,12 +25,12 @@ pub const TEST_MUTEX_ITERATIONS: u32 = 1000;
 unsafe extern "Rust" {
     // mark these as 'safe' so Rust doesn't freak out,
     // allowing it to be treated like a regular global static.
-    pub safe static ULP_LOCK: UlpLockWrapper;
-    pub safe static ULP_COMMAND: UlpCmdWrapper;
-    pub safe static ULP_REPLY: UlpReplyWrapper;
-    pub safe static ULP_BOOT_COUNTER: UlpCounter;
-    pub safe static ULP_HALT_COUNTER: UlpCounter;
-    pub safe static ULP_LOOP_COUNTER: UlpCounter;
+    pub safe static ULP_LOCK: locks::UlpLockWrapper;
+    pub safe static ULP_COMMAND: types::UlpCmdWrapper;
+    pub safe static ULP_REPLY: types::UlpReplyWrapper;
+    pub safe static ULP_BOOT_COUNTER: types::UlpCounter;
+    pub safe static ULP_HALT_COUNTER: types::UlpCounter;
+    pub safe static ULP_LOOP_COUNTER: types::UlpCounter;
     pub safe static mut ULP_TEST_DATA_IN: u32;
     pub safe static mut ULP_TEST_DATA_OUT: u32;
     pub safe static mut ULP_DEBUG_GPIO_ISR_COUNT: u32;

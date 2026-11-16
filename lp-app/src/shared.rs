@@ -4,12 +4,9 @@
 use esp_lp_hal::prelude::shared;
 use sharedtypes::{
     UlpCmd,
-    UlpCmdWrapper,
-    UlpCounter,
-    UlpLockInner,
-    UlpLockWrapper,
     UlpReply,
-    UlpReplyWrapper,
+    locks::{UlpLockInner, UlpLockWrapper},
+    types::{UlpCmdWrapper, UlpCounter, UlpReplyWrapper},
 };
 
 #[shared]

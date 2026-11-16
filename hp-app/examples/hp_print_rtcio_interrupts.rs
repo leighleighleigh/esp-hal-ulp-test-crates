@@ -13,12 +13,12 @@ use esp_hal::{
 };
 use hil_test::{hp_utils::configure_rtc_pin, ulp_utils::reprogram_ulp_core_with_run_hook};
 use shared::{
+    ULP_BOOT_COUNTER,
+    ULP_COMMAND,
     ULP_DEBUG_GPIO_ISR_COUNT,
     ULP_DEBUG_GPIO_ISR_STATUS,
     ULP_DEBUG_LAST_ISR_DATA,
-    UlpBootCounter,
-    UlpCommand,
-    traits::*,
+    UlpCmd,
 };
 
 #[main]
@@ -57,7 +57,7 @@ fn main() -> ! {
     let lp_wake_src = LpCoreWakeupSource::HpCpu;
 
     reprogram_ulp_core_with_run_hook(&mut ulp_core, lp_wake_src, || {
-        UlpCommand::COUNTER_LOOP.store();
+        ULP_COMMAND.store(UlpCmd::COUNTER_LOOP);
         unsafe { ULP_DEBUG_GPIO_ISR_STATUS = 0x0 };
         unsafe { ULP_DEBUG_LAST_ISR_DATA = 0x0 };
     });
@@ -72,7 +72,7 @@ fn main() -> ! {
 
     // Print whenever trap or isr data change
     loop {
-        let new_boot_counter = UlpBootCounter::load();
+        let new_boot_counter = ULP_BOOT_COUNTER.load();
         if boot_cnt != new_boot_counter {
             defmt::info!("BOOT COUNT: {}", new_boot_counter);
             boot_cnt = new_boot_counter;
@@ -84,18 +84,6 @@ fn main() -> ! {
         if gpio_isr_count != new_gpio_isr_count {
             defmt::info!("({}) TRAP_DATA: 0x{:08x}", new_gpio_isr_count, trap_data);
             defmt::info!("({}) ISR_DATA:  0x{:08x}", new_gpio_isr_count, isr_data);
-            // let new_boot_cnt = UlpBootCounter::load();
-            // let new_halt_cnt = UlpHaltCounter::load();
-            // defmt::info!(
-            //     "({}) Boot count: 0x{:08x}",
-            //     new_gpio_isr_count,
-            //     new_boot_cnt
-            // );
-            // defmt::info!(
-            //     "({}) Halt count: 0x{:08x}",
-            //     new_gpio_isr_count,
-            //     new_halt_cnt
-            // );
         }
 
         gpio_isr_count = new_gpio_isr_count;

@@ -9,10 +9,18 @@ use esp_hal::{
     time::Instant,
 };
 use hil_test::ulp_utils::reprogram_ulp_core_with_run_hook;
-use shared::{ULP_TEST_DATA_IN, UlpCommand, UlpCounter, UlpLock, UlpReply, traits::*};
-
+use num_traits::Float;
+use shared::{
+    ULP_COMMAND,
+    ULP_LOCK,
+    ULP_LOOP_COUNTER,
+    ULP_REPLY,
+    ULP_TEST_DATA_IN,
+    UlpCmd,
+    UlpReply,
+};
 const MUTEX_ITERATIONS: u32 = 10000;
-const HP_CORE_INCREMENTS: bool = false;
+const HP_CORE_INCREMENTS: bool = true;
 
 #[main]
 fn main() -> ! {
@@ -39,55 +47,89 @@ fn main() -> ! {
     let mut ulp_core = LpCore::new(peripherals.ULP_RISCV_CORE);
     let lp_wake_src = LpCoreWakeupSource::HpCpu;
     reprogram_ulp_core_with_run_hook(&mut ulp_core, lp_wake_src, || {
-        UlpCommand::MUTEX_TEST.store();
+        ULP_COMMAND.store(UlpCmd::MUTEX_TEST);
         unsafe { ULP_TEST_DATA_IN = MUTEX_ITERATIONS };
     });
 
     let mut superloop = 0;
 
+    // Keep a running average, and also keep track of the variables and sample uncertainty.
+    let mut test_samples: [f64; _] = [0.0; 100];
+
     loop {
         let t0 = Instant::now();
 
         for _i in 0..MUTEX_ITERATIONS {
-            UlpLock::acquire();
+            ULP_LOCK.acquire();
             if HP_CORE_INCREMENTS {
-                UlpCounter::increment();
+                ULP_LOOP_COUNTER.increment();
             }
-            UlpLock::release();
+            ULP_LOCK.release();
         }
 
         // Also acquire/release the lock while we wait for ULP to finish
-        while UlpReply::load() != UlpReply::OK {
-            UlpLock::acquire();
-            UlpLock::release();
+        while ULP_REPLY.load() != UlpReply::OK {
+            ULP_LOCK.acquire();
+            ULP_LOCK.release();
         }
 
         let test_duration = t0.elapsed();
         let test_rate = (MUTEX_ITERATIONS as u64 * 1000000) / test_duration.as_micros();
-
-        defmt::warn!(
-            "Loop {} did {} iters in {} ({} iter/sec)",
-            superloop,
-            MUTEX_ITERATIONS,
-            test_duration,
-            test_rate
-        );
+        test_samples[superloop % test_samples.len()] = test_rate as f64;
 
         if HP_CORE_INCREMENTS {
             // Assert no race conditions and we incremented 2x the number of loops
-            hil_test::assert_eq!(2 * MUTEX_ITERATIONS, UlpCounter::load());
+            hil_test::assert_eq!(2 * MUTEX_ITERATIONS, ULP_LOOP_COUNTER.load());
         } else {
             // Assert the ULP core incremented 1x the number of loops
-            hil_test::assert_eq!(MUTEX_ITERATIONS, UlpCounter::load());
+            hil_test::assert_eq!(MUTEX_ITERATIONS, ULP_LOOP_COUNTER.load());
+        }
+
+        // Calculate mean and sample variance
+        let n = (superloop + 1).min(100);
+        if n >= 2 {
+            let mut test_sample_mu = 0.0;
+            for i in 0..n {
+                test_sample_mu += test_samples[i];
+            }
+            test_sample_mu /= n as f64;
+            // defmt::warn!("Loop {} mean {}", superloop, test_sample_mu as u64);
+
+            let mut test_sample_var: f64 = 0.0;
+            for i in 0..n {
+                let x = test_samples[i] - test_sample_mu;
+                let xx = x * x;
+                test_sample_var += xx;
+            }
+            test_sample_var /= (n - 1) as f64;
+            let test_sample_std = test_sample_var.powf(0.5);
+
+            defmt::warn!(
+                "Loop {} did {} iters in {} ({} iter/sec, mean {}, std {})",
+                superloop,
+                MUTEX_ITERATIONS,
+                test_duration,
+                test_rate,
+                test_sample_mu as u64,
+                test_sample_std as u64,
+            );
+        } else {
+            defmt::warn!(
+                "Loop {} did {} iters in {} ({} iter/sec)",
+                superloop,
+                MUTEX_ITERATIONS,
+                test_duration,
+                test_rate
+            );
         }
 
         superloop += 1;
 
-        dly.delay_millis(1000); // wait for a second before running again
+        dly.delay_millis(10); // wait for a second before running again
 
         // Reset the counter
-        UlpCounter::reset();
+        ULP_LOOP_COUNTER.reset();
         // Tell the core to do the test again
-        UlpCommand::MUTEX_TEST.store();
+        ULP_COMMAND.store(UlpCmd::MUTEX_TEST);
     }
 }

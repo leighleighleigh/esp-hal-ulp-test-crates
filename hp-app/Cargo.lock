@@ -564,6 +564,7 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 [[package]]
 name = "esp-backtrace"
 version = "0.20.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "defmt 1.1.1",
  "document-features",
@@ -579,6 +580,7 @@ dependencies = [
 [[package]]
 name = "esp-bootloader-esp-idf"
 version = "0.6.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "document-features",
  "esp-config",
@@ -594,6 +596,7 @@ dependencies = [
 [[package]]
 name = "esp-config"
 version = "0.8.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "document-features",
  "esp-metadata-generated",
@@ -605,6 +608,7 @@ dependencies = [
 [[package]]
 name = "esp-hal"
 version = "1.2.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "bitfield",
  "bytemuck",
@@ -665,6 +669,7 @@ dependencies = [
 [[package]]
 name = "esp-hal-procmacros"
 version = "0.23.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "document-features",
  "object",
@@ -678,10 +683,12 @@ dependencies = [
 [[package]]
 name = "esp-metadata-generated"
 version = "0.5.1"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 
 [[package]]
 name = "esp-println"
 version = "0.18.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "defmt 1.1.1",
  "document-features",
@@ -694,6 +701,7 @@ dependencies = [
 [[package]]
 name = "esp-riscv-rt"
 version = "0.15.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "defmt 1.1.1",
  "document-features",
@@ -704,6 +712,7 @@ dependencies = [
 [[package]]
 name = "esp-rom-sys"
 version = "0.1.5"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "document-features",
  "esp-metadata-generated",
@@ -715,6 +724,7 @@ dependencies = [
 [[package]]
 name = "esp-storage"
 version = "0.10.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "document-features",
  "esp-hal",
@@ -730,6 +740,7 @@ dependencies = [
 [[package]]
 name = "esp-sync"
 version = "0.3.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "defmt 1.1.1",
  "document-features",
@@ -971,6 +982,7 @@ dependencies = [
  "esp32s2",
  "esp32s3",
  "log",
+ "num-traits",
  "riscv-decode",
  "semihosting",
  "shared",
@@ -1073,6 +1085,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2"
 
 [[package]]
+name = "libm"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
+
+[[package]]
 name = "litrs"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1112,6 +1130,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
+ "libm",
 ]
 
 [[package]]
@@ -1604,6 +1623,7 @@ dependencies = [
 [[package]]
 name = "xtensa-lx"
 version = "0.13.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "critical-section",
 ]
@@ -1611,6 +1631,7 @@ dependencies = [
 [[package]]
 name = "xtensa-lx-rt"
 version = "0.23.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "defmt 1.1.1",
  "document-features",
@@ -1621,6 +1642,7 @@ dependencies = [
 [[package]]
 name = "xtensa-lx-rt-proc-macros"
 version = "0.5.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#0d04de0734d8eb4d7a48d4608647e5e8d3ba82f3"
 dependencies = [
  "proc-macro2",
  "quote",

@@ -1,3 +1,4 @@
+use ::shared::{UlpCmd, UlpReply};
 /// Test utils for ULP stuff
 use embedded_hal::delay::DelayNs;
 pub use esp_hal::lp_core::{
@@ -7,14 +8,21 @@ pub use esp_hal::lp_core::{
     WakeupConfig as LpWakeupConfig,
 };
 use esp_hal::{delay::Delay, load_lp_code, time::Instant};
-use shared::{UlpCmd, UlpReply};
 
-pub mod externs {
-    use esp_hal::load_shared;
-    load_shared!("target/lp_app");
-    load_shared!("target/lp_rainbow");
+pub mod lp_app {
+    esp_hal::load_lp_code_ext!("target/lp_app");
+    pub mod shared {
+        esp_hal::load_lp_shared!("target/lp_app");
+    }
 }
-use externs::*;
+pub mod lp_rainbow {
+    esp_hal::load_lp_code_ext!("target/lp_rainbow");
+    pub mod shared {
+        esp_hal::load_lp_shared!("target/lp_rainbow");
+    }
+}
+pub use lp_app::shared::*;
+pub use lp_rainbow::shared::*;
 
 // Type aliasing for peripheral type
 pub type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
@@ -128,7 +136,7 @@ pub fn reprogram_ulp_core_with_run_hook<'a, F>(
     F: FnOnce(),
 {
     ulp_core.erase();
-    let ulp_code = load_lp_code!("target/lp_app");
+    let ulp_code = lp_app::LpCoreCode {};
     // All shared variables are reset before reprogramming.
     reset_ulp_shared_variables();
     pre_run_hook();

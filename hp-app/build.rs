@@ -15,14 +15,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("cargo::rustc-link-arg-tests=-Tembedded-test.x");
 
-    // Built ULP artifacts (ULP ELF binaries and the generated linker script containing shared
-    // variable locations), should have been copied into the ./target/ directory.
-    // println!("cargo::rerun-if-changed=target/lp_app");
-    // println!("cargo::rerun-if-changed=target/lp_rainbow");
-
-    let out_dir = var("OUT_DIR")?;
-    println!("cargo::rustc-link-search={}", out_dir.to_string());
-    println!("cargo::rustc-link-arg=-Tlp_shared.x");
+    // Link against variables loaded by load_lp_shared! macro.
+    println!(
+        "cargo::rustc-link-arg=-T{}/lp_shared.x",
+        var("OUT_DIR")?.to_string()
+    );
 
     Ok(())
 }

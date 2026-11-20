@@ -3,49 +3,79 @@ name = "lp-app"
 version = "0.2.0"
 edition = "2024"
 rust-version = "1.95.0"
+autoexamples = false
+autobenches = false
+autotests = false
+
+[lib]
+name = "lp_app"
+path = "src/lib.rs"
+crate-type = ["rlib"]
 
 [[bin]]
-path = "src/main.rs"
 name = "lp_app"
-test = false
-bench = false
+path = "src/main.rs"
+required-features = ["is-lp-core"]
+
+[features]
+default = []
+esp32s3 = ["esp-metadata-generated/esp32s3", "esp-lp-hal?/esp32s3"]
+esp32s2 = ["esp-metadata-generated/esp32s2", "esp-lp-hal?/esp32s2"]
+esp32c6 = ["esp-metadata-generated/esp32c6", "esp-lp-hal?/esp32c6"]
+# Set when compiled for the LP core, unset for the HP core.
+is-lp-core = [
+    "shared/is-lp-core",
+    "dep:delegate",
+    "dep:embedded-hal",
+    "dep:esp-lp-hal",
+    "dep:fugit",
+    "dep:max170xx",
+    "dep:panic-halt",
+    "dep:riscv-rt",
+    "dep:smart-leds",
+    "dep:ws2812-esp32s3-ulp",
+]
+# Extra feature flags
+defmt = ["shared/defmt"]
 
 [dependencies]
 cfg-if = "1"
-embedded-hal = "1.0.0"
-panic-halt = "1.0.0"
-delegate = "0.13.4"
-fugit = "0.3.7"
+# esp-hal-procmacros contains the 'shared' proc-macro, we will use whatever version esp-lp-hal/esp-hal provides.
+esp-hal-procmacros = { version = "*", default-features = false }
+# The 'shared' crate has SHARED TYPES, these are re-exported by the lp_app library :) 
+shared = { path = "../shared" }
 
-# LP HAL from esp-hal
-# which will need a chip feature-flag specified,
-# in order to provide the right linker script.
-shared = { path = "../shared", features = [ "is-lp-core" ] }
-esp-lp-hal = { version = "0.3.0" }
-riscv-rt = { version = "0.18.0", default-features = false }
-smart-leds = { version = "0.4.0" }
-ws2812-esp32s3-ulp = { git = "https://github.com/leighleighleigh/ws2812-esp32s3-ulp-rs.git", version = "0.1.0" }
-max170xx = { git = "https://github.com/leighleighleigh/max170xx-rs.git", version = "1.0.0", features = ["avoid-floats"] }
+### EVERYTHING BELOW IS FOR THE LP_APP BINARY ###
+embedded-hal = { version = "1.0.0", optional = true }
+panic-halt = { version = "1.0.0", optional = true }
+delegate = { version = "0.13.4", optional = true }
+fugit = { version = "0.3.7", optional = true }
+esp-lp-hal = { version = "0.3.0", optional = true }
+riscv-rt = { version = "*", default-features = false, optional = true } # riscv-rt is required for interrupt proc-macros, exported by esp-lp-hal
+max170xx = { git = "https://github.com/leighleighleigh/max170xx-rs.git", version = "1.0.0", features = [
+    "avoid-floats",
+], optional = true }
+smart-leds = { version = "0.4.0", optional = true }
+ws2812-esp32s3-ulp = { git = "https://github.com/leighleighleigh/ws2812-esp32s3-ulp-rs.git", version = "0.1.0", optional = true }
 
 [build-dependencies]
+cargo_metadata = "0.23.1"
+esp-devtool = { version = "*", path = "../../esp-hal/xtask" }
 esp-metadata-generated = { version = "0.5.1", features = ["build-script"] }
+object = { version = "0.41.0", default-features = false, features = ["read_core", "elf"] }
 
-[features]
-default = [] 
-esp32s3 = ["esp-metadata-generated/esp32s3", "esp-lp-hal/esp32s3" ]
-esp32s2 = ["esp-metadata-generated/esp32s2", "esp-lp-hal/esp32s2" ]
-esp32c6 = ["esp-metadata-generated/esp32c6", "esp-lp-hal/esp32c6" ]
+[patch.crates-io]
+esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
+esp-metadata-generated = { path = "/home/leigh/Git/esp-hal/esp-metadata-generated" }
+esp-hal-procmacros = { path = "/home/leigh/Git/esp-hal/esp-hal-procmacros" }
+# esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+# esp-metadata-generated = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+# esp-hal-procmacros = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
 
 [profile.release]
 debug = false
 strip = "debuginfo"
 # size is an important factor in the ULP code,  because it's easy to run out of space.
-opt-level = "s" 
+opt-level = "s"
 codegen-units = 1 # LLVM can perform better optimizations using a single thread
 lto = false
-
-[patch.crates-io]
-# esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
-# esp-metadata-generated = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
-esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
-esp-metadata-generated = { path = "/home/leigh/Git/esp-hal/esp-metadata-generated" }

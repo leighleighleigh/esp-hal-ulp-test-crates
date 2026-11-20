@@ -42,7 +42,7 @@ mod tests {
             LpCoreTimerCycles,
             LpCoreWakeupSource,
             LpWakeupConfig,
-            lp_app::shared::*,
+            lp_app::*,
             lp_rainbow::shared::*,
             reprogram_ulp_core_with_rainbow_firmware,
             reprogram_ulp_core_with_run_hook,

@@ -22,10 +22,8 @@ build CHIP=chip:
   set -eou pipefail
   cargo {{CHIP}}
   ecode="$?"
-  # NEW 2026-05-13
-  #   No longer using scripts to build the shared linker script.
-  #   Instead, uses the '../shared/' crate binary to do this.
-  just build-linker-script 
+  # NEW 2026-11-21, no longer builds the linker script here!
+  # just build-linker-script 
 
 # USAGE: just build-linker-script
 # Runs the shared CLI tool to extract global variables from the ULP ELF,

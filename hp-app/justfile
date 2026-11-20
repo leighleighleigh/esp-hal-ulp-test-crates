@@ -60,7 +60,7 @@ prepare:
   #!/usr/bin/env bash
   set -eou pipefail
   # Build the ULP core application(s), and copy it over to here
-  just build-ulp-app ../lp-app/ {{chip}}
+  #just build-ulp-app ../lp-app/ {{chip}}
   just build-ulp-app ../lp-ws2812-app/ {{chip}}
 
 # Enters the ulp project, and builds it.

@@ -2,7 +2,6 @@
 #![no_main]
 #![allow(static_mut_refs)]
 
-// use embedded_hal::i2c::I2c;
 use esp_lp_hal::{
     delay::Delay,
     // gpio,
@@ -42,31 +41,8 @@ use timer::Timer;
 // bit-banged i2c driver
 mod i2cbb;
 use i2cbb::I2cBB;
-use shared::{TEST_XOR_MASK, UlpCmd, UlpReply};
-
-// GLOBAL SHARED VARIABLES
-#[shared]
-pub static ULP_HALT_COUNTER: shared::UlpCounter = shared::UlpCounter::new();
-#[shared]
-pub static ULP_LOOP_COUNTER: shared::UlpCounter = shared::UlpCounter::new();
-#[shared]
-pub static ULP_BOOT_COUNTER: shared::UlpCounter = shared::UlpCounter::new();
-#[shared]
-pub static ULP_COMMAND: shared::UlpCmdWrapper = shared::UlpCmdWrapper::new();
-#[shared]
-pub static ULP_REPLY: shared::UlpReplyWrapper = shared::UlpReplyWrapper::new();
-#[shared]
-pub static ULP_LOCK: shared::UlpLockWrapper = shared::UlpLockWrapper::new();
-#[shared]
-pub static ULP_DEBUG_GPIO_ISR_COUNT: shared::UlpCounter = shared::UlpCounter::new();
-#[shared]
-pub static ULP_DEBUG_GPIO_ISR_STATUS: shared::UlpCounter = shared::UlpCounter::new();
-#[shared]
-pub static ULP_DEBUG_LAST_ISR_DATA: shared::UlpCounter = shared::UlpCounter::new();
-#[shared]
-pub static ULP_TEST_DATA_IN: shared::UlpCounter = shared::UlpCounter::new();
-#[shared]
-pub static ULP_TEST_DATA_OUT: shared::UlpCounter = shared::UlpCounter::new();
+// This crate library
+use lp_app::*;
 
 #[inline(always)]
 fn cycles() -> u64 {

@@ -1,3 +1,4 @@
+#![allow(unused)]
 use std::{env::var, error::Error};
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -15,7 +16,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("cargo::rustc-link-arg-tests=-Tembedded-test.x");
 
-    // Link against variables loaded by load_lp_shared! macro.
+    // Link against the lp-app shared variables
+    println!("cargo::rustc-link-arg=-Tlp-app-shared.x");
+
+    // Link against the lp-app shared variables loaded by load_lp_shared! macro.
     println!(
         "cargo::rustc-link-arg=-T{}/lp_shared.x",
         var("OUT_DIR")?.to_string()

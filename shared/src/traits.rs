@@ -14,6 +14,7 @@ where
     inner: SyncUnsafeCell<ET>,
 }
 
+// TODO: Employ the delegate! macro somehow, to make type access more ergonomic?
 impl<ET> SharedCell<ET>
 where
     ET: Clone + Copy + PartialEq + PartialOrd,

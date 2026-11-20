@@ -13,15 +13,15 @@ use ws2812_esp32s3_ulp::Ws2812;
 mod colours;
 use colours::apply_brightness;
 
-#[shared]
+#[shared_variable]
 pub static mut RAINBOW_COUNTER: u32 = 0;
 
 // RAINBOW_RUN controls RGB rainbow on/off.
 // RGB will run when set to 0xCAFEBABE.
-#[shared]
+#[shared_variable]
 pub static mut RAINBOW_RUN: u32 = 0;
 
-#[shared]
+#[shared_variable]
 pub static mut OTHER_VAR: u32 = 0;
 
 #[entry]

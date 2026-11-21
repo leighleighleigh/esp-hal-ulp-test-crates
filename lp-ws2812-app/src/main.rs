@@ -1,13 +1,12 @@
 #![no_std]
 #![no_main]
-#![allow(static_mut_refs)]
 
 use esp_lp_hal::{delay::Delay, prelude::*};
 use panic_halt as _;
 use smart_leds::{
-    colors::BLACK,
-    hsv::{hsv2rgb, Hsv},
     SmartLedsWrite,
+    colors::BLACK,
+    hsv::{Hsv, hsv2rgb},
 };
 use ws2812_esp32s3_ulp::Ws2812;
 mod colours;

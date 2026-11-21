@@ -1,11 +1,13 @@
 #![no_std]
-#![no_main]
 
 // This library is used by both LP and HP cores.
 // It contains the shared global variables!
 use esp_hal_procmacros::shared_variable;
 // Shared variable types, in external crate.
-pub use shared::{self, *};
+pub use shared;
+
+#[cfg(not(feature = "is-lp-core"))]
+pub const BIN_PATH: &str = env!("LP_BINARY_PATH");
 
 #[shared_variable]
 pub static ULP_HALT_COUNTER: shared::UlpCounter = shared::UlpCounter::new();

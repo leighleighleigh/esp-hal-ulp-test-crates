@@ -30,17 +30,12 @@ use esp_hal::{
 };
 use esp32s3 as pac;
 use hil_test::ulp_utils::ulp_riscv_reset;
-
+// Shared variables from lp_rainbow app
+use lp_rainbow::{RAINBOW_COUNTER, RAINBOW_RUN};
 // Global on/off controls
 const ULP_CORE_ENABLED: bool = true;
 const ULP_RAINBOW_DURING_SLEEP: bool = true;
 const ULP_RAINBOW_SPEED: u32 = 10; // Fast
-// const RAINBOW_SPEED: u32 = 540; // Very slow
-
-unsafe extern "Rust" {
-    static mut RAINBOW_RUN: u32; // Runs when set to 0xcafebabe
-    static mut RAINBOW_COUNTER: u32;
-}
 
 #[main]
 fn main() -> ! {
@@ -83,7 +78,9 @@ fn main() -> ! {
 
             defmt::warn!("Re-programming ULP!");
             ulp_core.erase();
-            let ulp_code = load_lp_code!("target/lp_rainbow");
+            let ulp_code = esp_hal::load_lp_code!(
+                "../lp-ws2812-app/target/riscv32imc-unknown-none-elf/release/lp_rainbow"
+            );
 
             let lp_led_pin = esp_hal::gpio::Output::new(
                 p.GPIO18,

@@ -1,5 +1,4 @@
 #![no_std]
-#![no_main]
 
 // This library is used by both LP and HP cores.
 // It contains the shared global variables!

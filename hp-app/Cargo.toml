@@ -80,7 +80,7 @@ esp32c6 = [
 ]
 
 [dependencies]
-# shared VARIABLES between HP/LP cores
+# LP binary crates also provide a library, containing shared types
 lp-app = { path = "../lp-app" , default-features = false }
 lp-rainbow = { path = "../lp-ws2812-app", default-features = false }
 

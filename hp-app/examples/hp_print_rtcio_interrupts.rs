@@ -12,13 +12,13 @@ use esp_hal::{
     main,
 };
 use hil_test::{hp_utils::configure_rtc_pin, ulp_utils::reprogram_ulp_core_with_run_hook};
-use shared::{
+use lp_app::{
     ULP_BOOT_COUNTER,
     ULP_COMMAND,
     ULP_DEBUG_GPIO_ISR_COUNT,
     ULP_DEBUG_GPIO_ISR_STATUS,
     ULP_DEBUG_LAST_ISR_DATA,
-    UlpCmd,
+    shared::UlpCmd,
 };
 
 #[main]
@@ -58,8 +58,8 @@ fn main() -> ! {
 
     reprogram_ulp_core_with_run_hook(&mut ulp_core, lp_wake_src, || {
         ULP_COMMAND.store(UlpCmd::COUNTER_LOOP);
-        unsafe { ULP_DEBUG_GPIO_ISR_STATUS = 0x0 };
-        unsafe { ULP_DEBUG_LAST_ISR_DATA = 0x0 };
+        ULP_DEBUG_GPIO_ISR_STATUS.store(0);
+        ULP_DEBUG_LAST_ISR_DATA.store(0);
     });
 
     defmt::warn!("ULP re-programmed!");
@@ -78,9 +78,9 @@ fn main() -> ! {
             boot_cnt = new_boot_counter;
         }
 
-        let new_gpio_isr_count = unsafe { ULP_DEBUG_GPIO_ISR_COUNT };
-        let trap_data = unsafe { ULP_DEBUG_GPIO_ISR_STATUS };
-        let isr_data = unsafe { ULP_DEBUG_LAST_ISR_DATA };
+        let new_gpio_isr_count = ULP_DEBUG_GPIO_ISR_COUNT.load();
+        let trap_data = ULP_DEBUG_GPIO_ISR_STATUS.load();
+        let isr_data = ULP_DEBUG_LAST_ISR_DATA.load();
         if gpio_isr_count != new_gpio_isr_count {
             defmt::info!("({}) TRAP_DATA: 0x{:08x}", new_gpio_isr_count, trap_data);
             defmt::info!("({}) ISR_DATA:  0x{:08x}", new_gpio_isr_count, isr_data);

@@ -1,6 +1,5 @@
 #![no_std]
 #![no_main]
-#![allow(static_mut_refs)]
 
 use esp_lp_hal::{
     delay::Delay,
@@ -41,6 +40,8 @@ use timer::Timer;
 // bit-banged i2c driver
 mod i2cbb;
 use i2cbb::I2cBB;
+// Shared types/data
+use lp_app::shared::{TEST_XOR_MASK, UlpCmd, UlpReply};
 // This crate library
 use lp_app::*;
 

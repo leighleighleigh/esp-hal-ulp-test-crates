@@ -10,6 +10,7 @@ use esp_hal::{delay::Delay, time::Instant};
 // Use all shared variables from the lp_app library crate
 pub use lp_app::{self, *};
 pub use lp_rainbow::{self, *};
+pub use shared::{UlpCmd, UlpReply};
 
 // Type aliasing for peripheral type
 pub type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
@@ -122,8 +123,8 @@ pub fn reprogram_ulp_core_with_run_hook<'a, F>(
 ) where
     F: FnOnce(),
 {
+    //defmt::info!("Loading {}", lp_app::BIN_PATH);
     ulp_core.erase();
-
     let ulp_code =
         esp_hal::load_lp_code!("../lp-app/target/riscv32imc-unknown-none-elf/release/lp_app");
 
@@ -140,8 +141,9 @@ pub fn reprogram_ulp_core_with_rainbow_firmware(
     button_pin: esp_hal::peripherals::GPIO5,
 ) {
     ulp_core.erase();
-    let ulp_code = 
-        esp_hal::load_lp_code!("../lp-ws2812-app/target/riscv32imc-unknown-none-elf/release/lp_rainbow");
+    let ulp_code = esp_hal::load_lp_code!(
+        "../lp-ws2812-app/target/riscv32imc-unknown-none-elf/release/lp_rainbow"
+    );
 
     // configure GPIO 18 as LP output pin
     let lp_led_pin = esp_hal::gpio::Output::new(

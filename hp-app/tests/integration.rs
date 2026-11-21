@@ -43,7 +43,7 @@ mod tests {
             LpCoreWakeupSource,
             LpWakeupConfig,
             lp_app::*,
-            lp_rainbow::shared::*,
+            lp_rainbow::*,
             reprogram_ulp_core_with_rainbow_firmware,
             reprogram_ulp_core_with_run_hook,
             ulp_has_booted,

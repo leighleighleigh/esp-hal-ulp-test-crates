@@ -1517,6 +1517,7 @@ dependencies = [
  "esp32s3",
  "log",
  "lp-app",
+ "lp-ws2812-app",
  "num-traits",
  "riscv-decode",
  "semihosting",
@@ -1746,6 +1747,19 @@ dependencies = [
  "esp-metadata-generated 0.5.1",
  "object 0.41.0",
  "shared",
+]
+
+[[package]]
+name = "lp-ws2812-app"
+version = "0.2.0"
+dependencies = [
+ "cargo_metadata",
+ "cfg-if",
+ "esp-devtool",
+ "esp-hal-procmacros 0.20.0",
+ "esp-lp-hal",
+ "esp-metadata-generated 0.5.1",
+ "object 0.41.0",
 ]
 
 [[package]]

@@ -55,6 +55,7 @@ esp32s2 = [
     "esp-println?/esp32s2",
     "dep:esp32s2",
     "lp-app/esp32s2",
+    "lp-rainbow/esp32s2",
 ]
 esp32s3 = [
     "embedded-test/xtensa-semihosting",
@@ -65,6 +66,7 @@ esp32s3 = [
     "esp-println?/esp32s3",
     "dep:esp32s3",
     "lp-app/esp32s3",
+    "lp-rainbow/esp32s3",
 ]
 esp32c6 = [
     "esp-hal/esp32c6",
@@ -74,11 +76,13 @@ esp32c6 = [
     "esp-println?/esp32c6",
     "dep:esp32c6",
     "lp-app/esp32c6",
+    "lp-rainbow/esp32c6",
 ]
 
 [dependencies]
 # shared VARIABLES between HP/LP cores
-lp-app = { path = "../lp-app" }
+lp-app = { path = "../lp-app" , default-features = false }
+lp-rainbow = { path = "../lp-ws2812-app", package = "lp-ws2812-app", default-features = false }
 
 defmt = "1.1"
 defmt-rtt = { version = "1.0.0", optional = true }

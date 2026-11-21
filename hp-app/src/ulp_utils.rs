@@ -9,14 +9,7 @@ pub use esp_hal::lp_core::{
 use esp_hal::{delay::Delay, load_lp_code, time::Instant};
 // Use all shared variables from the lp_app library crate
 pub use lp_app::{self, *};
-
-pub mod lp_rainbow {
-    esp_hal::load_lp_code_global!("target/lp_rainbow");
-    pub mod shared {
-        esp_hal::load_lp_shared!("target/lp_rainbow");
-    }
-}
-pub use lp_rainbow::shared::*;
+pub use lp_rainbow::{self, *};
 
 // Type aliasing for peripheral type
 pub type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
@@ -131,8 +124,8 @@ pub fn reprogram_ulp_core_with_run_hook<'a, F>(
 {
     ulp_core.erase();
 
-    // let ulp_code = lp_app::LpCoreCode {};
-    let ulp_code = esp_hal::load_lp_code!("target/lp_app");
+    let ulp_code =
+        esp_hal::load_lp_code!("../lp-app/target/riscv32imc-unknown-none-elf/release/lp_app");
 
     // All shared variables are reset before reprogramming.
     reset_ulp_shared_variables();

@@ -1,7 +1,7 @@
 [alias]
-esp32c6 = "build --release --features=esp32c6,is-lp-core --target riscv32imac-unknown-none-elf"
-esp32s2 = "build --release --features=esp32s2,is-lp-core --target riscv32imc-unknown-none-elf"
-esp32s3 = "build --release --features=esp32s3,is-lp-core --target riscv32imc-unknown-none-elf"
+esp32c6 = "build --release --features=esp32c6 --target riscv32imac-unknown-none-elf"
+esp32s2 = "build --release --features=esp32s2 --target riscv32imc-unknown-none-elf"
+esp32s3 = "build --release --features=esp32s3 --target riscv32imc-unknown-none-elf"
 
 [build]
 target = "riscv32imc-unknown-none-elf"  # ESP32-S2 + ESP32-S3

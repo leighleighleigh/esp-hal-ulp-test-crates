@@ -12,17 +12,7 @@ use smart_leds::{
 use ws2812_esp32s3_ulp::Ws2812;
 mod colours;
 use colours::apply_brightness;
-
-#[shared_variable]
-pub static mut RAINBOW_COUNTER: u32 = 0;
-
-// RAINBOW_RUN controls RGB rainbow on/off.
-// RGB will run when set to 0xCAFEBABE.
-#[shared_variable]
-pub static mut RAINBOW_RUN: u32 = 0;
-
-#[shared_variable]
-pub static mut OTHER_VAR: u32 = 0;
+use lp_rainbow::*;
 
 #[entry]
 fn main(gpio18_led: esp_lp_hal::gpio::Output<18>, gpio5_button: esp_lp_hal::gpio::Input<5>) {

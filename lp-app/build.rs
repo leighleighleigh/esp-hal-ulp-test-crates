@@ -140,7 +140,10 @@ fn link_shared_variables(symbols: Vec<SharedSymbol>) -> Result<(), Box<dyn Error
         .open(link_path)?;
     // Write to the file
     for (s, a) in symbols {
-        link_file.write_fmt(format_args!(r#"PROVIDE({s} = {a:#x});"#))?;
+        let offset_addr = a + 0x50000000;
+        let entry = format!("PROVIDE({s} = {offset_addr:#x});");
+        println!("cargo::warning={}", entry);
+        link_file.write_fmt(format_args!("{}", entry))?;
     }
     Ok(())
 }

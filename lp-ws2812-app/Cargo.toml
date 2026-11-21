@@ -1,5 +1,5 @@
 [package]
-name         = "lp-ws2812-app"
+name         = "lp-rainbow"
 version      = "0.2.0"
 edition      = "2024"
 rust-version = "1.95.0"

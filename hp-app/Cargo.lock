@@ -1517,7 +1517,7 @@ dependencies = [
  "esp32s3",
  "log",
  "lp-app",
- "lp-ws2812-app",
+ "lp-rainbow",
  "num-traits",
  "riscv-decode",
  "semihosting",
@@ -1750,7 +1750,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lp-ws2812-app"
+name = "lp-rainbow"
 version = "0.2.0"
 dependencies = [
  "cargo_metadata",

@@ -9,16 +9,15 @@ use esp_hal::{
     time::Instant,
 };
 use hil_test::ulp_utils::reprogram_ulp_core_with_run_hook;
-use num_traits::Float;
-use shared::{
+use lp_app::{
     ULP_COMMAND,
     ULP_LOCK,
     ULP_LOOP_COUNTER,
     ULP_REPLY,
     ULP_TEST_DATA_IN,
-    UlpCmd,
-    UlpReply,
+    shared::{UlpCmd, UlpReply},
 };
+use num_traits::Float;
 const MUTEX_ITERATIONS: u32 = 10000;
 const HP_CORE_INCREMENTS: bool = true;
 
@@ -48,7 +47,7 @@ fn main() -> ! {
     let lp_wake_src = LpCoreWakeupSource::HpCpu;
     reprogram_ulp_core_with_run_hook(&mut ulp_core, lp_wake_src, || {
         ULP_COMMAND.store(UlpCmd::MUTEX_TEST);
-        unsafe { ULP_TEST_DATA_IN = MUTEX_ITERATIONS };
+        ULP_TEST_DATA_IN.store(MUTEX_ITERATIONS);
     });
 
     let mut superloop = 0;

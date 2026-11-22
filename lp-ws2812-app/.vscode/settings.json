@@ -1,17 +1,22 @@
 {
+  "chat.disableAIFeatures": true,
   "rust-analyzer.cargo.autoreload": true,
   "rust-analyzer.cargo.allTargets": false,
+  "rust-analyzer.check.allTargets": false,
+  "[rust]": {
+    "editor.formatOnSave": false
+  },
   // For ESP32-S3
   "rust-analyzer.cargo.target": "riscv32imc-unknown-none-elf",
   "rust-analyzer.cargo.features": [
-    "esp32s3"
+    "esp32s3", "is-lp-core"
   ],
+  "nixEnvSelector.nixFile": "${workspaceFolder}/flake.nix",
+  "nixEnvSelector.useFlakes": true,
+  "nixEnvSelector.flakeShell": "default",
   // For ESP32-S2
   // "rust-analyzer.cargo.features": ["esp32s2"],
   // For ESP32-C6
   // "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf",
   // "rust-analyzer.cargo.features": ["esp32c6"],
-  "[rust]": {
-    "editor.formatOnSave": false
-  }
 }

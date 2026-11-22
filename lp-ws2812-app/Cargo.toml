@@ -1,46 +1,69 @@
 [package]
-name = "lp-ws2812-app"
-version = "0.2.0"
-edition = "2024"
+name         = "lp-rainbow"
+version      = "0.2.0"
+edition      = "2024"
 rust-version = "1.95.0"
 
+[lib]
+name       = "lp_rainbow"
+path       = "src/lib.rs"
+crate-type = ["rlib"]
+
 [[bin]]
-path = "src/main.rs"
-name = "lp_rainbow"
-test = false
-bench = false
-
-[dependencies]
-cfg-if = "1"
-embedded-hal = "1.0.0"
-panic-halt = "1.0.0"
-
-# LP HAL from esp-hal
-# which will need a chip feature-flag specified,
-# in order to provide the right linker script.
-esp-lp-hal = { version = "0.3.0" }
-riscv-rt = { version = "0.18.0", default-features = false }
-ws2812-esp32s3-ulp = { git = "https://github.com/leighleighleigh/ws2812-esp32s3-ulp-rs.git", version = "0.1.0" }
-smart-leds = { version = "0.4.0" }
-critical-section = "1.2.0"
-
-[build-dependencies]
-esp-metadata-generated = { version = "0.5.1", features = ["build-script"] }
+name              = "lp_rainbow"
+path              = "src/main.rs"
+required-features = ["is-lp-core"]
 
 [features]
-default = [] 
-esp32s3 = ["esp-metadata-generated/esp32s3", "esp-lp-hal/esp32s3" ]
-esp32s2 = ["esp-metadata-generated/esp32s2", "esp-lp-hal/esp32s2" ]
-esp32c6 = ["esp-metadata-generated/esp32c6", "esp-lp-hal/esp32c6" ]
+default = ["is-lp-core"]
+esp32s3 = ["esp-metadata-generated/esp32s3", "esp-lp-hal?/esp32s3"]
+esp32s2 = ["esp-metadata-generated/esp32s2", "esp-lp-hal?/esp32s2"]
+esp32c6 = ["esp-metadata-generated/esp32c6", "esp-lp-hal?/esp32c6"]
+# Set when compiled for the LP core, unset for the HP core.
+is-lp-core = [
+    "dep:critical-section",
+    "dep:embedded-hal",
+    "dep:esp-lp-hal",
+    "dep:panic-halt",
+    "dep:riscv-rt",
+    "dep:smart-leds",
+    "dep:ws2812-esp32s3-ulp",
+]
+
+[dependencies]
+cfg-if             = "1"
+esp-hal-procmacros = { version = "*", default-features = false }
+
+### EVERYTHING BELOW IS FOR THE LP_APP BINARY ###
+critical-section   = { version = "1.2.0", optional = true }
+embedded-hal       = { version = "1.0.0", optional = true }
+panic-halt         = { version = "1.0.0", optional = true }
+esp-lp-hal         = { version = "0.3.0", optional = true }
+riscv-rt           = { version = "*", default-features = false, optional = true }                                                 # riscv-rt is required for interrupt proc-macros, exported by esp-lp-hal
+smart-leds         = { version = "0.4.0", optional = true }
+ws2812-esp32s3-ulp = { git = "https://github.com/leighleighleigh/ws2812-esp32s3-ulp-rs.git", version = "0.1.0", optional = true }
+
+[build-dependencies]
+cargo_metadata = "0.23.1"
+esp-devtool = { version = "*", path = "../../esp-hal/xtask" }
+esp-metadata-generated = { version = "0.5.1", features = ["build-script"] }
+object = { version = "0.41.0", default-features = false, features = [
+    "read_core",
+    "elf",
+] }
+
+[patch.crates-io]
+#esp-lp-hal             = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
+#esp-metadata-generated = { path = "/home/leigh/Git/esp-hal/esp-metadata-generated" }
+#esp-hal-procmacros     = { path = "/home/leigh/Git/esp-hal/esp-hal-procmacros" }
+esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+esp-metadata-generated = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+esp-hal-procmacros = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
 
 [profile.release]
 debug = false
 strip = "debuginfo"
 # size is an important factor in the ULP code,  because it's easy to run out of space.
-opt-level = "s" 
-codegen-units = 1 # LLVM can perform better optimizations using a single thread
-lto = false
-
-[patch.crates-io]
-esp-lp-hal = { path = "/home/leigh/Git/esp-hal/esp-lp-hal" }
-#esp-lp-hal = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+opt-level     = "s"
+codegen-units = 1     # LLVM can perform better optimizations using a single thread
+lto           = false

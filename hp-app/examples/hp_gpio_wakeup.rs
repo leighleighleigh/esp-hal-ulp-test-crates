@@ -19,15 +19,13 @@ use esp_hal::{
     },
 };
 use hil_test::{hp_utils::configure_rtc_pin, ulp_utils::reprogram_ulp_core_with_run_hook};
-use shared::{
+use lp_app::{
     ULP_BOOT_COUNTER,
     ULP_COMMAND,
     ULP_DEBUG_GPIO_ISR_COUNT,
     ULP_DEBUG_GPIO_ISR_STATUS,
     ULP_DEBUG_LAST_ISR_DATA,
-    UlpCmd,
-    UlpReply,
-    traits::*,
+    shared::{UlpCmd, UlpReply},
 };
 
 #[main]
@@ -91,9 +89,9 @@ fn main() -> ! {
     // Print 3 times
     for _ in 0..3 {
         let new_boot_counter = ULP_BOOT_COUNTER.load();
-        let new_gpio_isr_count = unsafe { ULP_DEBUG_GPIO_ISR_COUNT };
-        let trap_data = unsafe { ULP_DEBUG_GPIO_ISR_STATUS };
-        let isr_data = unsafe { ULP_DEBUG_LAST_ISR_DATA };
+        let new_gpio_isr_count = ULP_DEBUG_GPIO_ISR_COUNT.load();
+        let trap_data = ULP_DEBUG_GPIO_ISR_STATUS.load();
+        let isr_data = ULP_DEBUG_LAST_ISR_DATA.load();
         info!("({}) BOOT COUNT: {}", new_gpio_isr_count, new_boot_counter);
         info!("({}) TRAP_DATA: 0x{:08x}", new_gpio_isr_count, trap_data);
         info!("({}) ISR_DATA:  0x{:08x}", new_gpio_isr_count, isr_data);

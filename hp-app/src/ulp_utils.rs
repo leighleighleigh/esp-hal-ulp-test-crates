@@ -1,4 +1,4 @@
-use ::shared::{UlpCmd, UlpReply};
+#![allow(ambiguous_glob_reexports)]
 /// Test utils for ULP stuff
 use embedded_hal::delay::DelayNs;
 pub use esp_hal::lp_core::{
@@ -8,21 +8,10 @@ pub use esp_hal::lp_core::{
     WakeupConfig as LpWakeupConfig,
 };
 use esp_hal::{delay::Delay, load_lp_code, time::Instant};
-
-pub mod lp_app {
-    esp_hal::load_lp_code_ext!("target/lp_app");
-    pub mod shared {
-        esp_hal::load_lp_shared!("target/lp_app");
-    }
-}
-pub mod lp_rainbow {
-    esp_hal::load_lp_code_ext!("target/lp_rainbow");
-    pub mod shared {
-        esp_hal::load_lp_shared!("target/lp_rainbow");
-    }
-}
-pub use lp_app::shared::*;
-pub use lp_rainbow::shared::*;
+// Use all shared variables from the lp_app library crate
+pub use lp_app::{self, *};
+pub use lp_rainbow::{self, *};
+pub use shared::{UlpCmd, UlpReply};
 
 // Type aliasing for peripheral type
 pub type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
@@ -136,7 +125,8 @@ pub fn reprogram_ulp_core_with_run_hook<'a, F>(
     F: FnOnce(),
 {
     ulp_core.erase();
-    let ulp_code = lp_app::LpCoreCode {};
+    let ulp_code = lp_app::load!();
+
     // All shared variables are reset before reprogramming.
     reset_ulp_shared_variables();
     pre_run_hook();
@@ -150,7 +140,7 @@ pub fn reprogram_ulp_core_with_rainbow_firmware(
     button_pin: esp_hal::peripherals::GPIO5,
 ) {
     ulp_core.erase();
-    let ulp_code = load_lp_code!("target/lp_rainbow");
+    let ulp_code = lp_rainbow::load!();
 
     // configure GPIO 18 as LP output pin
     let lp_led_pin = esp_hal::gpio::Output::new(

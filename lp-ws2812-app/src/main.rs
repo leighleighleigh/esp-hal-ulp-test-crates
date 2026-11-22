@@ -1,28 +1,17 @@
 #![no_std]
 #![no_main]
-#![allow(static_mut_refs)]
 
 use esp_lp_hal::{delay::Delay, prelude::*};
 use panic_halt as _;
 use smart_leds::{
-    colors::BLACK,
-    hsv::{hsv2rgb, Hsv},
     SmartLedsWrite,
+    colors::BLACK,
+    hsv::{Hsv, hsv2rgb},
 };
 use ws2812_esp32s3_ulp::Ws2812;
 mod colours;
 use colours::apply_brightness;
-
-#[shared]
-pub static mut RAINBOW_COUNTER: u32 = 0;
-
-// RAINBOW_RUN controls RGB rainbow on/off.
-// RGB will run when set to 0xCAFEBABE.
-#[shared]
-pub static mut RAINBOW_RUN: u32 = 0;
-
-#[shared]
-pub static mut OTHER_VAR: u32 = 0;
+use lp_rainbow::*;
 
 #[entry]
 fn main(gpio18_led: esp_lp_hal::gpio::Output<18>, gpio5_button: esp_lp_hal::gpio::Input<5>) {

@@ -41,6 +41,13 @@ build-tests *ARGS="":
 build-examples:
   @just build --examples
 
+# Clean all crates
+fullclean:
+  #!/usr/bin/env bash
+  cargo clean
+  (cd ../lp-app/ && cargo clean)
+  (cd ../lp-ws2812-app/ && cargo clean)
+
 format:
   #!/usr/bin/env bash
   shopt -s globstar 

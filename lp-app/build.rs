@@ -2,7 +2,8 @@
 use std::{
     env,
     error::Error,
-    io::{self, Write},
+    fmt::Write as _,
+    io::Write,
     path::PathBuf,
     process::{Command, Stdio},
 };
@@ -17,55 +18,69 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Define all necessary configuration symbols for the configured device:
     chip.define_cfgs();
 
-    // Called when HP core builds this crate as a library
+    // Called when this crate is built as a library
     #[cfg(not(feature = "is-lp-core"))]
-    build_lp_library(chip)?;
+    generate_library_artifacts(chip)?;
 
     // Done!
     Ok(())
 }
 
-fn build_lp_library(chip: Chip) -> Result<(), Box<dyn Error>> {
-    let bin = build_lp_binary(chip)?;
-    // Export this as an environment variable, so it can be stored in a const variable
-    println!("cargo::rustc-env=LP_BINARY_PATH={}", &bin.display());
-    build_lp_linker_script(&bin)?;
-    let outdir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
-    let app_name = env!("CARGO_PKG_NAME").replace("-", "_").to_lowercase();
-    embed_lp_binary(outdir, bin, app_name)
+fn generate_library_artifacts(chip: Chip) -> Result<(), Box<dyn Error>> {
+    // Generated artifacts are placed in $OUT_DIR
+    let out_dir = PathBuf::from(env::var_os("OUT_DIR").ok_or("OUT_DIR is not set")?);
+    println!("cargo:rustc-link-search={}", out_dir.display());
+
+    // Compile the LP firmware, and return a path to the binary ELF artifact
+    let bin = build_lp_firmware(chip)?;
+
+    // Extract symbols from the compiled binary, so the HP core can link against them.
+    let linker_script_filename = format!("{}-shared.x", env!("CARGO_PKG_NAME"));
+    generate_linker_script(chip, &bin, &out_dir, linker_script_filename)?;
+
+    // The load! macro provides a wrapper around `load_lp_code!`,
+    // pre-filled with an absolute path to the firmware ELF.
+    generate_load_macro(out_dir, bin)
 }
 
-fn embed_lp_binary(
-    out_dir: PathBuf,
-    elf_file: PathBuf,
-    app_name: String,
-) -> Result<(), Box<dyn Error>> {
-    let dest_path = std::path::Path::new(&out_dir).join(format!("code.rs"));
-    println!("cargo:warning={}", dest_path.display());
+fn generate_load_macro(out_dir: PathBuf, elf_file: PathBuf) -> Result<(), Box<dyn Error>> {
+    let mut source = String::from(
+        r#"#[doc(hidden)]
+#[macro_export]
+/// Wrapper for load_lp_code!(...)
+macro_rules! load {
+"#,
+    );
+
+    write!(
+        source,
+        r#"
+    () => {{ load_lp_code!("{elf}") }};
+"#,
+        elf = elf_file.display()
+    )?;
+
+    write!(
+        source,
+        r#"
+}}
+"#
+    )?;
 
     std::fs::write(
-        &dest_path,
-        format!(
-            r#"
-#[macro_export]
-/// Wrapper for load_lp_code!("{elf}")
-macro_rules! load {{
-    () => {{
-        load_lp_code!("{elf}")
-    }};
-}}
-        "#,
-            elf = elf_file.display()
-        ),
-    )
-    .unwrap();
+        std::path::PathBuf::from(out_dir).join("load_macro.rs"),
+        source,
+    )?;
+
     Ok(())
 }
 
 /// Builds this crate, and returns a path to the compiled ELF.
-fn build_lp_binary(chip: Chip) -> Result<PathBuf, Box<dyn Error>> {
+fn build_lp_firmware(chip: Chip) -> Result<PathBuf, Box<dyn Error>> {
     let manifest_path = PathBuf::from(env!("CARGO_MANIFEST_PATH"));
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let cwd = manifest_dir; // working directory for cargo command execution
+
     let pkg_name = env!("CARGO_PKG_NAME");
     let chip_target = match &chip {
         Chip::Esp32c6 => "riscv32imac-unknown-none-elf",
@@ -108,10 +123,9 @@ fn build_lp_binary(chip: Chip) -> Result<PathBuf, Box<dyn Error>> {
         command.stdin(Stdio::inherit()).output()
     }
 
-    let cwd = manifest_dir.to_path_buf();
     let mut builder = CargoArgsBuilder::new(pkg_name.to_string())
         .subcommand("build")
-        .manifest_path(cwd.clone().join("Cargo.toml"))
+        .manifest_path(manifest_path)
         .target(chip_target)
         .features(&features);
     builder.add_arg("--release");
@@ -138,7 +152,12 @@ fn build_lp_binary(chip: Chip) -> Result<PathBuf, Box<dyn Error>> {
     panic!("Couldn't fetch LP binary!");
 }
 
-fn build_lp_linker_script(elf_file: &PathBuf) -> Result<(), Box<dyn Error>> {
+fn generate_linker_script(
+    chip: Chip,
+    elf_file: &PathBuf,
+    out_dir: &PathBuf,
+    filename: String,
+) -> Result<(), Box<dyn Error>> {
     type SharedSymbol = (String, u64);
 
     fn read_shared_variables(elf_file: &PathBuf) -> Result<Vec<SharedSymbol>, Box<dyn Error>> {
@@ -158,27 +177,30 @@ fn build_lp_linker_script(elf_file: &PathBuf) -> Result<(), Box<dyn Error>> {
         Ok(syms)
     }
 
-    fn link_shared_variables(symbols: Vec<SharedSymbol>) -> Result<(), Box<dyn Error>> {
-        // Generate a new linker script, containing the shared variable locations
-        let out = PathBuf::from(env::var("OUT_DIR").unwrap());
-        // Unsure if needed, if we aren't ourselves linking against this? Hmm, need do test.
-        println!("cargo:rustc-link-search={}", out.display());
-        let link_path = out.join(format!("{}-shared.x", env!("CARGO_PKG_NAME")));
-        let mut link_file = std::fs::OpenOptions::new()
-            .write(true)
-            .append(true)
-            .create(true)
-            .open(link_path)?;
-        // Write to the file
-        for (s, a) in symbols {
-            let offset_addr = a + 0x50000000;
-            let entry = format!("PROVIDE({s} = {offset_addr:#x});");
-            println!("cargo::warning={}", entry);
-            link_file.write_fmt(format_args!("{}", entry))?;
-        }
-        Ok(())
+    // Find the shared variable symbols in the ELF binary file
+    let symbols = read_shared_variables(&elf_file)?;
+
+    // Determine the base address to offset from HP core to LP core.
+    let lp_base_address = match chip {
+        Chip::Esp32c6 => 0x0,
+        Chip::Esp32s2 | Chip::Esp32s3 => 0x5000_0000,
+        _ => panic!("Unsupported chip!"),
+    };
+
+    // Write generated symbols to the file
+    let link_path = out_dir.join(filename);
+    let mut link_file = std::fs::OpenOptions::new()
+        .write(true)
+        .append(true)
+        .create(true)
+        .open(link_path)?;
+
+    for (s, a) in symbols {
+        let offset_addr = a + lp_base_address;
+        let entry = format!("PROVIDE({s} = {offset_addr:#x});\r\n");
+        link_file.write_fmt(format_args!("{}", entry))?;
+        println!("cargo::warning={}", entry);
     }
 
-    let syms = read_shared_variables(&elf_file)?;
-    link_shared_variables(syms)
+    Ok(())
 }

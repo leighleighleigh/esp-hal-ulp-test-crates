@@ -31,7 +31,4 @@ pub static ULP_TEST_DATA_OUT: shared::UlpCounter = shared::UlpCounter::new();
 
 // This file is written by build.rs
 #[cfg(not(feature = "is-lp-core"))]
-#[macro_use]
-mod code {
-    include!(concat!(env!("OUT_DIR"), "/code.rs"));
-}
+include!(concat!(env!("OUT_DIR"), "/load_macro.rs"));

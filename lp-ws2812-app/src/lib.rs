@@ -13,7 +13,4 @@ pub static mut OTHER_VAR: u32 = 0;
 
 // This file is written by build.rs
 #[cfg(not(feature = "is-lp-core"))]
-#[macro_use]
-mod code {
-    include!(concat!(env!("OUT_DIR"), "/code.rs"));
-}
+include!(concat!(env!("OUT_DIR"), "/load_macro.rs"));

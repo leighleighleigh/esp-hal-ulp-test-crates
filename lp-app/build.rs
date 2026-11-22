@@ -29,7 +29,37 @@ fn build_lp_library(chip: Chip) -> Result<(), Box<dyn Error>> {
     let bin = build_lp_binary(chip)?;
     // Export this as an environment variable, so it can be stored in a const variable
     println!("cargo::rustc-env=LP_BINARY_PATH={}", &bin.display());
-    build_lp_linker_script(&bin)
+    build_lp_linker_script(&bin)?;
+    let outdir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    let app_name = env!("CARGO_PKG_NAME").replace("-", "_").to_lowercase();
+    embed_lp_binary(outdir, bin, app_name)
+}
+
+fn embed_lp_binary(
+    out_dir: PathBuf,
+    elf_file: PathBuf,
+    app_name: String,
+) -> Result<(), Box<dyn Error>> {
+    let dest_path = std::path::Path::new(&out_dir).join(format!("code.rs"));
+    println!("cargo:warning={}", dest_path.display());
+
+    std::fs::write(
+        &dest_path,
+        format!(
+            r#"
+#[macro_export]
+/// Wrapper for load_lp_code!("{elf}")
+macro_rules! load {{
+    () => {{
+        load_lp_code!("{elf}")
+    }};
+}}
+        "#,
+            elf = elf_file.display()
+        ),
+    )
+    .unwrap();
+    Ok(())
 }
 
 /// Builds this crate, and returns a path to the compiled ELF.

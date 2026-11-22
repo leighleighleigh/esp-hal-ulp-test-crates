@@ -6,9 +6,6 @@ use esp_hal_procmacros::shared_variable;
 // Shared variable types, in external crate.
 pub use shared;
 
-#[cfg(not(feature = "is-lp-core"))]
-pub const BIN_PATH: &str = env!("LP_BINARY_PATH");
-
 #[shared_variable]
 pub static ULP_HALT_COUNTER: shared::UlpCounter = shared::UlpCounter::new();
 #[shared_variable]
@@ -31,3 +28,10 @@ pub static ULP_DEBUG_LAST_ISR_DATA: shared::UlpCounter = shared::UlpCounter::new
 pub static ULP_TEST_DATA_IN: shared::UlpCounter = shared::UlpCounter::new();
 #[shared_variable]
 pub static ULP_TEST_DATA_OUT: shared::UlpCounter = shared::UlpCounter::new();
+
+// This file is written by build.rs
+#[cfg(not(feature = "is-lp-core"))]
+#[macro_use]
+mod code {
+    include!(concat!(env!("OUT_DIR"), "/code.rs"));
+}

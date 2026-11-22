@@ -1,3 +1,4 @@
+#![allow(ambiguous_glob_reexports)]
 /// Test utils for ULP stuff
 use embedded_hal::delay::DelayNs;
 pub use esp_hal::lp_core::{
@@ -6,7 +7,7 @@ pub use esp_hal::lp_core::{
     UlpCoreWakeupSource as LpCoreWakeupSource,
     WakeupConfig as LpWakeupConfig,
 };
-use esp_hal::{delay::Delay, time::Instant};
+use esp_hal::{delay::Delay, load_lp_code, time::Instant};
 // Use all shared variables from the lp_app library crate
 pub use lp_app::{self, *};
 pub use lp_rainbow::{self, *};
@@ -123,10 +124,8 @@ pub fn reprogram_ulp_core_with_run_hook<'a, F>(
 ) where
     F: FnOnce(),
 {
-    //defmt::info!("Loading {}", lp_app::BIN_PATH);
     ulp_core.erase();
-    let ulp_code =
-        esp_hal::load_lp_code!("../lp-app/target/riscv32imc-unknown-none-elf/release/lp_app");
+    let ulp_code = lp_app::load!();
 
     // All shared variables are reset before reprogramming.
     reset_ulp_shared_variables();
@@ -141,9 +140,7 @@ pub fn reprogram_ulp_core_with_rainbow_firmware(
     button_pin: esp_hal::peripherals::GPIO5,
 ) {
     ulp_core.erase();
-    let ulp_code = esp_hal::load_lp_code!(
-        "../lp-ws2812-app/target/riscv32imc-unknown-none-elf/release/lp_rainbow"
-    );
+    let ulp_code = lp_rainbow::load!();
 
     // configure GPIO 18 as LP output pin
     let lp_led_pin = esp_hal::gpio::Output::new(

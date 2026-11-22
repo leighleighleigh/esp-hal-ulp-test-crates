@@ -144,26 +144,26 @@ opt-level = 3
 lto = false             # LTO (thin or fat) miscompiles some tests on RISC-V
 overflow-checks = true
 
-# # git development patches
-# [patch.crates-io]
-# esp-backtrace = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
-# esp-bootloader-esp-idf = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
-# esp-hal = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
-# esp-hal-procmacros = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
-# esp-metadata-generated = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
-# esp-println = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
-# esp-riscv-rt = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
-# esp-rom-sys = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
-# esp-storage = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
-
-# local development patches
+# git development patches
 [patch.crates-io]
-esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
-esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
-esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
-esp-hal-procmacros = { path = "/home/leigh/Git/esp-hal/esp-hal-procmacros" }
-esp-metadata-generated = { path = "/home/leigh/Git/esp-hal/esp-metadata-generated" }
-esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
-esp-riscv-rt = { path = "/home/leigh/Git/esp-hal/esp-riscv-rt" }
-esp-rom-sys = { path = "/home/leigh/Git/esp-hal/esp-rom-sys" }
-esp-storage = { path = "/home/leigh/Git/esp-hal/esp-storage" }
+esp-backtrace = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+esp-bootloader-esp-idf = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+esp-hal = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+esp-hal-procmacros = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+esp-metadata-generated = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+esp-println = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+esp-riscv-rt = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+esp-rom-sys = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+esp-storage = { git = "https://github.com/leighleighleigh/esp-hal", branch = "lp-shared-variables" }
+
+## local development patches
+#[patch.crates-io]
+#esp-backtrace = { path = "/home/leigh/Git/esp-hal/esp-backtrace" }
+#esp-bootloader-esp-idf = { path = "/home/leigh/Git/esp-hal/esp-bootloader-esp-idf" }
+#esp-hal = { path = "/home/leigh/Git/esp-hal/esp-hal" }
+#esp-hal-procmacros = { path = "/home/leigh/Git/esp-hal/esp-hal-procmacros" }
+#esp-metadata-generated = { path = "/home/leigh/Git/esp-hal/esp-metadata-generated" }
+#esp-println = { path = "/home/leigh/Git/esp-hal/esp-println" }
+#esp-riscv-rt = { path = "/home/leigh/Git/esp-hal/esp-riscv-rt" }
+#esp-rom-sys = { path = "/home/leigh/Git/esp-hal/esp-rom-sys" }
+#esp-storage = { path = "/home/leigh/Git/esp-hal/esp-storage" }

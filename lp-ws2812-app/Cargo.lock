@@ -482,6 +482,7 @@ dependencies = [
 [[package]]
 name = "esp-hal-procmacros"
 version = "0.23.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#80331efb1592680e245dd108879ad52b257a480f"
 dependencies = [
  "document-features",
  "proc-macro-crate",
@@ -494,6 +495,7 @@ dependencies = [
 [[package]]
 name = "esp-lp-hal"
 version = "0.3.0"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#80331efb1592680e245dd108879ad52b257a480f"
 dependencies = [
  "critical-section",
  "document-features",
@@ -512,6 +514,7 @@ dependencies = [
 [[package]]
 name = "esp-metadata-generated"
 version = "0.5.1"
+source = "git+https://github.com/leighleighleigh/esp-hal?branch=lp-shared-variables#80331efb1592680e245dd108879ad52b257a480f"
 
 [[package]]
 name = "esp32c6-lp"

@@ -78,9 +78,7 @@ fn main() -> ! {
 
             defmt::warn!("Re-programming ULP!");
             ulp_core.erase();
-            let ulp_code = esp_hal::load_lp_code!(
-                "../lp-ws2812-app/target/riscv32imc-unknown-none-elf/release/lp_rainbow"
-            );
+            let ulp_code = lp_rainbow::load!();
 
             let lp_led_pin = esp_hal::gpio::Output::new(
                 p.GPIO18,

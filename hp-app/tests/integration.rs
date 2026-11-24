@@ -34,7 +34,10 @@ mod tests {
     use esp32s3::rtc_cntl::ulp_cp_timer_1::ULP_CP_TIMER_SLP_CYCLE_R;
     use hil_test::{
         self as _,
+        debug,
+        error,
         hp_utils::configure_rtc_pin,
+        info,
         ulp_debug::{self, FromRegister},
         ulp_utils::{
             LpCore,
@@ -55,6 +58,7 @@ mod tests {
             ulp_riscv_timer_stop,
             ulp_timer_period,
         },
+        warn,
     };
     use semihosting::sys::arm_compat::syscall::{self, ParamRegR, ParamRegW};
     use shared::{TEST_MUTEX_ITERATIONS, UlpCmd, UlpReply};
@@ -68,6 +72,7 @@ mod tests {
     fn init() -> Context {
         let config = esp_hal::Config::default().with_cpu_clock(esp_hal::clock::CpuClock::max());
         let peripherals = esp_hal::init(config);
+        hil_test::setup_logger();
 
         {
             // REQUIRED FOR LEIGHLEIGHLEIGH's CUSTOM DEVBOARD ONLY
@@ -84,10 +89,10 @@ mod tests {
         }
 
         // Do a newline in debug mode, so logs are readable
-        defmt::debug!("\n");
+        debug!("\n");
 
         // let dbg = ulp_debug::CocpuDebug::read();
-        // defmt::debug!("{}", dbg);
+        // debug!("{}", dbg);
 
         // LEGACY: Rescue the ULP core from a stuck state
         // ulp_riscv_hard_reset();
@@ -150,12 +155,12 @@ mod tests {
         );
         hil_test::assert_eq!(ulp_has_booted(), true);
         hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
-        defmt::debug!("count: {}", ULP_LOOP_COUNTER.load());
+        debug!("count: {}", ULP_LOOP_COUNTER.load());
         // Delay for a second
         Delay::new().delay_ms(1000);
         // Check the count is above 10
         let count = ULP_LOOP_COUNTER.load();
-        defmt::debug!("count: {}", count);
+        debug!("count: {}", count);
         hil_test::assert!(count >= 10);
     }
 
@@ -201,7 +206,7 @@ mod tests {
         ULP_LOOP_COUNTER.reset();
         Delay::new().delay_ms(100);
         let count = ULP_LOOP_COUNTER.load();
-        defmt::debug!("count: {}", count);
+        debug!("count: {}", count);
         hil_test::assert!(count >= 100);
 
         // Change speed to a slow one
@@ -209,7 +214,7 @@ mod tests {
         ULP_LOOP_COUNTER.reset();
         Delay::new().delay_ms(1000);
         let count = ULP_LOOP_COUNTER.load();
-        defmt::debug!("count: {}", count);
+        debug!("count: {}", count);
         hil_test::assert!(count <= 2);
     }
 
@@ -231,14 +236,14 @@ mod tests {
         hil_test::assert_eq!(true, ulp_is_looping());
 
         // Check it is running at a fast rate
-        defmt::debug!("Waiting for 1 second...");
+        debug!("Waiting for 1 second...");
         Delay::new().delay_ms(1000);
         let count = ULP_LOOP_COUNTER.load();
-        defmt::debug!("count: {}", count);
+        debug!("count: {}", count);
         hil_test::assert!(count >= 10);
 
         // Pause timer, ask it to reconfigure for slow rate
-        defmt::debug!("Pausing timer...");
+        debug!("Pausing timer...");
         ulp_riscv_timer_stop();
         Delay::new().delay_ms(10);
         hil_test::assert_eq!(false, ulp_is_looping());
@@ -247,16 +252,16 @@ mod tests {
         ULP_BOOT_COUNTER.reset();
         ULP_REPLY.store(UlpReply::UNSET);
 
-        defmt::debug!("Resuming timer...");
+        debug!("Resuming timer...");
         ulp_riscv_timer_resume();
         hil_test::assert!(ulp_has_booted());
         hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
 
         // Confirm the slow rate was applied
-        defmt::debug!("Waiting for 1 second...");
+        debug!("Waiting for 1 second...");
         Delay::new().delay_ms(1000);
         let count = ULP_LOOP_COUNTER.load();
-        defmt::debug!("count: {}", count);
+        debug!("count: {}", count);
         hil_test::assert!(count >= 1 && count <= 3);
     }
 
@@ -290,7 +295,7 @@ mod tests {
 
         // Check the exception write 0xdeadbeef to the DATA1 variable
         let result = { ULP_DEBUG_LAST_ISR_DATA.load() };
-        defmt::debug!("ULP_DEBUG_TRAP_DATA1: 0x{:08x}", result);
+        debug!("ULP_DEBUG_TRAP_DATA1: 0x{:08x}", result);
         hil_test::assert_eq!(0xdeadbeef, result);
 
         // Check that the exception has caused the ULP to halt
@@ -308,7 +313,7 @@ mod tests {
         hil_test::assert_eq!(true, ulp_is_looping());
 
         let result = { ULP_DEBUG_LAST_ISR_DATA.load() };
-        defmt::debug!("interrupt wrote: 0x{:08x}", result);
+        debug!("interrupt wrote: 0x{:08x}", result);
         hil_test::assert_eq!(0xcafebabe, result);
 
         // The interrupt should not cause the ULP to lock up or halt
@@ -367,12 +372,9 @@ mod tests {
             let expected_waitirq_cycles = timer_cycles + ULP_CYCLE_MEASUREMENT_OVERHEAD;
 
             // Print the number of cycles that the lp core blocked for
-            defmt::debug!(
+            debug!(
                 "timer cycles: {} ({} ms), expected waitirq cycles: {}, ULP measured cycles: {}",
-                timer_cycles,
-                timer_duration_ms,
-                expected_waitirq_cycles,
-                ulp_waitirq_cycles,
+                timer_cycles, timer_duration_ms, expected_waitirq_cycles, ulp_waitirq_cycles,
             );
             hil_test::assert_eq!(expected_waitirq_cycles, ulp_waitirq_cycles);
 
@@ -470,11 +472,9 @@ mod tests {
             let lp_did_interrupt = ((lp_trap_data >> 10) & (1 << RTCPIN)) != 0;
             let lp_input_lvl = ((lp_isr_data >> 10) & (1 << RTCPIN)) != 0;
 
-            defmt::debug!(
+            debug!(
                 "HP output: {}, LP interrupted: {}, LP input: {}",
-                hp_output_lvl,
-                lp_did_interrupt,
-                lp_input_lvl
+                hp_output_lvl, lp_did_interrupt, lp_input_lvl
             );
 
             match INTTYPE {
@@ -712,7 +712,7 @@ mod tests {
 
             let data = ULP_TEST_DATA_OUT.load();
             let voltage = (data as f32) / 10000.0;
-            defmt::debug!("Battery: {} V", voltage);
+            debug!("Battery: {} V", voltage);
         }
 
         hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
@@ -732,11 +732,11 @@ mod tests {
         // Immediately acquire the lock, before the ULP core does,
         // and release it when we want to be woken up.
         ULP_LOCK.acquire();
-        defmt::debug!("UlpLock acquired.");
+        debug!("UlpLock acquired.");
 
         hil_test::assert!(ulp_has_booted());
         hil_test::assert_eq!(UlpReply::OK, ULP_REPLY.load());
-        defmt::debug!("ULP booted.");
+        debug!("ULP booted.");
 
         // Wait 0.1 seconds (maximum time) for ULP to be ready to handle the lock
         Delay::new().delay_ms(100);
@@ -746,7 +746,7 @@ mod tests {
         // If we aren't woken within 3 seconds, the timer will wake us up.
         let wakeup_deadline = esp_hal::time::Duration::from_millis(3000);
         lpwr.set_wakeup_deadline(Instant::now() + wakeup_deadline);
-        defmt::debug!("Entering light sleep...");
+        debug!("Entering light sleep...");
 
         // Enter light sleep, recording the time of entry.
         let sleep_cfg = RtcSleepConfig::default();
@@ -758,7 +758,7 @@ mod tests {
 
         // Light sleep will resume here!
         let sleep_duration = sleep_start_timestamp.elapsed();
-        defmt::debug!("slept for {}", sleep_duration);
+        debug!("slept for {}", sleep_duration);
 
         // Use the elapsed sleep time to determine PASS/FAIL
 

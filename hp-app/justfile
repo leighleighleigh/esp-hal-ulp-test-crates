@@ -96,3 +96,23 @@ try-stream PORT:
     cat {{PORT}} 2>/dev/null || break
   done
   echo "# [$(date +%s)] Disconnected from {{PORT}}"
+
+qemu APP:
+  #!/usr/bin/env bash
+  elf="$(realpath "{{APP}}")"
+  bin="${elf%.*}.bin"
+
+  espflash save-image \
+  --chip esp32s3 \
+  --flash-size 4mb \
+  --merge "${elf}" "${bin}"
+
+  qemu-system-xtensa -icount shift=auto \
+  -global driver=timer.esp32s3.timg,property=wdt_disable,value=false \
+  -nographic \
+  -machine esp32s3 \
+  -m 4 \
+  -serial mon:stdio -monitor none \
+  -drive file=${bin},if=mtd,format=raw
+
+

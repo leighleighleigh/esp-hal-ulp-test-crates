@@ -14,60 +14,78 @@ pub mod ulp_utils;
 // defmt_rtt installs the global defmt logger for running tests,
 // but if not enabled the esp-println will install one instead.
 #[cfg(feature = "defmt")]
+pub use defmt::{debug, error, info, warn};
+#[cfg(feature = "defmt-rtt")]
 use defmt_rtt as _;
 use esp_hal as _;
-#[cfg(not(feature = "defmt"))]
+#[cfg(not(feature = "defmt-rtt"))]
 use esp_println as _;
+#[cfg(any(feature = "defmt-println", feature = "log-println"))]
+use esp_println as _;
+#[allow(unused)]
+#[cfg(not(feature = "defmt"))]
+pub use log::{debug, error, info, warn};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(not(feature = "defmt"))]
-#[defmt::global_logger]
-struct Logger;
+/// Init logging using the debug!,info!,warn!,error! macros.
+pub fn setup_logger() {
+    #[cfg(not(feature = "defmt"))]
+    esp_println::logger::init_logger_from_env();
+}
 
-#[cfg(not(feature = "defmt"))]
-unsafe impl defmt::Logger for Logger {
-    fn acquire() {}
-    unsafe fn flush() {}
-    unsafe fn release() {}
-    unsafe fn write(_bytes: &[u8]) {}
+cfg_select! {
+    test => {
+        #[cfg(not(feature = "defmt"))]
+        #[defmt::global_logger]
+        struct Logger;
+
+        #[cfg(not(feature = "defmt"))]
+        unsafe impl defmt::Logger for Logger {
+            fn acquire() {}
+            unsafe fn flush() {}
+            unsafe fn release() {}
+            unsafe fn write(_bytes: &[u8]) {}
+        }
+    }
+    _ => {}
 }
 
 #[cfg(feature = "defmt")]
 #[macro_export]
 macro_rules! assert {
-    ($($t:tt)*) => { defmt::assert!($($t)*) }
-}
+            ($($t:tt)*) => { defmt::assert!($($t)*) }
+        }
 
 #[cfg(feature = "defmt")]
 #[macro_export]
 macro_rules! assert_eq {
-    ($($t:tt)*) => { defmt::assert_eq!($($t)*) }
-}
+            ($($t:tt)*) => { defmt::assert_eq!($($t)*) }
+        }
 
 #[cfg(feature = "defmt")]
 #[macro_export]
 macro_rules! assert_ne {
-    ($($t:tt)*) => { defmt::assert_ne!($($t)*) }
-}
+            ($($t:tt)*) => { defmt::assert_ne!($($t)*) }
+        }
 
 #[cfg(not(feature = "defmt"))]
 #[macro_export]
 macro_rules! assert {
-    ($($t:tt)*) => { ::core::assert!($($t)*) }
-}
+            ($($t:tt)*) => { ::core::assert!($($t)*) }
+        }
 
 #[cfg(not(feature = "defmt"))]
 #[macro_export]
 macro_rules! assert_eq {
-    ($($t:tt)*) => { ::core::assert_eq!($($t)*) }
-}
+            ($($t:tt)*) => { ::core::assert_eq!($($t)*) }
+        }
 
 #[cfg(not(feature = "defmt"))]
 #[macro_export]
 macro_rules! assert_ne {
-    ($($t:tt)*) => { ::core::assert_ne!($($t)*) }
-}
+            ($($t:tt)*) => { ::core::assert_ne!($($t)*) }
+        }
 
 #[macro_export]
 macro_rules! i2c_pins {

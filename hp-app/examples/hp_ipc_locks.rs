@@ -8,7 +8,7 @@ use esp_hal::{
     main,
     time::Instant,
 };
-use hil_test::ulp_utils::reprogram_ulp_core_with_run_hook;
+use hil_test::{info, setup_logger, ulp_utils::reprogram_ulp_core_with_run_hook, warn};
 use lp_app::{
     ULP_COMMAND,
     ULP_LOCK,
@@ -25,6 +25,8 @@ const HP_CORE_INCREMENTS: bool = true;
 fn main() -> ! {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
+    setup_logger();
+    info!("Boot!");
 
     {
         // REQUIRED FOR LEIGHLEIGHLEIGH's CUSTOM DEVBOARD ONLY
@@ -56,6 +58,7 @@ fn main() -> ! {
     let mut test_samples: [f64; _] = [0.0; 100];
 
     loop {
+        info!("Starting superloop {}", superloop);
         let t0 = Instant::now();
 
         for _i in 0..MUTEX_ITERATIONS {
@@ -92,7 +95,7 @@ fn main() -> ! {
                 test_sample_mu += test_samples[i];
             }
             test_sample_mu /= n as f64;
-            // defmt::warn!("Loop {} mean {}", superloop, test_sample_mu as u64);
+            // warn!("Loop {} mean {}", superloop, test_sample_mu as u64);
 
             let mut test_sample_var: f64 = 0.0;
             for i in 0..n {
@@ -103,7 +106,7 @@ fn main() -> ! {
             test_sample_var /= (n - 1) as f64;
             let test_sample_std = test_sample_var.powf(0.5);
 
-            defmt::warn!(
+            warn!(
                 "Loop {} did {} iters in {} ({} iter/sec, mean {}, std {})",
                 superloop,
                 MUTEX_ITERATIONS,
@@ -113,12 +116,9 @@ fn main() -> ! {
                 test_sample_std as u64,
             );
         } else {
-            defmt::warn!(
+            warn!(
                 "Loop {} did {} iters in {} ({} iter/sec)",
-                superloop,
-                MUTEX_ITERATIONS,
-                test_duration,
-                test_rate
+                superloop, MUTEX_ITERATIONS, test_duration, test_rate
             );
         }
 

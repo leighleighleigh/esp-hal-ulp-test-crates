@@ -11,6 +11,11 @@
       url = "git+ssh://git@github.com/leighleighleigh/esp-rs-nix.git?ref=refs/tags/v3.1.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    qemu-espressif = {
+      url = "git+https://gitlab.com/SFrijters/nix-qemu-espressif";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs: {
@@ -19,12 +24,17 @@
       default =
         let
           esp-rs = inputs.esp-rs.packages.${system}.default;
+          esp-qemu = inputs.qemu-espressif.packages.${system}.default.override {
+            enableTests = false;
+            enableTools = true;
+          };
         in
         pkgs.mkShell rec {
           name = "hp-app";
 
           packages = [
             esp-rs
+            esp-qemu
           ]
           ++ [
             pkgs.cargo-generate

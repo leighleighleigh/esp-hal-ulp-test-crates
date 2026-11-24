@@ -13,6 +13,8 @@ pub use lp_app::{self, *};
 pub use lp_rainbow::{self, *};
 pub use shared::{UlpCmd, UlpReply};
 
+use super::debug;
+
 // Type aliasing for peripheral type
 pub type LpCorePeripheral = esp_hal::peripherals::ULP_RISCV_CORE<'static>;
 
@@ -195,11 +197,11 @@ pub fn ulp_is_looping() -> bool {
     let c = (b - a) as u64;
 
     if c == 0 {
-        defmt::debug!("a =  {}, b = {}. Timed out.", a, b);
-        defmt::debug!("a =  {}, b = {}, rate = 0 Hz", a, b);
+        debug!("a =  {}, b = {}. Timed out.", a, b);
+        debug!("a =  {}, b = {}, rate = 0 Hz", a, b);
     } else {
         let count_rate = (c * 1000000) / dt;
-        defmt::debug!("a =  {}, b = {}, rate = {} Hz", a, b, count_rate);
+        debug!("a =  {}, b = {}, rate = {} Hz", a, b, count_rate);
     }
 
     a != b

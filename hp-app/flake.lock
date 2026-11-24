@@ -49,10 +49,31 @@
         "type": "indirect"
       }
     },
+    "qemu-espressif": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1794988991,
+        "narHash": "sha256-N+WX0/GbfTrmTYwWGB9s0mik1y7xqRNijSSUEaKAqPU=",
+        "ref": "refs/heads/master",
+        "rev": "b6b060d2f96bffa2b5784a2af29a3f574ed3d794",
+        "revCount": 190,
+        "type": "git",
+        "url": "https://gitlab.com/SFrijters/nix-qemu-espressif"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://gitlab.com/SFrijters/nix-qemu-espressif"
+      }
+    },
     "root": {
       "inputs": {
         "esp-rs": "esp-rs",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "qemu-espressif": "qemu-espressif"
       }
     }
   },

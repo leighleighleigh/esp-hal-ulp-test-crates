@@ -18,7 +18,8 @@ rustflags = [
 [env]
 # CHANGE THE TEST LOGGING LEVEL HERE!!!
 DEFMT_LOG = "debug,integration=debug,embedded_test=off,esp_hal=off"
-ESP_LOG = "debug,integration=debug,embedded_test=off,esp_hal=off"
+# ESP_LOG = "debug,integration=debug,embedded_test=off,esp_hal=off"
+ESP_LOG = "debug"
 
 [unstable]
 build-std = ["core", "alloc"]

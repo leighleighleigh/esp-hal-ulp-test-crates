@@ -11,7 +11,13 @@ use esp_hal::{
     },
     main,
 };
-use hil_test::{hp_utils::configure_rtc_pin, ulp_utils::reprogram_ulp_core_with_run_hook};
+use hil_test::{
+    hp_utils::configure_rtc_pin,
+    info,
+    setup_logger,
+    ulp_utils::reprogram_ulp_core_with_run_hook,
+    warn,
+};
 use lp_app::{
     ULP_BOOT_COUNTER,
     ULP_COMMAND,
@@ -25,6 +31,7 @@ use lp_app::{
 fn main() -> ! {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
+    setup_logger();
 
     {
         // REQUIRED FOR LEIGHLEIGHLEIGH's CUSTOM DEVBOARD ONLY
@@ -49,7 +56,7 @@ fn main() -> ! {
     }
 
     let mut ulp_core = LpCore::new(peripherals.ULP_RISCV_CORE);
-    defmt::warn!("Re-programming ULP!");
+    warn!("Re-programming ULP!");
 
     // Run with sleeping, to find out: Do GPIO interrupts fire while asleep?
     // let lp_wake_src = LpCoreWakeupSource::Timer(LpCoreTimerCycles::new(530));
@@ -62,7 +69,7 @@ fn main() -> ! {
         ULP_DEBUG_LAST_ISR_DATA.store(0);
     });
 
-    defmt::warn!("ULP re-programmed!");
+    warn!("ULP re-programmed!");
 
     let dly = esp_hal::delay::Delay::new();
 
@@ -74,7 +81,7 @@ fn main() -> ! {
     loop {
         let new_boot_counter = ULP_BOOT_COUNTER.load();
         if boot_cnt != new_boot_counter {
-            defmt::info!("BOOT COUNT: {}", new_boot_counter);
+            info!("BOOT COUNT: {}", new_boot_counter);
             boot_cnt = new_boot_counter;
         }
 
@@ -82,8 +89,8 @@ fn main() -> ! {
         let trap_data = ULP_DEBUG_GPIO_ISR_STATUS.load();
         let isr_data = ULP_DEBUG_LAST_ISR_DATA.load();
         if gpio_isr_count != new_gpio_isr_count {
-            defmt::info!("({}) TRAP_DATA: 0x{:08x}", new_gpio_isr_count, trap_data);
-            defmt::info!("({}) ISR_DATA:  0x{:08x}", new_gpio_isr_count, isr_data);
+            info!("({}) TRAP_DATA: 0x{:08x}", new_gpio_isr_count, trap_data);
+            info!("({}) ISR_DATA:  0x{:08x}", new_gpio_isr_count, isr_data);
         }
 
         gpio_isr_count = new_gpio_isr_count;

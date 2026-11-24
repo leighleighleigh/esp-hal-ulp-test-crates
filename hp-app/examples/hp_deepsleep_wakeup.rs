@@ -29,7 +29,7 @@ use esp_hal::{
     time::Instant,
 };
 use esp32s3 as pac;
-use hil_test::ulp_utils::ulp_riscv_reset;
+use hil_test::{info, setup_logger, ulp_utils::ulp_riscv_reset, warn};
 // Shared variables from lp_rainbow app
 use lp_rainbow::{RAINBOW_COUNTER, RAINBOW_RUN};
 // Global on/off controls
@@ -41,6 +41,7 @@ const ULP_RAINBOW_SPEED: u32 = 10; // Fast
 fn main() -> ! {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let p = esp_hal::init(config);
+    setup_logger();
 
     {
         // REQUIRED FOR LEIGHLEIGHLEIGH's CUSTOM DEVBOARD ONLY
@@ -49,7 +50,7 @@ fn main() -> ! {
         setup_gpio_holds(io_reg_en, chg_reset);
     }
 
-    defmt::info!("Boot hp_deepsleep_wakeup!");
+    info!("Boot hp_deepsleep_wakeup!");
 
     // Pause the rainbow, we are awake!
     unsafe {
@@ -76,7 +77,7 @@ fn main() -> ! {
             let dly = esp_hal::delay::Delay::new();
             dly.delay_millis(2000);
 
-            defmt::warn!("Re-programming ULP!");
+            warn!("Re-programming ULP!");
             ulp_core.erase();
             let ulp_code = lp_rainbow::load!();
 
@@ -103,20 +104,20 @@ fn main() -> ! {
 
             ulp_code.run(&mut ulp_core, wakeup_source, lp_led_pin, lp_button_pin);
 
-            defmt::warn!("ULP reprogrammed!");
+            warn!("ULP reprogrammed!");
         }
     }
 
     let count = unsafe { RAINBOW_COUNTER };
-    defmt::info!("RAINBOW_COUNTER = {}", count);
-    defmt::info!("Resetting RAINBOW_COUNTER");
+    info!("RAINBOW_COUNTER = {}", count);
+    info!("Resetting RAINBOW_COUNTER");
 
     // Reset counter to 0
     unsafe {
         RAINBOW_COUNTER = 0;
     }
 
-    defmt::warn!("Entering deep sleep!");
+    warn!("Entering deep sleep!");
 
     if ULP_RAINBOW_DURING_SLEEP {
         unsafe {
